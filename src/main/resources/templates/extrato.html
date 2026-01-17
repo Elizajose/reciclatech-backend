@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Recibo Oficial</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { background: #555; padding: 40px; font-family: 'Courier New', monospace; }
+        .folha { background: white; max-width: 800px; margin: 0 auto; padding: 50px; }
+        @media print { body { background: white; padding: 0; } .no-print { display: none; } }
+    </style>
+</head>
+<body>
+
+<div class="text-center mb-4 no-print d-flex justify-content-center gap-2">
+    <button onclick="window.print()" class="btn btn-success"><i class="bi bi-printer"></i> Imprimir / Salvar PDF</button>
+
+    <button onclick="enviarZap()" class="btn btn-primary"><i class="bi bi-whatsapp"></i> Enviar p/ Empresa</button>
+
+    <a href="/admin/coletas" class="btn btn-secondary">Nova Coleta</a>
+</div>
+
+<input type="hidden" id="jsNome" th:value="${vendedor.nome}">
+<input type="hidden" id="jsTotal" th:value="${total}">
+
+<div class="folha shadow">
+    <div class="text-center border-bottom pb-4 mb-4">
+        <h2 class="fw-bold text-success text-uppercase">ReciclaTech</h2>
+        <p class="text-muted small">RECIBO DE PAGAMENTO / COMPROVANTE DE RENDA</p>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-8">
+            <strong>BENEFICIÁRIO:</strong><br>
+            <span th:text="${vendedor.nome}" class="fs-5 text-uppercase">NOME</span><br>
+            <small class="text-muted">CPF: <span th:text="${vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO'}"></span></small>
+        </div>
+        <div class="col-4 text-end">
+            <strong>DATA:</strong><br>
+            <span th:text="${dataHoje}">Data</span>
+        </div>
+    </div>
+
+    <table class="table table-bordered border-dark">
+        <thead class="table-light">
+        <tr>
+            <th>MATERIAL</th>
+            <th class="text-center">QTD/PESO</th>
+            <th class="text-end">TOTAL</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:if="${vendas.empty}">
+            <td colspan="3" class="text-center text-muted">Nenhum valor processado.</td>
+        </tr>
+        <tr th:each="venda : ${vendas}">
+            <td th:text="${venda.material}">Material</td>
+            <td class="text-center">
+                <span th:text="${venda.peso}">0.0</span>
+                <span th:text="${mapaUnidades.getOrDefault(venda.material, 'UN')}">KG</span>
+            </td>
+            <td class="text-end fw-bold"
+                th:text="'R$ ' + ${#numbers.formatDecimal(venda.precoEstimado, 1, 'POINT', 2, 'COMMA')}">
+                R$ 0,00
+            </td>
+        </tr>
+        </tbody>
+        <tfoot>
+        <tr class="table-success">
+            <td colspan="2" class="text-end fw-bold">TOTAL LÍQUIDO:</td>
+            <td class="text-end fw-bold fs-4"
+                th:text="'R$ ' + ${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}">
+                R$ 0,00
+            </td>
+        </tr>
+        </tfoot>
+    </table>
+
+    <div class="mt-5 pt-5 text-center border-top w-50 mx-auto">
+        Assinatura do Responsável
+    </div>
+</div>
+
+<script>
+    function enviarZap() {
+        // Pega os dados do recibo
+        let nome = document.getElementById("jsNome").value;
+        let total = document.getElementById("jsTotal").value;
+
+        // Formata a mensagem
+        let msg = `🧾 *NOVO RECIBO GERADO*\n\n👤 *Cliente:* ${nome}\n💰 *Valor Total:* R$ ${total}\n\n📎 *Anexo:* Estou enviando o PDF deste recibo agora.`;
+
+        // Mude para o número da EMPRESA (Onde vai ficar a cópia)
+        let numeroEmpresa = "5587991919496";
+
+        let url = `https://wa.me/${numeroEmpresa}?text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank');
+    }
+</script>
+</body>
+</html>

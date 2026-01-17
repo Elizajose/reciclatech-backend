@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Painel Administrativo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-dark mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="/"><i class="bi bi-shield-lock"></i> Área Administrativa</a>
+        <a href="/" class="btn btn-outline-light btn-sm">Voltar para o App</a>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="card shadow">
+        <div class="card-header bg-warning text-dark fw-bold">
+            <i class="bi bi-currency-dollar"></i> Gerenciar Tabela de Preços (Cotação do Dia)
+        </div>
+        <div class="card-body">
+
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th>Material</th>
+                    <th>Preço Atual (kg)</th>
+                    <th>Nova Cotação</th>
+                    <th>Ação</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="mat : ${materiais}">
+
+                    <td class="fw-bold" th:text="${mat.nome}">Cobre</td>
+
+                    <td class="text-muted" th:text="'R$ ' + ${mat.precoPorKg}">R$ 0.00</td>
+
+                    <form action="/admin/atualizar" method="post">
+                        <input type="hidden" name="id" th:value="${mat.id}">
+
+                        <td>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" step="0.01" name="novoPreco"
+                                       class="form-control" th:value="${mat.precoPorKg}" required>
+                            </div>
+                        </td>
+                        <td>
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="bi bi-save"></i> Salvar
+                            </button>
+                        </td>
+                    </form>
+
+                </tr>
+                </tbody>
+            </table>
+
+        </div>
+        <div class="card-footer text-muted small">
+            Alterações aqui impactam imediatamente novos cadastros de catadores.
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
