@@ -17,60 +17,46 @@
             overflow-x: hidden;
         }
 
-        /* --- ESTILOS DA NOVA LOGO --- */
-        .logo-brand {
-            font-size: 1.5rem;
-            letter-spacing: -0.5px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .logo-icon {
-            color: var(--primary);
-            font-size: 1.8rem;
-            transform: rotate(-15deg); /* Dá um charminho inclinado no ícone */
-        }
-
-        /* --- ESTILOS DO BOTÃO DE FOTO --- */
-        .card-foto {
-            border: 2px dashed #ccc;
-            border-radius: 12px;
-            padding: 25px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: #f8f9fa;
-            color: #6c757d;
-        }
-        .card-foto:hover {
-            border-color: var(--primary);
-            background: #fff;
-        }
-        /* Quando selecionado (Fica verde) */
-        .card-foto.selecionado {
-            border-color: var(--primary);
-            background: #e3fdf5; /* Fundo verde clarinho */
-            color: #006400;
-        }
+        /* --- LOGO --- */
+        .logo-brand { font-size: 1.5rem; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
+        .logo-icon { color: var(--primary); font-size: 1.8rem; transform: rotate(-15deg); }
 
         .hero-section { background: linear-gradient(135deg, #00b894 0%, #0984e3 100%); color: white; padding: 60px 0; }
         .feature-icon { font-size: 2.5rem; color: var(--primary); margin-bottom: 15px; }
 
-        .price-ticker {
-            background: var(--dark);
-            color: white;
-            padding: 8px;
-            overflow: hidden;
-            white-space: nowrap;
-            max-width: 100vw;
-        }
-
+        .price-ticker { background: var(--dark); color: white; padding: 8px; overflow: hidden; white-space: nowrap; max-width: 100vw; }
         .ticker-wrap { display: inline-block; animation: marquee 60s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
         .ticker-item { margin-right: 40px; color: #55efc4; font-weight: 600; }
 
         .btn-zap { background: #25D366; color: white; font-weight: bold; border: none; transition: transform 0.2s;}
         .btn-zap:active { transform: scale(0.98); }
+
+        /* --- ESTILO DOS ITENS (VOLTOU!) --- */
+        .materials-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; max-height: 300px; overflow-y: auto; }
+
+        .material-card {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fff;
+            position: relative;
+        }
+
+        .material-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+
+        /* O segredo: Quando o checkbox dentro estiver marcado, muda o card */
+        .material-card:has(input:checked) {
+            background: #e3fdf5;
+            border-color: var(--primary);
+            font-weight: bold;
+            color: var(--dark);
+        }
+
+        .material-card input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
 
         @media (max-width: 768px) {
             .hero-section h1 { font-size: 2rem; }
@@ -147,14 +133,13 @@
                             <input type="text" id="endZap" name="endereco" class="form-control" placeholder="Rua, Nº, Bairro" required>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="small fw-bold text-muted mb-2">TEM FOTOS?</label>
-
-                            <div class="card-foto" onclick="toggleFoto(this)" id="btnFoto">
-                                <i class="bi bi-camera-fill fs-1 mb-2 d-block"></i>
-                                <div class="fw-bold">Toque aqui para avisar que tem FOTOS</div>
-                                <small class="d-block mt-1">(Você enviará as imagens no chat)</small>
-                            </div>
+                        <label class="small fw-bold text-muted mb-2">O QUE VOCÊ TEM?</label>
+                        <div class="materials-grid mb-3">
+                            <label th:each="m : ${materiais}" class="material-card">
+                                <input type="checkbox" name="materiaisSelecionados" th:value="${m.nome}" class="check-item">
+                                <i class="bi bi-recycle fs-3 d-block mb-1 icon-dinamico"></i>
+                                <span th:text="${m.nome}" class="small nome-material">Material</span>
+                            </label>
                         </div>
 
                         <button type="submit" class="btn btn-zap w-100 py-3 rounded-3 fs-5">
@@ -228,51 +213,55 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // Variável para saber se o cliente marcou que tem foto
-    let temFoto = false;
+    // 1. Script para deixar os ícones bonitinhos (Ímã, Caixa, etc)
+    document.addEventListener("DOMContentLoaded", function() {
+        const cards = document.querySelectorAll('.material-card');
 
-    // Função que muda a cor do botão de foto quando clica
-    function toggleFoto(element) {
-        temFoto = !temFoto; // Inverte (se era falso vira verdadeiro, e vice-versa)
+        cards.forEach(card => {
+            const nome = card.querySelector('.nome-material').innerText.toLowerCase();
+            const icone = card.querySelector('.icon-dinamico');
 
-        if(temFoto) {
-            // Estado ATIVO (Verde)
-            element.classList.add('selecionado');
-            element.innerHTML = `
-                <i class="bi bi-check-circle-fill fs-1 mb-2 d-block text-success"></i>
-                <div class="fw-bold text-success">Fotos Confirmadas!</div>
-                <small class="d-block mt-1">Envie as fotos no chat a seguir.</small>
-            `;
-        } else {
-            // Estado INATIVO (Cinza)
-            element.classList.remove('selecionado');
-            element.innerHTML = `
-                <i class="bi bi-camera-fill fs-1 mb-2 d-block"></i>
-                <div class="fw-bold">Toque aqui para avisar que tem FOTOS</div>
-                <small class="d-block mt-1">(Você enviará as imagens no chat)</small>
-            `;
-        }
-    }
+            icone.classList.remove('bi-recycle'); // Tira o padrão
 
-    // Função de Enviar Zap (Atualizada)
+            if (nome.includes('cobre') || nome.includes('ferro') || nome.includes('metal')) {
+                icone.classList.add('bi-magnet'); // Ímã
+            } else if (nome.includes('alumínio') || nome.includes('lata')) {
+                icone.classList.add('bi-collection'); // Latas
+            } else if (nome.includes('papel') || nome.includes('papelão')) {
+                icone.classList.add('bi-box-seam'); // Caixa
+            } else if (nome.includes('plástico') || nome.includes('garrafa')) {
+                icone.classList.add('bi-water'); // Garrafa
+            } else {
+                icone.classList.add('bi-recycle'); // Padrão
+            }
+        });
+    });
+
+    // 2. Função de Enviar Zap (AGORA COM A LISTA DE ITENS)
     function enviarZap(event) {
-        event.preventDefault(); // Impede o formulário de recarregar a página
+        // NÃO TEM preventDefault. Salva no banco E manda pro Zap.
 
         let nome = document.getElementById("nomeZap").value;
         let tel = document.getElementById("telZap").value;
         let end = document.getElementById("endZap").value;
 
-        // Monta a mensagem
-        let msg = `Olá! Sou *${nome}* (${tel}).\n📍 Endereço: *${end}*.\n\n`;
+        // Pega os itens selecionados
+        let itensSelecionados = [];
+        document.querySelectorAll('.check-item:checked').forEach(el => {
+            itensSelecionados.push(el.value);
+        });
 
-        // Se marcou que tem foto, muda o texto
-        if(temFoto) {
-            msg += `📸 *TENHO FOTOS DOS MATERIAIS!* \nVou enviar elas aqui no chat agora mesmo para avaliação.`;
+        // Monta a mensagem
+        let msg = `Olá! Sou *${nome}* (${tel}).\n📍 Endereço: *${end}*.\n`;
+
+        if (itensSelecionados.length > 0) {
+            msg += `\n📦 *Tenho para vender:* \n- ${itensSelecionados.join('\n- ')}`;
         } else {
-            msg += `Gostaria de solicitar uma coleta. Podem vir avaliar?`;
+            msg += `\nGostaria de solicitar uma coleta.`;
         }
 
-        // SEU NÚMERO AQUI
+        msg += `\n\nPodem vir avaliar?`;
+
         let url = `https://wa.me/5587991919496?text=${encodeURIComponent(msg)}`;
         window.open(url, '_blank');
     }
