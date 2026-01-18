@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.time.LocalDate;
+import java.util.stream.Collectors;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -202,7 +204,21 @@ public class TelaController {
     }
 
     // Auxiliares
-    @GetMapping("/meus-extratos") public String listarExtratos(Model m) { m.addAttribute("usuarios", usuarioRepository.findAll()); return "lista-extratos"; }
+    @GetMapping("/meus-extratos")
+    public String meusExtratos(Model model) {
+        // Pega só os usuários que têm status CONCLUIDO
+        // E (aqui está o truque) filtraremos apenas visualmente ou buscamos todos.
+        // Como seu banco é simples, vamos pegar todos e filtrar no Java se é de HOJE.
+
+        List<Usuario> concluidosHoje = usuarioRepository.findByStatus(StatusColeta.CONCLUIDO)
+                .stream()
+                .filter(u -> u.getDataColeta() != null)
+                .filter(u -> u.getDataColeta().toLocalDate().isEqual(LocalDate.now())) // Só data de HOJE
+                .collect(Collectors.toList());
+
+        model.addAttribute("usuarios", concluidosHoje);
+        return "lista-extratos";
+    }
     @GetMapping("/admin/precos") public String painelPrecos(Model m, HttpSession s) { if(s.getAttribute("adminLogado")==null) return "redirect:/login"; m.addAttribute("materiais", materialRepository.findAll()); return "admin-precos"; }
     @PostMapping("/admin/atualizar") public String upd(@RequestParam Long id, @RequestParam Double novoPreco) { Material m = materialRepository.findById(id).get(); m.setPrecoPorKg(BigDecimal.valueOf(novoPreco)); materialRepository.save(m); return "redirect:/admin/precos"; }
 

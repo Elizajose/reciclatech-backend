@@ -17,6 +17,42 @@
             overflow-x: hidden;
         }
 
+        /* --- ESTILOS DA NOVA LOGO --- */
+        .logo-brand {
+            font-size: 1.5rem;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .logo-icon {
+            color: var(--primary);
+            font-size: 1.8rem;
+            transform: rotate(-15deg); /* Dá um charminho inclinado no ícone */
+        }
+
+        /* --- ESTILOS DO BOTÃO DE FOTO --- */
+        .card-foto {
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9fa;
+            color: #6c757d;
+        }
+        .card-foto:hover {
+            border-color: var(--primary);
+            background: #fff;
+        }
+        /* Quando selecionado (Fica verde) */
+        .card-foto.selecionado {
+            border-color: var(--primary);
+            background: #e3fdf5; /* Fundo verde clarinho */
+            color: #006400;
+        }
+
         .hero-section { background: linear-gradient(135deg, #00b894 0%, #0984e3 100%); color: white; padding: 60px 0; }
         .feature-icon { font-size: 2.5rem; color: var(--primary); margin-bottom: 15px; }
 
@@ -33,13 +69,8 @@
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
         .ticker-item { margin-right: 40px; color: #55efc4; font-weight: 600; }
 
-        .btn-zap { background: #25D366; color: white; font-weight: bold; border: none; }
-        .materials-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; max-height: 250px; overflow-y: auto; }
-
-        .material-card { border: 1px solid #ddd; padding: 15px 10px; text-align: center; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-        .material-card:hover { transform: translateY(-2px); shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        .material-card:has(input:checked) { background: #e3fdf5; border-color: var(--primary); font-weight: bold; color: var(--dark); }
-        .material-card input { display: none; }
+        .btn-zap { background: #25D366; color: white; font-weight: bold; border: none; transition: transform 0.2s;}
+        .btn-zap:active { transform: scale(0.98); }
 
         @media (max-width: 768px) {
             .hero-section h1 { font-size: 2rem; }
@@ -53,14 +84,19 @@
     <div class="ticker-wrap">
         <span class="ticker-item">📢 COTAÇÃO DE HOJE:</span>
         <span th:each="m : ${materiais}" class="ticker-item">
-            <i class="bi bi-tag-fill"></i> <span th:text="${m.nome} + ': R$ ' + ${m.precoPorKg} + '/' + ${m.unidade}"></span>
+            <i class="bi bi-caret-up-fill text-success"></i> <span th:text="${m.nome} + ': R$ ' + ${m.precoPorKg} + '/' + ${m.unidade}"></span>
         </span>
     </div>
 </div>
 
 <nav class="navbar navbar-expand-lg bg-white shadow-sm sticky-top">
     <div class="container">
-        <a class="navbar-brand fw-bold text-success" href="/"><i class="bi bi-recycle"></i> ReciclaTech</a>
+
+        <a class="navbar-brand fw-bold text-dark logo-brand" href="/">
+            <i class="bi bi-recycle logo-icon"></i>
+            <div>Recicla<span class="text-success">Tech</span></div>
+        </a>
+
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto gap-3 align-items-center">
@@ -85,7 +121,7 @@
 <section class="hero-section">
     <div class="container">
         <div class="row align-items-center">
-            <div class="col-lg-6 mb-4">
+            <div class="col-lg-6 mb-4 text-center text-lg-start">
                 <h1 class="fw-bold display-5">Transforme Resíduos em Receita</h1>
                 <p class="lead mb-4">O jeito mais fácil, rápido e transparente de vender seus recicláveis. Nós vamos até você.</p>
                 <a href="#quem-somos" class="btn btn-outline-light rounded-pill px-4">Saiba Mais</a>
@@ -93,12 +129,13 @@
 
             <div class="col-lg-5 offset-lg-1">
                 <div class="card border-0 shadow-lg text-dark p-4">
-                    <h3 class="fw-bold mb-3">🚚 Chamar Coleta</h3>
-                    <form action="/publicar" method="post" onsubmit="enviarZap()">
+                    <h3 class="fw-bold mb-3"><i class="bi bi-whatsapp text-success"></i> Chamar Coleta</h3>
+
+                    <form onsubmit="enviarZap(event)">
                         <div class="row g-2 mb-3">
                             <div class="col-6">
                                 <label class="small fw-bold text-muted">TELEFONE</label>
-                                <input type="text" id="telZap" name="telefoneVendedor" class="form-control" placeholder="(00) 90000-0000" required>
+                                <input type="tel" id="telZap" name="telefoneVendedor" class="form-control" placeholder="(00) 90000-0000" required>
                             </div>
                             <div class="col-6">
                                 <label class="small fw-bold text-muted">NOME</label>
@@ -110,20 +147,18 @@
                             <input type="text" id="endZap" name="endereco" class="form-control" placeholder="Rua, Nº, Bairro" required>
                         </div>
 
-                        <label class="small fw-bold text-muted mb-2">O QUE VOCÊ TEM?</label>
+                        <div class="mb-3">
+                            <label class="small fw-bold text-muted mb-2">TEM FOTOS?</label>
 
-                        <div class="materials-grid mb-3">
-                            <label th:each="m : ${materiais}" class="material-card">
-                                <input type="checkbox" class="checkZap" th:value="${m.nome}">
-
-                                <i class="bi bi-recycle fs-3 d-block mb-2 icon-dinamico"></i>
-
-                                <span th:text="${m.nome}" class="small fw-bold nome-material">Nome</span>
-                            </label>
+                            <div class="card-foto" onclick="toggleFoto(this)" id="btnFoto">
+                                <i class="bi bi-camera-fill fs-1 mb-2 d-block"></i>
+                                <div class="fw-bold">Toque aqui para avisar que tem FOTOS</div>
+                                <small class="d-block mt-1">(Você enviará as imagens no chat)</small>
+                            </div>
                         </div>
 
-                        <button type="submit" class="btn btn-zap w-100 py-3 rounded-3">
-                            <i class="bi bi-whatsapp"></i> CHAMAR NO WHATSAPP
+                        <button type="submit" class="btn btn-zap w-100 py-3 rounded-3 fs-5">
+                            CHAMAR NO WHATSAPP <i class="bi bi-send-fill ms-2"></i>
                         </button>
                     </form>
                 </div>
@@ -193,46 +228,51 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // 1. Função que troca os ícones baseada no nome do material
-    document.addEventListener("DOMContentLoaded", function() {
-        const cards = document.querySelectorAll('.material-card');
+    // Variável para saber se o cliente marcou que tem foto
+    let temFoto = false;
 
-        cards.forEach(card => {
-            const nome = card.querySelector('.nome-material').innerText.toLowerCase();
-            const icone = card.querySelector('.icon-dinamico');
+    // Função que muda a cor do botão de foto quando clica
+    function toggleFoto(element) {
+        temFoto = !temFoto; // Inverte (se era falso vira verdadeiro, e vice-versa)
 
-            // Remove o ícone padrão
-            icone.classList.remove('bi-recycle');
+        if(temFoto) {
+            // Estado ATIVO (Verde)
+            element.classList.add('selecionado');
+            element.innerHTML = `
+                <i class="bi bi-check-circle-fill fs-1 mb-2 d-block text-success"></i>
+                <div class="fw-bold text-success">Fotos Confirmadas!</div>
+                <small class="d-block mt-1">Envie as fotos no chat a seguir.</small>
+            `;
+        } else {
+            // Estado INATIVO (Cinza)
+            element.classList.remove('selecionado');
+            element.innerHTML = `
+                <i class="bi bi-camera-fill fs-1 mb-2 d-block"></i>
+                <div class="fw-bold">Toque aqui para avisar que tem FOTOS</div>
+                <small class="d-block mt-1">(Você enviará as imagens no chat)</small>
+            `;
+        }
+    }
 
-            // Lógica de escolha
-            if (nome.includes('cobre') || nome.includes('metal') || nome.includes('ferro')) {
-                icone.classList.add('bi-magnet'); // Ímã
-            } else if (nome.includes('alumínio') || nome.includes('lata')) {
-                icone.classList.add('bi-collection'); // Latas empilhadas
-            } else if (nome.includes('papel') || nome.includes('papelão')) {
-                icone.classList.add('bi-box-seam'); // Caixa
-            } else if (nome.includes('plástico') || nome.includes('pet')) {
-                icone.classList.add('bi-cup-straw'); // Copo/Plástico
-            } else if (nome.includes('vidro') || nome.includes('garrafa')) {
-                icone.classList.add('bi-water'); // Representando garrafa/líquido
-            } else if (nome.includes('bateria') || nome.includes('pilha')) {
-                icone.classList.add('bi-battery-charging'); // Bateria
-            } else {
-                icone.classList.add('bi-recycle'); // Padrão se não achar nada
-            }
-        });
-    });
+    // Função de Enviar Zap (Atualizada)
+    function enviarZap(event) {
+        event.preventDefault(); // Impede o formulário de recarregar a página
 
-    // 2. Função de Enviar Zap
-    function enviarZap() {
         let nome = document.getElementById("nomeZap").value;
         let tel = document.getElementById("telZap").value;
         let end = document.getElementById("endZap").value;
-        let itens = [];
-        document.querySelectorAll('.checkZap:checked').forEach((el) => itens.push(el.value));
-        if (itens.length === 0) return;
-        let msg = `Olá! Sou *${nome}* (${tel}).\nEndereço: *${end}*.\n\nTenho para vender: \n- ${itens.join('\n- ')}\n\nPodem vir avaliar?`;
 
+        // Monta a mensagem
+        let msg = `Olá! Sou *${nome}* (${tel}).\n📍 Endereço: *${end}*.\n\n`;
+
+        // Se marcou que tem foto, muda o texto
+        if(temFoto) {
+            msg += `📸 *TENHO FOTOS DOS MATERIAIS!* \nVou enviar elas aqui no chat agora mesmo para avaliação.`;
+        } else {
+            msg += `Gostaria de solicitar uma coleta. Podem vir avaliar?`;
+        }
+
+        // SEU NÚMERO AQUI
         let url = `https://wa.me/5587991919496?text=${encodeURIComponent(msg)}`;
         window.open(url, '_blank');
     }
