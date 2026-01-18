@@ -3,18 +3,34 @@
 <head>
     <title>ReciclaTech - Soluções Ambientais</title>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 
     <style>
         :root { --primary: #00b894; --dark: #2d3436; }
-        body { font-family: 'Inter', sans-serif; }
+
+        /* CORREÇÃO MOBILE: Impede rolagem lateral indesejada */
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
 
         .hero-section { background: linear-gradient(135deg, #00b894 0%, #0984e3 100%); color: white; padding: 60px 0; }
         .feature-icon { font-size: 2.5rem; color: var(--primary); margin-bottom: 15px; }
-        .price-ticker { background: var(--dark); color: white; padding: 8px; overflow: hidden; white-space: nowrap; }
+
+        /* CORREÇÃO MOBILE: Trava o letreiro na largura da tela */
+        .price-ticker {
+            background: var(--dark);
+            color: white;
+            padding: 8px;
+            overflow: hidden;
+            white-space: nowrap;
+            max-width: 100vw;
+        }
+
         .ticker-wrap { display: inline-block; animation: marquee 60s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
         .ticker-item { margin-right: 40px; color: #55efc4; font-weight: 600; }
@@ -24,6 +40,12 @@
         .material-card { border: 1px solid #ddd; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; }
         .material-card:has(input:checked) { background: #e3fdf5; border-color: var(--primary); font-weight: bold; }
         .material-card input { display: none; }
+
+        /* CORREÇÃO MOBILE: Ajusta tamanho da fonte em telas pequenas */
+        @media (max-width: 768px) {
+            .hero-section h1 { font-size: 2rem; } /* Diminui o título no celular */
+            .hero-section { padding: 40px 0; }
+        }
     </style>
 </head>
 <body>

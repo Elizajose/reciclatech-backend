@@ -2,43 +2,47 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Revisão Final</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 </head>
-<body class="bg-light pb-5">
+<body class="bg-light pb-5 p-3 p-md-5">
 
-<div class="container mt-3">
+<div class="container mt-3" style="max-width: 600px;">
 
-    <div class="alert alert-warning border-warning shadow-sm">
-        <i class="bi bi-exclamation-triangle-fill"></i> <strong>Atenção Comprador:</strong><br>
-        Confira os valores e pesos. Você pode alterar o preço unitário aqui se houve mudança de mercado.
+    <div class="alert alert-warning border-warning shadow-sm small">
+        <i class="bi bi-exclamation-triangle-fill"></i> <strong>Atenção:</strong><br>
+        Confira os valores. Você pode alterar o preço unitário agora se necessário.
     </div>
 
     <div class="card shadow border-0">
-        <div class="card-header bg-dark text-white">
-            <h5 class="m-0 fw-bold">2. Revisão Final e Pagamento</h5>
+        <div class="card-header bg-dark text-white py-3">
+            <h5 class="m-0 fw-bold"><i class="bi bi-cash-coin"></i> 2. Revisão e Pagamento</h5>
         </div>
 
         <form action="/admin/confirmar-finalizacao" method="post">
             <input type="hidden" name="idVendedor" th:value="${vendedor.id}">
 
-            <div class="card-body">
-                <h5 class="fw-bold mb-3"><i class="bi bi-person-circle"></i> <span th:text="${vendedor.nome}">Nome</span></h5>
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-3 text-uppercase text-primary">
+                    <i class="bi bi-person-circle"></i> <span th:text="${vendedor.nome}">Nome</span>
+                </h5>
 
                 <div class="mb-4">
-                    <label class="fw-bold small text-muted">CPF PARA NOTA (OPCIONAL)</label>
+                    <label class="fw-bold small text-muted mb-1">CPF PARA NOTA (OPCIONAL)</label>
                     <input type="text" name="cpfFinal" class="form-control form-control-lg bg-light"
-                           th:value="${vendedor.cpf}" placeholder="000.000.000-00">
+                           th:value="${vendedor.cpf}" placeholder="000.000.000-00" inputmode="numeric">
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table table-bordered align-middle">
+                    <table class="table table-bordered align-middle mb-0">
                         <thead class="table-light">
                         <tr>
                             <th>Item</th>
-                            <th style="width: 80px;">Peso</th>
-                            <th style="width: 100px;">Preço Un.</th>
+                            <th>Peso</th>
+                            <th style="min-width: 130px;">Preço Un.</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -46,18 +50,23 @@
                             <input type="hidden" name="idsMateriais" th:value="${item.material.id}">
 
                             <td>
-                                <span class="fw-bold" th:text="${item.material.nome}">Mat</span>
+                                <span class="fw-bold text-dark" th:text="${item.material.nome}">Mat</span>
                             </td>
-                            <td>
+
+                            <td class="text-center">
                                 <input type="hidden" name="pesosFinais" th:value="${item.peso}">
-                                <span class="badge bg-secondary" th:text="${item.peso} + ' ' + ${item.material.unidade}">10 KG</span>
+                                <span class="badge bg-secondary" style="font-size: 0.9rem;"
+                                      th:text="${item.peso} + ' ' + ${item.material.unidade}">10 KG</span>
                             </td>
+
                             <td>
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-text">R$</span>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0">R$</span>
+
                                     <input type="number" step="0.01" name="precosFinais"
-                                           class="form-control fw-bold text-success"
-                                           th:value="${item.material.precoPorKg}">
+                                           class="form-control fw-bold text-success border-start-0"
+                                           th:value="${item.material.precoPorKg}"
+                                           inputmode="decimal">
                                 </div>
                             </td>
                         </tr>
@@ -65,12 +74,12 @@
                     </table>
                 </div>
 
-                <div class="d-grid gap-2 mt-4">
-                    <button type="submit" class="btn btn-success btn-lg py-3 shadow">
-                        <i class="bi bi-file-earmark-check"></i> CONFIRMAR E GERAR RECIBO
+                <div class="d-grid gap-2 mt-5">
+                    <button type="submit" class="btn btn-success btn-lg py-3 shadow fw-bold">
+                        <i class="bi bi-check-lg"></i> CONFIRMAR E GERAR RECIBO
                     </button>
-                    <a href="javascript:history.back()" class="btn btn-outline-danger">
-                        <i class="bi bi-arrow-left"></i> Voltar e Corrigir Pesos
+                    <a href="javascript:history.back()" class="btn btn-outline-secondary py-2">
+                        Voltar e Corrigir
                     </a>
                 </div>
 
