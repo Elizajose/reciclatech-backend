@@ -13,6 +13,7 @@ public class Oferta {
     private Long id;
 
     private String material;
+
     private Double peso; // Agora começa zerado e o comprador preenche depois
     private String endereco; // <--- NOVO CAMPO
 
@@ -22,8 +23,12 @@ public class Oferta {
 
     private BigDecimal precoEstimado;
 
+    // --- A CORREÇÃO ESTÁ AQUI ---
+    // Renomeado de 'vendedor' para 'usuario' para casar com o mappedBy="usuario"
     @ManyToOne
-    private Usuario vendedor;
+    @JoinColumn(name = "usuario_id") // Cria a coluna usuario_id no banco
+    private Usuario usuario;
+    // ----------------------------
 
     @Enumerated(EnumType.STRING)
     private StatusOferta status = StatusOferta.DISPONIVEL; // Começa Disponível
