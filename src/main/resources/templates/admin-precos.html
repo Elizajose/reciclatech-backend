@@ -1,78 +1,88 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Painel Administrativo</title>
+    <title>Gerenciar Materiais</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 </head>
 <body class="bg-light p-3 p-md-5">
 
-<nav class="navbar navbar-dark bg-dark mb-4 rounded shadow-sm">
-    <div class="container-fluid">
-        <a class="navbar-brand fw-bold" href="/admin/coletas"><i class="bi bi-shield-lock"></i> Admin</a>
-
-        <a href="/admin/coletas" class="btn btn-outline-light btn-sm">Voltar</a>
-    </div>
-</nav>
-
 <div class="container" style="max-width: 900px;">
+
+    <div class="d-flex justify-content-between mb-4">
+        <h3 class="fw-bold">🔧 Gestão de Materiais</h3>
+        <a href="/admin/coletas" class="btn btn-outline-secondary">Voltar</a>
+    </div>
+
+    <div class="card mb-4 border-success shadow-sm">
+        <div class="card-header bg-success text-white fw-bold">
+            <i class="bi bi-plus-circle"></i> Adicionar Novo Item
+        </div>
+        <div class="card-body">
+            <form action="/admin/material/novo" method="post" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="small fw-bold">Nome do Material</label>
+                    <input type="text" name="nome" class="form-control" placeholder="Ex: Bateria Velha" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="small fw-bold">Unidade</label>
+                    <select name="unidade" class="form-select">
+                        <option value="KG">KG (Quilo)</option>
+                        <option value="UN">UN (Unidade)</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="small fw-bold">Preço Inicial</label>
+                    <input type="number" step="0.01" name="preco" class="form-control" placeholder="0.00" required>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-success w-100 fw-bold">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card shadow border-0">
-        <div class="card-header bg-warning text-dark fw-bold py-3">
-            <i class="bi bi-currency-dollar"></i> Gerenciar Cotação do Dia
-        </div>
-
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                    <tr>
-                        <th class="ps-4">Material</th>
-                        <th style="min-width: 100px;">Atual</th>
-                        <th style="min-width: 200px;">Nova Cotação</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr th:each="mat : ${materiais}">
-
-                        <td class="ps-4 fw-bold text-nowrap" th:text="${mat.nome}">Cobre</td>
-
-                        <td class="text-muted small">
-                            R$ <span th:text="${mat.precoPorKg}">0.00</span>
-                        </td>
-
-                        <td>
-                            <form action="/admin/atualizar" method="post" class="d-flex gap-2">
-                                <input type="hidden" name="id" th:value="${mat.id}">
-
-                                <div class="input-group">
-                                    <span class="input-group-text bg-white border-end-0">R$</span>
-
-                                    <input type="number" step="0.01" name="novoPreco"
-                                           class="form-control border-start-0 fw-bold"
-                                           th:value="${mat.precoPorKg}"
-                                           inputmode="decimal"
-                                           required>
-
-                                    <button type="submit" class="btn btn-success">
-                                        <i class="bi bi-check-lg"></i>
-                                    </button>
-                                </div>
-                            </form>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card-footer text-muted small text-center py-3 bg-light">
-            <i class="bi bi-info-circle"></i> Alterações impactam novos cadastros imediatamente.
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th class="ps-4">Item</th>
+                    <th>Preço Atual</th>
+                    <th>Ações</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="mat : ${materiais}">
+                    <td class="ps-4 fw-bold">
+                        <span th:text="${mat.nome}">Cobre</span>
+                        <span class="badge bg-light text-secondary border ms-2" th:text="${mat.unidade}">KG</span>
+                    </td>
+                    <td>
+                        <form action="/admin/atualizar" method="post" class="d-flex gap-2" style="max-width: 200px;">
+                            <input type="hidden" name="id" th:value="${mat.id}">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" step="0.01" name="novoPreco" class="form-control fw-bold" th:value="${mat.precoPorKg}">
+                                <button class="btn btn-outline-success"><i class="bi bi-check"></i></button>
+                            </div>
+                        </form>
+                    </td>
+                    <td class="text-end pe-4">
+                        <a th:href="@{'/admin/material/deletar/' + ${mat.id}}"
+                           class="btn btn-outline-danger btn-sm"
+                           onclick="return confirm('Tem certeza? Isso pode afetar recibos antigos!')">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

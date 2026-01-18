@@ -6,144 +6,135 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
     <style>
-        :root { --primary: #00b894; --dark: #2d3436; }
+        :root { --primary: #00b894; --dark: #2d3436; --accent: #fdcb6e; }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            overflow-x: hidden;
-        }
+        body { font-family: 'Montserrat', sans-serif; overflow-x: hidden; }
 
-        /* --- LOGO --- */
-        .logo-brand { font-size: 1.5rem; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
-        .logo-icon { color: var(--primary); font-size: 1.8rem; transform: rotate(-15deg); }
+        /* --- MENU --- */
+        .navbar-brand { font-weight: 900; letter-spacing: -1px; }
+        .nav-link { font-weight: 700; color: var(--dark) !important; }
 
-        .hero-section { background: linear-gradient(135deg, #00b894 0%, #0984e3 100%); color: white; padding: 60px 0; }
-        .feature-icon { font-size: 2.5rem; color: var(--primary); margin-bottom: 15px; }
-
-        .price-ticker { background: var(--dark); color: white; padding: 8px; overflow: hidden; white-space: nowrap; max-width: 100vw; }
-        .ticker-wrap { display: inline-block; animation: marquee 60s linear infinite; }
-        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
-        .ticker-item { margin-right: 40px; color: #55efc4; font-weight: 600; }
-
-        .btn-zap { background: #25D366; color: white; font-weight: bold; border: none; transition: transform 0.2s;}
-        .btn-zap:active { transform: scale(0.98); }
-
-        /* --- ESTILO DOS ITENS (VOLTOU!) --- */
-        .materials-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; max-height: 300px; overflow-y: auto; }
-
-        .material-card {
-            border: 1px solid #ddd;
-            padding: 10px;
+        /* --- HERO & RECICLÔMETRO --- */
+        .hero-section { background: #009473; color: white; padding: 80px 0; position: relative; overflow: hidden; }
+        .reciclometro-box {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 15px;
+            padding: 20px;
             text-align: center;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: #fff;
-            position: relative;
+            backdrop-filter: blur(5px);
+            margin-top: 20px;
         }
+        .reciclometro-num { font-size: 3rem; font-weight: 900; color: var(--accent); text-shadow: 2px 2px 0px rgba(0,0,0,0.2); }
 
-        .material-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-
-        /* O segredo: Quando o checkbox dentro estiver marcado, muda o card */
-        .material-card:has(input:checked) {
-            background: #e3fdf5;
-            border-color: var(--primary);
-            font-weight: bold;
-            color: var(--dark);
+        /* --- CARDS MATERIAIS --- */
+        .material-card {
+            border: 2px solid #eee; padding: 15px; text-align: center; border-radius: 12px;
+            cursor: pointer; transition: all 0.2s; background: #fff; position: relative;
         }
-
+        .material-card:hover { transform: translateY(-3px); border-color: var(--primary); }
+        .material-card:has(input:checked) { background: #e3fdf5; border-color: var(--primary); font-weight: bold; color: #006400; }
         .material-card input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
 
-        @media (max-width: 768px) {
-            .hero-section h1 { font-size: 2rem; }
-            .hero-section { padding: 40px 0; }
-        }
+        /* --- BOTÃO ZAP --- */
+        .btn-zap { background: #25D366; color: white; font-weight: 900; border: none; padding: 15px; border-radius: 50px; width: 100%; transition: 0.3s; }
+        .btn-zap:hover { background: #1ebc57; transform: scale(1.02); }
+
+        /* --- TICKER --- */
+        .price-ticker { background: var(--dark); color: white; padding: 10px; overflow: hidden; white-space: nowrap; }
+        .ticker-wrap { display: inline-block; animation: marquee 40s linear infinite; }
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+        .ticker-item { margin-right: 50px; font-weight: bold; font-size: 1.1rem; }
     </style>
 </head>
 <body>
 
 <div class="price-ticker">
     <div class="ticker-wrap">
-        <span class="ticker-item">📢 COTAÇÃO DE HOJE:</span>
+        <span class="ticker-item text-warning">🚀 COTAÇÃO ATUALIZADA:</span>
         <span th:each="m : ${materiais}" class="ticker-item">
-            <i class="bi bi-caret-up-fill text-success"></i> <span th:text="${m.nome} + ': R$ ' + ${m.precoPorKg} + '/' + ${m.unidade}"></span>
+            <i class="bi bi-tag-fill"></i> <span th:text="${m.nome} + ': R$ ' + ${m.precoPorKg}"></span>
         </span>
     </div>
 </div>
 
-<nav class="navbar navbar-expand-lg bg-white shadow-sm sticky-top">
+<nav class="navbar navbar-expand-lg bg-white shadow-sm sticky-top py-3">
     <div class="container">
-
-        <a class="navbar-brand fw-bold text-dark logo-brand" href="/">
-            <i class="bi bi-recycle logo-icon"></i>
-            <div>Recicla<span class="text-success">Tech</span></div>
+        <a class="navbar-brand text-success fs-3" href="/">
+            <i class="bi bi-recycle"></i> ReciclaTech
         </a>
-
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
+
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto gap-3 align-items-center">
-                <li class="nav-item"><a class="nav-link" href="#quem-somos">Quem Somos</a></li>
-                <li class="nav-item"><a class="nav-link" href="#parcerias">Parcerias</a></li>
-                <li class="nav-item"><a class="nav-link" href="#contato">Contato</a></li>
-
                 <li class="nav-item">
-                    <a class="nav-link text-danger" href="https://www.instagram.com/SEU_INSTAGRAM_AQUI" target="_blank" title="Siga nosso Instagram">
-                        <i class="bi bi-instagram fs-5"></i>
+                    <a class="nav-link text-danger d-flex align-items-center gap-2" href="https://instagram.com/SEU_INSTAGRAM" target="_blank">
+                        <i class="bi bi-instagram fs-4"></i> <span class="d-lg-none">Nosso Instagram</span>
                     </a>
                 </li>
-
+                <li class="nav-item"><a class="nav-link" href="#reciclometro">Nosso Impacto</a></li>
+                <li class="nav-item"><a class="nav-link" href="#quem-somos">Quem Somos</a></li>
                 <li class="nav-item">
-                    <a href="/admin/coletas" class="btn btn-dark rounded-pill btn-sm fw-bold"><i class="bi bi-lock-fill"></i> Área da Equipe</a>
+                    <a href="/admin/coletas" class="btn btn-dark rounded-pill fw-bold px-4"><i class="bi bi-lock-fill"></i> Equipe</a>
                 </li>
             </ul>
         </div>
     </div>
 </nav>
 
-<section class="hero-section">
+<section class="hero-section" id="reciclometro">
     <div class="container">
         <div class="row align-items-center">
-            <div class="col-lg-6 mb-4 text-center text-lg-start">
-                <h1 class="fw-bold display-5">Transforme Resíduos em Receita</h1>
-                <p class="lead mb-4">O jeito mais fácil, rápido e transparente de vender seus recicláveis. Nós vamos até você.</p>
-                <a href="#quem-somos" class="btn btn-outline-light rounded-pill px-4">Saiba Mais</a>
+            <div class="col-lg-6 mb-5">
+                <h1 class="display-4 fw-black mb-3">Transforme lixo em <span class="text-warning">dinheiro</span> e ajude o planeta.</h1>
+                <p class="lead mb-4 opacity-75">Nós vamos até você, pesamos na hora e pagamos imediatamente via Pix.</p>
+
+                <div class="reciclometro-box">
+                    <div class="text-uppercase small fw-bold tracking-widest mb-1">Total Coletado pela ReciclaTech</div>
+                    <div class="reciclometro-num">
+                        <i class="bi bi-speedometer2"></i>
+                        <span th:text="${#numbers.formatDecimal(totalReciclado, 1, 'POINT', 0, 'COMMA')}">0</span> KG
+                    </div>
+                    <div class="small opacity-75">Resíduos que deixaram de poluir nossa cidade!</div>
+                </div>
             </div>
 
             <div class="col-lg-5 offset-lg-1">
-                <div class="card border-0 shadow-lg text-dark p-4">
-                    <h3 class="fw-bold mb-3"><i class="bi bi-whatsapp text-success"></i> Chamar Coleta</h3>
+                <div class="card border-0 shadow-lg p-4 rounded-4">
+                    <div class="text-center mb-4">
+                        <h3 class="fw-bold text-dark">🚚 Agendar Coleta</h3>
+                        <p class="text-muted small">É rápido, fácil e sem compromisso.</p>
+                    </div>
 
                     <form onsubmit="enviarZap(event)">
-                        <div class="row g-2 mb-3">
-                            <div class="col-6">
-                                <label class="small fw-bold text-muted">TELEFONE</label>
-                                <input type="tel" id="telZap" name="telefoneVendedor" class="form-control" placeholder="(00) 90000-0000" required>
-                            </div>
-                            <div class="col-6">
-                                <label class="small fw-bold text-muted">NOME</label>
-                                <input type="text" id="nomeZap" name="nomeVendedor" class="form-control" required>
-                            </div>
+                        <div class="form-floating mb-2">
+                            <input type="text" id="nomeZap" class="form-control bg-light border-0" placeholder="Nome" required>
+                            <label>Seu Nome</label>
                         </div>
-                        <div class="mb-3">
-                            <label class="small fw-bold text-muted">ENDEREÇO</label>
-                            <input type="text" id="endZap" name="endereco" class="form-control" placeholder="Rua, Nº, Bairro" required>
+                        <div class="form-floating mb-2">
+                            <input type="tel" id="telZap" class="form-control bg-light border-0" placeholder="Telefone" required>
+                            <label>Seu WhatsApp</label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <input type="text" id="endZap" class="form-control bg-light border-0" placeholder="Endereço" required>
+                            <label>Endereço Completo</label>
                         </div>
 
-                        <label class="small fw-bold text-muted mb-2">O QUE VOCÊ TEM?</label>
-                        <div class="materials-grid mb-3">
+                        <label class="fw-bold small text-muted mb-2">SELECIONE OS MATERIAIS:</label>
+                        <div class="d-grid gap-2 mb-4" style="grid-template-columns: repeat(3, 1fr);">
                             <label th:each="m : ${materiais}" class="material-card">
                                 <input type="checkbox" name="materiaisSelecionados" th:value="${m.nome}" class="check-item">
-                                <i class="bi bi-recycle fs-3 d-block mb-1 icon-dinamico"></i>
-                                <span th:text="${m.nome}" class="small nome-material">Material</span>
+                                <i class="bi bi-recycle fs-4 d-block mb-1 text-success"></i>
+                                <span th:text="${m.nome}" class="small lh-1 d-block">Item</span>
                             </label>
                         </div>
 
-                        <button type="submit" class="btn btn-zap w-100 py-3 rounded-3 fs-5">
-                            CHAMAR NO WHATSAPP <i class="bi bi-send-fill ms-2"></i>
+                        <button type="submit" class="btn-zap fs-5 shadow-sm">
+                            CHAMAR NO ZAP <i class="bi bi-whatsapp ms-2"></i>
                         </button>
                     </form>
                 </div>
@@ -152,118 +143,53 @@
     </div>
 </section>
 
-<section id="quem-somos" class="py-5">
-    <div class="container text-center">
-        <h2 class="fw-bold mb-5 text-success">Quem Somos</h2>
-        <div class="row g-4">
-            <div class="col-md-4">
-                <i class="bi bi-shield-check feature-icon"></i>
-                <h5>Transparência</h5>
-                <p class="text-muted">Pesagem digital no local e comprovantes gerados na hora.</p>
-            </div>
-            <div class="col-md-4">
-                <i class="bi bi-truck feature-icon"></i>
-                <h5>Logística Ágil</h5>
-                <p class="text-muted">Frota própria pronta para atender sua solicitação rapidamente.</p>
-            </div>
-            <div class="col-md-4">
-                <i class="bi bi-recycle feature-icon"></i>
-                <h5>Sustentabilidade</h5>
-                <p class="text-muted">Destinação correta e certificada para todos os materiais.</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<section id="parcerias" class="py-5 bg-light">
-    <div class="container">
-        <h2 class="fw-bold mb-4 text-center">Nossas Ações e Parcerias</h2>
+<section id="quem-somos" class="py-5 bg-light">
+    <div class="container py-5">
         <div class="row align-items-center">
-            <div class="col-md-6">
-                <img src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=800&q=80" class="img-fluid rounded-4 shadow" alt="Reciclagem">
+            <div class="col-lg-6 mb-4">
+                <img src="https://images.unsplash.com/photo-1542601906990-b4d3fb7d5763?auto=format&fit=crop&w=800&q=80" class="img-fluid rounded-4 shadow" alt="Equipe">
             </div>
-            <div class="col-md-6 ps-md-5">
-                <h4>Impacto Real</h4>
-                <p>Trabalhamos em conjunto com cooperativas, indústrias e catadores autônomos para garantir que 100% do material coletado volte para a cadeia produtiva.</p>
-                <ul class="list-unstyled">
-                    <li><i class="bi bi-check-circle-fill text-success me-2"></i> Certificado de Reciclagem</li>
-                    <li><i class="bi bi-check-circle-fill text-success me-2"></i> Apoio a Cooperativas Locais</li>
-                    <li><i class="bi bi-check-circle-fill text-success me-2"></i> Educação Ambiental</li>
-                </ul>
+            <div class="col-lg-6 ps-lg-5">
+                <h6 class="text-success fw-bold text-uppercase">Sobre Nós</h6>
+                <h2 class="fw-bold mb-4">Mais do que uma empresa de coleta, somos agentes de mudança.</h2>
+                <p class="text-muted">A ReciclaTech nasceu com um propósito simples: facilitar a reciclagem conectando quem gera resíduos com quem dá um novo destino a eles. Atuamos com transparência total, balanças digitais e pagamento justo.</p>
+
+                <div class="d-flex gap-4 mt-4">
+                    <div>
+                        <h2 class="fw-bold text-success m-0">100%</h2>
+                        <small>Material Reciclado</small>
+                    </div>
+                    <div>
+                        <h2 class="fw-bold text-success m-0">24h</h2>
+                        <small>Atendimento Rápido</small>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-<section id="contato" class="py-5 bg-dark text-white">
-    <div class="container text-center">
-        <h2 class="fw-bold mb-4">Fale Conosco</h2>
-        <p class="mb-4">Dúvidas sobre preços ou grandes volumes?</p>
-        <div class="d-flex justify-content-center gap-4 fs-5">
-            <div><i class="bi bi-whatsapp text-success"></i> (87) 99999-9999</div>
-            <div><i class="bi bi-envelope text-primary"></i> contato@reciclatech.com</div>
-        </div>
+<footer class="bg-dark text-white py-4 text-center">
+    <div class="container">
+        <p class="m-0 small opacity-50">ReciclaTech Soluções Ambientais © 2026</p>
     </div>
-</section>
-
-<footer class="py-3 text-center small text-muted">
-    ReciclaTech © 2026 - Todos os direitos reservados.
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
-    // 1. Script para deixar os ícones bonitinhos (Ímã, Caixa, etc)
-    document.addEventListener("DOMContentLoaded", function() {
-        const cards = document.querySelectorAll('.material-card');
-
-        cards.forEach(card => {
-            const nome = card.querySelector('.nome-material').innerText.toLowerCase();
-            const icone = card.querySelector('.icon-dinamico');
-
-            icone.classList.remove('bi-recycle'); // Tira o padrão
-
-            if (nome.includes('cobre') || nome.includes('ferro') || nome.includes('metal')) {
-                icone.classList.add('bi-magnet'); // Ímã
-            } else if (nome.includes('alumínio') || nome.includes('lata')) {
-                icone.classList.add('bi-collection'); // Latas
-            } else if (nome.includes('papel') || nome.includes('papelão')) {
-                icone.classList.add('bi-box-seam'); // Caixa
-            } else if (nome.includes('plástico') || nome.includes('garrafa')) {
-                icone.classList.add('bi-water'); // Garrafa
-            } else {
-                icone.classList.add('bi-recycle'); // Padrão
-            }
-        });
-    });
-
-    // 2. Função de Enviar Zap (AGORA COM A LISTA DE ITENS)
     function enviarZap(event) {
-        // NÃO TEM preventDefault. Salva no banco E manda pro Zap.
-
         let nome = document.getElementById("nomeZap").value;
         let tel = document.getElementById("telZap").value;
         let end = document.getElementById("endZap").value;
+        let itens = [];
+        document.querySelectorAll('.check-item:checked').forEach(el => itens.push(el.value));
 
-        // Pega os itens selecionados
-        let itensSelecionados = [];
-        document.querySelectorAll('.check-item:checked').forEach(el => {
-            itensSelecionados.push(el.value);
-        });
-
-        // Monta a mensagem
         let msg = `Olá! Sou *${nome}* (${tel}).\n📍 Endereço: *${end}*.\n`;
-
-        if (itensSelecionados.length > 0) {
-            msg += `\n📦 *Tenho para vender:* \n- ${itensSelecionados.join('\n- ')}`;
-        } else {
-            msg += `\nGostaria de solicitar uma coleta.`;
-        }
-
+        if (itens.length > 0) msg += `\n📦 Tenho: ${itens.join(', ')}`;
+        else msg += `\nQuero solicitar uma coleta.`;
         msg += `\n\nPodem vir avaliar?`;
 
-        let url = `https://wa.me/5587991919496?text=${encodeURIComponent(msg)}`;
-        window.open(url, '_blank');
+        window.open(`https://wa.me/5587991919496?text=${encodeURIComponent(msg)}`, '_blank');
     }
 </script>
 
