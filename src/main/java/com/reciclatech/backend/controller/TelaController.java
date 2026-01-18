@@ -213,4 +213,9 @@ public class TelaController {
         public BigDecimal total;
         public PreVendaDTO(Material m, Double p, BigDecimal t) { this.material=m; this.peso=p; this.total=t; }
     }
+    @GetMapping("/sair")
+    public String logout(HttpSession session) {
+        session.invalidate(); // <--- O SEGREDO: Isso apaga a memória do login
+        return "redirect:/login"; // Manda o usuário de volta para a tela de login
+    }
 }
