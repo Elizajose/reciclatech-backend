@@ -3,9 +3,11 @@ package com.reciclatech.backend.controller;
 import com.reciclatech.backend.model.Material;
 import com.reciclatech.backend.model.Oferta;
 import com.reciclatech.backend.model.Usuario;
+import com.reciclatech.backend.model.StatusColeta; // Importante
 import com.reciclatech.backend.repository.MaterialRepository;
 import com.reciclatech.backend.repository.OfertaRepository;
 import com.reciclatech.backend.repository.UsuarioRepository;
+
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -15,9 +17,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.reciclatech.backend.model.StatusColeta;
-import java.time.LocalDate;
-import java.util.stream.Collectors;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -40,9 +39,9 @@ public class TelaController {
     }
 
     @GetMapping("/login") public String telaLogin() { return "login-admin"; }
+
     @PostMapping("/login-admin")
     public String login(@RequestParam String senha, HttpSession session) {
-        // TROQUE "SUA_SENHA_FORTE_AQUI" pelo que você quiser
         if ("pych@rmy13".equals(senha)) {
             session.setAttribute("adminLogado", true);
             return "redirect:/admin/coletas";
@@ -51,7 +50,6 @@ public class TelaController {
     }
 
     // --- FLUXO DO CLIENTE (SOLICITAÇÃO) ---
-    // CORREÇÃO AQUI: Agora os nomes batem com o HTML (nomeVendedor, telefoneVendedor...)
     @PostMapping("/publicar")
     public String solicitarColeta(@RequestParam(required = false) List<String> materiaisSelecionados,
                                   @RequestParam String endereco,
@@ -71,14 +69,14 @@ public class TelaController {
                     return usuarioRepository.save(novo);
                 });
 
-        // Cria um pedido genérico na fila para a equipe ver
+        // Cria um pedido genérico na fila
         Oferta pedido = new Oferta();
         pedido.setMaterial("Solicitação de Coleta");
         pedido.setEndereco(endereco);
-        pedido.setUsuario(user);
+        pedido.setUsuario(user); // CORRIGIDO: usa setUsuario
         pedido.setPeso(0.0);
         pedido.setPrecoEstimado(BigDecimal.ZERO);
-        pedido.setStatus(Oferta.StatusOferta.DISPONIVEL); // Fica pendente
+        pedido.setStatus(Oferta.StatusOferta.DISPONIVEL);
 
         ofertaRepository.save(pedido);
 
@@ -93,7 +91,7 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
 
         List<Long> idsPendentes = ofertaRepository.findByStatus(Oferta.StatusOferta.DISPONIVEL).stream()
-                .map(o -> o.getUsuario().getId()).distinct().toList();
+                .map(o -> o.getUsuario().getId()).distinct().toList(); // CORRIGIDO: getUsuario
 
         model.addAttribute("usuarios", usuarioRepository.findAllById(idsPendentes));
         return "admin-lista-coletas";
@@ -110,7 +108,7 @@ public class TelaController {
         return "admin-checklist";
     }
 
-    // 3. TELA DE REVISÃO (Intermediária)
+    // 3. TELA DE REVISÃO
     @PostMapping("/admin/revisar-coleta")
     public String revisarColeta(@RequestParam Long idVendedor,
                                 @RequestParam Map<String, String> params,
@@ -156,11 +154,17 @@ public class TelaController {
 
         if (cpfFinal != null && !cpfFinal.isEmpty()) {
             vendedor.setCpf(cpfFinal);
-            usuarioRepository.save(vendedor);
         }
 
-        // Limpa a fila de espera
-        List<Oferta> antigas = ofertaRepository.findByVendedorIdAndStatus(idVendedor, Oferta.StatusOferta.DISPONIVEL);
+        // Atualiza status do usuário para CONCLUIDO (para aparecer na lista de extratos)
+        vendedor.setStatus(StatusColeta.CONCLUIDO);
+        vendedor.setDataColeta(java.time.LocalDateTime.now());
+        usuarioRepository.save(vendedor);
+
+        // --- CORREÇÃO IMPORTANTE AQUI ---
+        // Mudamos de findByVendedorId para findByUsuarioId
+        List<Oferta> antigas = ofertaRepository.findByUsuarioIdAndStatus(idVendedor, Oferta.StatusOferta.DISPONIVEL);
+
         String enderecoSalvo = antigas.isEmpty() ? "Local" : antigas.get(0).getEndereco();
         ofertaRepository.deleteAll(antigas);
 
@@ -173,7 +177,7 @@ public class TelaController {
             Oferta venda = new Oferta();
             venda.setMaterial(mat.getNome());
             venda.setPeso(peso);
-            venda.setUsuario(vendedor);
+            venda.setUsuario(vendedor); // CORRIGIDO: setUsuario
             venda.setStatus(Oferta.StatusOferta.VENDIDO);
             venda.setEndereco(enderecoSalvo);
             venda.setPrecoEstimado(BigDecimal.valueOf(precoUnitario).multiply(BigDecimal.valueOf(peso)));
@@ -190,7 +194,10 @@ public class TelaController {
         Usuario usuario = usuarioRepository.findById(id).orElse(null);
         if (usuario == null) return "redirect:/";
 
-        List<Oferta> vendas = ofertaRepository.findByVendedorIdAndStatus(id, Oferta.StatusOferta.VENDIDO);
+        // --- CORREÇÃO IMPORTANTE AQUI ---
+        // Mudamos de findByVendedorId para findByUsuarioId
+        List<Oferta> vendas = ofertaRepository.findByUsuarioIdAndStatus(id, Oferta.StatusOferta.VENDIDO);
+
         Map<String, String> mapaUnidades = materialRepository.findAll().stream()
                 .collect(Collectors.toMap(Material::getNome, Material::getUnidade));
 
@@ -207,21 +214,37 @@ public class TelaController {
     // Auxiliares
     @GetMapping("/meus-extratos")
     public String meusExtratos(Model model) {
-        // Pega só os usuários que têm status CONCLUIDO
-        // E (aqui está o truque) filtraremos apenas visualmente ou buscamos todos.
-        // Como seu banco é simples, vamos pegar todos e filtrar no Java se é de HOJE.
-
+        // Filtro de 24h funcionando graças ao campo dataColeta
         List<Usuario> concluidosHoje = usuarioRepository.findByStatus(StatusColeta.CONCLUIDO)
                 .stream()
                 .filter(u -> u.getDataColeta() != null)
-                .filter(u -> u.getDataColeta().toLocalDate().isEqual(LocalDate.now())) // Só data de HOJE
+                .filter(u -> u.getDataColeta().toLocalDate().isEqual(LocalDate.now()))
                 .collect(Collectors.toList());
 
         model.addAttribute("usuarios", concluidosHoje);
         return "lista-extratos";
     }
-    @GetMapping("/admin/precos") public String painelPrecos(Model m, HttpSession s) { if(s.getAttribute("adminLogado")==null) return "redirect:/login"; m.addAttribute("materiais", materialRepository.findAll()); return "admin-precos"; }
-    @PostMapping("/admin/atualizar") public String upd(@RequestParam Long id, @RequestParam Double novoPreco) { Material m = materialRepository.findById(id).get(); m.setPrecoPorKg(BigDecimal.valueOf(novoPreco)); materialRepository.save(m); return "redirect:/admin/precos"; }
+
+    @GetMapping("/admin/precos")
+    public String painelPrecos(Model m, HttpSession s) {
+        if(s.getAttribute("adminLogado")==null) return "redirect:/login";
+        m.addAttribute("materiais", materialRepository.findAll());
+        return "admin-precos";
+    }
+
+    @PostMapping("/admin/atualizar")
+    public String upd(@RequestParam Long id, @RequestParam Double novoPreco) {
+        Material m = materialRepository.findById(id).get();
+        m.setPrecoPorKg(BigDecimal.valueOf(novoPreco));
+        materialRepository.save(m);
+        return "redirect:/admin/precos";
+    }
+
+    @GetMapping("/sair")
+    public String logout(HttpSession session) {
+        session.invalidate();
+        return "redirect:/login";
+    }
 
     // DTO Auxiliar
     public static class PreVendaDTO {
@@ -229,10 +252,5 @@ public class TelaController {
         public Double peso;
         public BigDecimal total;
         public PreVendaDTO(Material m, Double p, BigDecimal t) { this.material=m; this.peso=p; this.total=t; }
-    }
-    @GetMapping("/sair")
-    public String logout(HttpSession session) {
-        session.invalidate(); // <--- O SEGREDO: Isso apaga a memória do login
-        return "redirect:/login"; // Manda o usuário de volta para a tela de login
     }
 }

@@ -6,9 +6,10 @@ import java.util.List;
 
 public interface OfertaRepository extends JpaRepository<Oferta, Long> {
 
-    // Já tínhamos esse:
+    // Busca ofertas pelo status (Ex: DISPONIVEL)
     List<Oferta> findByStatus(Oferta.StatusOferta status);
 
-    // ADICIONE ESSE NOVO (Filtra por ID do Vendedor + Status):
-    List<Oferta> findByVendedorIdAndStatus(Long vendedorId, Oferta.StatusOferta status);
+    // --- A CORREÇÃO ESTÁ AQUI ---
+    // Mudamos de 'VendedorId' para 'UsuarioId' porque o campo na Oferta agora chama 'usuario'
+    List<Oferta> findByUsuarioIdAndStatus(Long usuarioId, Oferta.StatusOferta status);
 }
