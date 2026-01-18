@@ -75,7 +75,7 @@ public class TelaController {
         Oferta pedido = new Oferta();
         pedido.setMaterial("Solicitação de Coleta");
         pedido.setEndereco(endereco);
-        pedido.setVendedor(user);
+        pedido.setUsuario(user);
         pedido.setPeso(0.0);
         pedido.setPrecoEstimado(BigDecimal.ZERO);
         pedido.setStatus(Oferta.StatusOferta.DISPONIVEL); // Fica pendente
@@ -93,7 +93,7 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
 
         List<Long> idsPendentes = ofertaRepository.findByStatus(Oferta.StatusOferta.DISPONIVEL).stream()
-                .map(o -> o.getVendedor().getId()).distinct().toList();
+                .map(o -> o.getUsuario().getId()).distinct().toList();
 
         model.addAttribute("usuarios", usuarioRepository.findAllById(idsPendentes));
         return "admin-lista-coletas";
@@ -173,7 +173,7 @@ public class TelaController {
             Oferta venda = new Oferta();
             venda.setMaterial(mat.getNome());
             venda.setPeso(peso);
-            venda.setVendedor(vendedor);
+            venda.setUsuario(vendedor);
             venda.setStatus(Oferta.StatusOferta.VENDIDO);
             venda.setEndereco(enderecoSalvo);
             venda.setPrecoEstimado(BigDecimal.valueOf(precoUnitario).multiply(BigDecimal.valueOf(peso)));

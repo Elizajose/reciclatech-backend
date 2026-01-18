@@ -28,7 +28,7 @@ public class OfertaService {
         Usuario vendedor = usuarioRepository.findById(vendedorId)
                 .orElseThrow(() -> new RuntimeException("Vendedor não encontrado!"));
 
-        oferta.setVendedor(vendedor);
+        oferta.setUsuario(vendedor);
 
         // --- A MÁGICA ACONTECE AQUI ---
         // Se o usuário não mandou preço, a gente calcula!
