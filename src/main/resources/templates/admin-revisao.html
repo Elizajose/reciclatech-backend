@@ -32,8 +32,14 @@
 
                 <div class="mb-4">
                     <label class="fw-bold small text-muted mb-1">CPF PARA NOTA (OPCIONAL)</label>
-                    <input type="text" name="cpfFinal" class="form-control form-control-lg bg-light"
-                           th:value="${vendedor.cpf}" placeholder="000.000.000-00" inputmode="numeric">
+                    <input type="text" name="cpfFinal"
+                           class="form-control form-control-lg bg-light"
+                           th:value="${vendedor.cpf}"
+                           placeholder="000.000.000-00"
+                           maxlength="14"
+                           oninput="formatarCPF(this)"
+                           inputmode="numeric">
+                    <div class="form-text small">Digite apenas os números.</div>
                 </div>
 
                 <div class="table-responsive">
@@ -87,6 +93,25 @@
         </form>
     </div>
 </div>
+
+<script>
+    function formatarCPF(i) {
+        var v = i.value.replace(/\D/g, ""); // Remove tudo que não for dígito
+
+        if (v.length > 11) v = v.slice(0, 11); // Limita a 11 números
+
+        // Coloca o primeiro ponto
+        if (v.length > 9) {
+            v = v.replace(/(\d{3})(\d{3})(\d{3})(\d+)/, "$1.$2.$3-$4");
+        } else if (v.length > 6) {
+            v = v.replace(/(\d{3})(\d{3})(\d+)/, "$1.$2.$3");
+        } else if (v.length > 3) {
+            v = v.replace(/(\d{3})(\d+)/, "$1.$2");
+        }
+
+        i.value = v;
+    }
+</script>
 
 </body>
 </html>
