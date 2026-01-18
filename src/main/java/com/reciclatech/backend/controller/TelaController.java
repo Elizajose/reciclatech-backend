@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.reciclatech.backend.model.StatusColeta;
 import java.time.LocalDate;
 import java.util.stream.Collectors;
 import java.math.BigDecimal;
