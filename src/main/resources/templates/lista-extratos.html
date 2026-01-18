@@ -17,7 +17,7 @@
             <h2 class="text-success fw-bold m-0"><i class="bi bi-files"></i> Extratos de Hoje</h2>
             <small class="text-muted"><i class="bi bi-clock"></i> O histórico exibe apenas vendas das últimas 24h.</small>
         </div>
-        <a href="/" class="btn btn-outline-secondary">Voltar</a>
+        <a href="/admin/coletas" class="btn btn-outline-secondary">Voltar para Painel</a>
     </div>
 
     <div class="card mb-4 border-warning shadow-sm">
@@ -34,7 +34,6 @@
 
     <div class="card shadow border-0">
         <div class="card-body p-0">
-
             <div class="table-responsive">
                 <table class="table table-hover mb-0 align-middle">
                     <thead class="table-success">
@@ -59,9 +58,7 @@
                             <i class="bi bi-person-circle text-success me-2"></i>
                             <span th:text="${user.nome}">Nome</span>
                         </td>
-                        <td>
-                            <span class="badge bg-secondary" th:text="'ID: ' + ${user.id}">ID</span>
-                        </td>
+                        <td><span class="badge bg-secondary" th:text="'ID: ' + ${user.id}">ID</span></td>
                         <td class="text-end pe-4">
                             <a th:href="@{'/extrato/' + ${user.id}}" class="btn btn-success btn-sm rounded-pill px-3 text-nowrap">
                                 <i class="bi bi-printer"></i> <span class="d-none d-sm-inline">Imprimir Extrato</span>
@@ -72,16 +69,13 @@
                     </tbody>
                 </table>
             </div>
-
         </div>
     </div>
 
     <div class="alert alert-warning mt-4 text-center small">
-        <i class="bi bi-exclamation-triangle"></i>
-        Somente ofertas com status <strong>VENDIDO</strong> aparecem aqui.
+        <i class="bi bi-exclamation-triangle"></i> Somente ofertas com status <strong>VENDIDO</strong> aparecem aqui.
     </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
