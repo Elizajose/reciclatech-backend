@@ -78,14 +78,27 @@ public class TelaController {
 
     @GetMapping("/login") public String telaLogin() { return "login-admin"; }
 
+    // ---  ALTERAÇÃO DE SEGURANÇA ---
     @PostMapping("/login-admin")
     public String login(@RequestParam String senha, HttpSession session) {
-        if ("pych@rmy13".equals(senha)) {
+
+        // 1. Busca a senha configurada no Servidor
+        String senhaSecreta = System.getenv("SENHA_ADMIN");
+
+
+        if (senhaSecreta == null) {
+            senhaSecreta = "admin123";
+        }
+
+        // 3. Compara a senha
+        if (senhaSecreta.equals(senha)) {
             session.setAttribute("adminLogado", true);
             return "redirect:/admin/coletas";
         }
+
         return "redirect:/login?erro=true";
     }
+    // ------------------------------------------------
 
     @PostMapping("/publicar")
     public String solicitarColeta(@RequestParam(required = false) List<String> materiaisSelecionados,
