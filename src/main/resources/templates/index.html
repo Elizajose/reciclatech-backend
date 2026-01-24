@@ -20,16 +20,25 @@
 
         /* --- HERO & RECICLÔMETRO --- */
         .hero-section { background: #009473; color: white; padding: 80px 0; position: relative; overflow: hidden; }
+
+        /* Box do Reciclômetro Melhorado */
         .reciclometro-box {
             background: rgba(255,255,255,0.1);
             border: 2px solid rgba(255,255,255,0.3);
             border-radius: 15px;
-            padding: 20px;
+            padding: 25px;
             text-align: center;
             backdrop-filter: blur(5px);
             margin-top: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
-        .reciclometro-num { font-size: 3rem; font-weight: 900; color: var(--accent); text-shadow: 2px 2px 0px rgba(0,0,0,0.2); }
+        .reciclometro-num {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: var(--accent);
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.2);
+            line-height: 1;
+        }
 
         /* --- CARDS MATERIAIS --- */
         .material-card {
@@ -94,12 +103,38 @@
                 <p class="lead mb-4 opacity-75">Nós vamos até você, pesamos na hora e pagamos também via Pix.</p>
 
                 <div class="reciclometro-box">
-                    <div class="text-uppercase small fw-bold tracking-widest mb-1">Total Coletado pela ReciclaTech</div>
-                    <div class="reciclometro-num">
-                        <i class="bi bi-speedometer2"></i>
-                        <span th:text="${#numbers.formatDecimal(totalReciclado, 1, 'POINT', 0, 'COMMA')}">0</span> KG
+                    <div class="text-uppercase small fw-bold tracking-widest mb-2 text-white opacity-75">
+                        Total Coletado pela ReciclaTech
                     </div>
-                    <div class="small opacity-75">Resíduos que deixaram de poluir nossa cidade!</div>
+
+                    <div class="reciclometro-num mb-2">
+                        <i class="bi bi-speedometer2"></i>
+                        <span id="contador" th:data-val="${totalReciclado}">0</span> KG
+                    </div>
+
+                    <div class="progress mb-4 mx-auto" style="height: 8px; width: 80%; background: rgba(255,255,255,0.2);">
+                        <div class="progress-bar bg-warning progress-bar-striped progress-bar-animated" role="progressbar" style="width: 75%"></div>
+                    </div>
+
+                    <div class="d-flex flex-column gap-2 justify-content-center align-items-center mb-3">
+
+                        <div th:each="item : ${topMateriais}" class="d-flex justify-content-between w-75 fw-bold"
+                             style="color: #fdcb6e; font-size: 1.1rem; border-bottom: 1px dashed rgba(253, 203, 110, 0.3); padding-bottom: 4px;">
+
+                            <span th:text="${item.nome}">Material</span>
+                            <span>
+                                <span th:text="${#numbers.formatDecimal(item.peso, 1, 'POINT', 0, 'COMMA')}">0</span> kg
+                            </span>
+                        </div>
+
+                        <div th:if="${#lists.isEmpty(topMateriais)}" class="text-white small opacity-50">
+                            O ranking aparecerá após as primeiras coletas!
+                        </div>
+                    </div>
+
+                    <div class="small text-white opacity-75 bg-success rounded-pill px-3 py-1 d-inline-block shadow-sm border border-success">
+                        Resíduos que deixaram de poluir nossa cidade!
+                    </div>
                 </div>
             </div>
 
@@ -176,12 +211,12 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
+    // 1. Função de Enviar Zap (Já estava no seu código)
     function enviarZap(event) {
-        // 1. Pausa o envio padrão por um instante
         event.preventDefault();
 
-        // 2. Prepara e abre o WhatsApp
         let nome = document.getElementById("nomeZap").value;
         let tel = document.getElementById("telZap").value;
         let end = document.getElementById("endZap").value;
@@ -193,15 +228,46 @@
         else msg += `\nQuero solicitar uma coleta.`;
         msg += `\n\nPodem vir avaliar?`;
 
-        // Abre o WhatsApp numa nova aba
         window.open(`https://wa.me/5587991919496?text=${encodeURIComponent(msg)}`, '_blank');
 
-        // 3. AGORA SIM: Força o navegador a enviar os dados para o Java
-        // Dá um pequeno atraso de 300ms só para garantir que a aba do Zap abriu
         setTimeout(() => {
             event.target.submit();
         }, 300);
     }
+
+    // 2. NOVA ANIMAÇÃO DO RECICLÔMETRO
+    document.addEventListener("DOMContentLoaded", () => {
+        const obj = document.getElementById("contador");
+
+        // Pega o valor que o Java mandou (ex: 1430.0)
+        const endValue = parseFloat(obj.getAttribute("data-val"));
+
+        // Se for zero, deixa zero mesmo
+        if(!endValue || endValue === 0) {
+            obj.innerText = "0";
+            return;
+        }
+
+        let startTimestamp = null;
+        const duration = 2500; // Tempo da animação (2.5 segundos)
+
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+
+            // Calcula o número atual baseado no progresso
+            const currentVal = Math.floor(progress * endValue);
+
+            // Formata o número (ex: 1.430)
+            obj.innerHTML = currentVal.toLocaleString('pt-BR');
+
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            }
+        };
+
+        window.requestAnimationFrame(step);
+    });
 </script>
 
 </body>

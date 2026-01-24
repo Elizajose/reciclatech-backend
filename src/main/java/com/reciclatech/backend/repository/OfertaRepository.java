@@ -16,4 +16,9 @@ public interface OfertaRepository extends JpaRepository<Oferta, Long> {
     // Soma o peso de todas as ofertas que já foram VENDIDAS
     @Query("SELECT SUM(o.peso) FROM Oferta o WHERE o.status = :status")
     Double somarPesoTotal(@Param("status") Oferta.StatusOferta status);
+
+    // --- NOVO: RANKING DOS TOP MATERIAIS ---
+    // Retorna uma lista de Arrays: [Nome do Material, Peso Somado]
+    @Query("SELECT o.material, SUM(o.peso) FROM Oferta o WHERE o.status = 'VENDIDO' GROUP BY o.material ORDER BY SUM(o.peso) DESC")
+    List<Object[]> findRankingMateriais();
 }

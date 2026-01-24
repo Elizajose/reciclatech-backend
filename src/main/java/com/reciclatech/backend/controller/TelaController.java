@@ -36,9 +36,23 @@ public class TelaController {
     public String home(Model model) {
         model.addAttribute("materiais", materialRepository.findAll());
 
-        // Lógica do Reciclômetro
+        // 1. Total Geral (Para o número grandão)
         Double total = ofertaRepository.somarPesoTotal(Oferta.StatusOferta.VENDIDO);
         model.addAttribute("totalReciclado", total != null ? total : 0.0);
+
+        // 2. Ranking Top 3 (Para a lista amarela abaixo)
+        List<Object[]> ranking = ofertaRepository.findRankingMateriais();
+        List<RankingDTO> top3 = new ArrayList<>();
+
+        // Pega apenas os 3 primeiros (ou menos, se tiver pouco dado)
+        int limite = Math.min(ranking.size(), 3);
+        for (int i = 0; i < limite; i++) {
+            Object[] row = ranking.get(i);
+            String nome = (String) row[0];
+            Double peso = (Double) row[1];
+            top3.add(new RankingDTO(nome, peso));
+        }
+        model.addAttribute("topMateriais", top3);
 
         return "index";
     }
@@ -248,5 +262,11 @@ public class TelaController {
         public Double peso;
         public BigDecimal total;
         public PreVendaDTO(Material m, Double p, BigDecimal t) { this.material=m; this.peso=p; this.total=t; }
+    }
+
+    public static class RankingDTO {
+        public String nome;
+        public Double peso;
+        public RankingDTO(String n, Double p) { this.nome = n; this.peso = p; }
     }
 }
