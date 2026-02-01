@@ -21,7 +21,7 @@
         /* --- HERO & RECICLÔMETRO --- */
         .hero-section { background: #009473; color: white; padding: 80px 0; position: relative; overflow: hidden; }
 
-        /* Box do Reciclômetro Melhorado */
+        /* Box do Reciclômetro */
         .reciclometro-box {
             background: rgba(255,255,255,0.1);
             border: 2px solid rgba(255,255,255,0.3);
@@ -71,11 +71,12 @@
     </div>
 </div>
 
-<nav class="navbar navbar-expand-lg bg-white shadow-sm sticky-top py-3">
+<nav class="navbar navbar-expand-lg bg-white shadow-sm sticky-top py-2">
     <div class="container">
-        <a class="navbar-brand text-success fs-3" href="/">
-            <i class="bi bi-recycle"></i> Coletaê Salgueiro
+        <a class="navbar-brand p-0" href="/">
+            <img src="/img/logo.png" alt="Coletaê Salgueiro" style="height: 55px; width: auto;">
         </a>
+
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
 
         <div class="collapse navbar-collapse" id="navbarNav">
@@ -117,7 +118,6 @@
                     </div>
 
                     <div class="d-flex flex-column gap-2 justify-content-center align-items-center mb-3">
-
                         <div th:each="item : ${topMateriais}" class="d-flex justify-content-between w-75 fw-bold"
                              style="color: #fdcb6e; font-size: 1.1rem; border-bottom: 1px dashed rgba(253, 203, 110, 0.3); padding-bottom: 4px;">
 
@@ -207,7 +207,7 @@
 
 <footer class="bg-dark text-white py-4 text-center">
     <div class="container">
-        <p class="m-0 small opacity-50">ReciclaTech Soluções Ambientais © 2026</p>
+        <p class="m-0 small opacity-50">Coletaê Salgueiro Soluções Ambientais © 2026</p>
     </div>
 </footer>
 

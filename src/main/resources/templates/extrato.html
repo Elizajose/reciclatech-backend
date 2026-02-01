@@ -61,7 +61,7 @@
 
 <div class="folha shadow">
     <div class="text-center border-bottom pb-4 mb-4">
-        <h2 class="fw-bold text-success text-uppercase">ReciclaTech</h2>
+        <h2 class="fw-bold text-success text-uppercase">Coletaê Salgueiro</h2>
         <p class="text-muted small">RECIBO DE PAGAMENTO / COMPROVANTE DE RENDA</p>
     </div>
 
@@ -73,28 +73,34 @@
         </div>
         <div class="col-4 text-end">
             <strong>DATA:</strong><br>
-            <span th:text="${dataHoje}">Data</span>
+            <span th:text="${#temporals.format(dataHoje, 'dd/MM/yyyy')}">Data</span>
         </div>
     </div>
 
-    <table class="table table-bordered border-dark">
+    <table class="table table-bordered border-dark align-middle">
         <thead class="table-light">
         <tr>
             <th>MATERIAL</th>
             <th class="text-center">QTD/PESO</th>
-            <th class="text-end">TOTAL</th>
+            <th class="text-center">PREÇO UN.</th> <th class="text-end">TOTAL</th>
         </tr>
         </thead>
         <tbody>
         <tr th:if="${vendas.empty}">
-            <td colspan="3" class="text-center text-muted">Nenhum valor processado.</td>
+            <td colspan="4" class="text-center text-muted">Nenhum valor processado.</td>
         </tr>
         <tr th:each="venda : ${vendas}">
             <td th:text="${venda.material}">Material</td>
+
             <td class="text-center">
                 <span th:text="${venda.peso}">0.0</span>
-                <span th:text="${mapaUnidades.getOrDefault(venda.material, 'UN')}">KG</span>
+                <span th:text="${mapaUnidades.getOrDefault(venda.material, 'UN')}" class="small text-muted">KG</span>
             </td>
+
+            <td class="text-center">
+                R$ <span th:text="${#numbers.formatDecimal(mapaPrecos.get(venda.material), 1, 'POINT', 2, 'COMMA')}">0,00</span>
+            </td>
+
             <td class="text-end fw-bold"
                 th:text="'R$ ' + ${#numbers.formatDecimal(venda.precoEstimado, 1, 'POINT', 2, 'COMMA')}">
                 R$ 0,00
@@ -103,7 +109,7 @@
         </tbody>
         <tfoot>
         <tr class="table-success">
-            <td colspan="2" class="text-end fw-bold">TOTAL LÍQUIDO:</td>
+            <td colspan="3" class="text-end fw-bold">TOTAL LÍQUIDO:</td>
             <td class="text-end fw-bold fs-4"
                 th:text="'R$ ' + ${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}">
                 R$ 0,00
@@ -112,13 +118,11 @@
         </tfoot>
     </table>
 
-    </table>
-
     <div class="mt-5 text-center w-50 mx-auto" style="position: relative;">
-
         <img src="/img/assinatura.png"
              alt="Assinatura"
-             style="width: 200px; mix-blend-mode: multiply; filter: contrast(150%) brightness(110%); margin-bottom: -15px;">
+             style="width: 200px; mix-blend-mode: multiply; filter: contrast(150%) brightness(110%); margin-bottom: -15px;"
+             onerror="this.style.display='none'">
 
         <div class="border-top border-dark"></div>
 
@@ -126,6 +130,7 @@
     </div>
 
 </div>
+
 <script>
     function enviarZap() {
         // Pega os dados do recibo
@@ -135,7 +140,7 @@
         // Formata a mensagem
         let msg = `🧾 *NOVO RECIBO GERADO*\n\n👤 *Cliente:* ${nome}\n💰 *Valor Total:* R$ ${total}\n\n📎 *Anexo:* Estou enviando o PDF deste recibo agora.`;
 
-        // Mude para o número da EMPRESA (Onde vai ficar a cópia)
+        // Número da EMPRESA
         let numeroEmpresa = "5587991919496";
 
         let url = `https://wa.me/${numeroEmpresa}?text=${encodeURIComponent(msg)}`;

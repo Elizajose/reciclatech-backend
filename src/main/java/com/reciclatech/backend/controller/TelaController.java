@@ -222,15 +222,26 @@ public class TelaController {
     public String gerarExtratoIndividual(@PathVariable Long id, Model model) {
         Usuario usuario = usuarioRepository.findById(id).orElse(null);
         if (usuario == null) return "redirect:/";
+
         List<Oferta> vendas = ofertaRepository.findByUsuarioIdAndStatus(id, Oferta.StatusOferta.VENDIDO);
+
+        // 1. Mapa de Unidades (Já existia)
         Map<String, String> mapaUnidades = materialRepository.findAll().stream()
                 .collect(Collectors.toMap(Material::getNome, Material::getUnidade));
+
+        // 2. NOVO: Mapa de Preços Atuais (Nome -> Preço)
+        Map<String, BigDecimal> mapaPrecos = materialRepository.findAll().stream()
+                .collect(Collectors.toMap(Material::getNome, Material::getPrecoPorKg));
+
         BigDecimal total = vendas.stream().map(Oferta::getPrecoEstimado).reduce(BigDecimal.ZERO, BigDecimal::add);
+
         model.addAttribute("vendedor", usuario);
         model.addAttribute("vendas", vendas);
         model.addAttribute("total", total);
         model.addAttribute("dataHoje", LocalDate.now());
         model.addAttribute("mapaUnidades", mapaUnidades);
+        model.addAttribute("mapaPrecos", mapaPrecos); // Enviando os preços para a tela!
+
         return "extrato";
     }
 
@@ -275,5 +286,21 @@ public class TelaController {
         public Double peso;
         public String unidade; // Campo novo para guardar "kg" ou "UN"
         public RankingDTO(String n, Double p, String u) { this.nome = n; this.peso = p; this.unidade = u; }
+    }
+
+    // --- NOVO: ZERAR SISTEMA (LIMPAR DADOS DE TESTE) ---
+    @PostMapping("/admin/reset-sistema")
+    public String resetSistema(HttpSession session) {
+        if(session.getAttribute("adminLogado")==null) return "redirect:/login";
+
+        // 1. Apaga todas as vendas e pedidos (Isso zera o Reciclômetro)
+        ofertaRepository.deleteAll();
+
+        // 2. Apaga todos os clientes cadastrados (Opcional, mas bom para limpar testes)
+        usuarioRepository.deleteAll();
+
+        // OBS: Não apagamos o materialRepository para manter seus preços configurados!
+
+        return "redirect:/admin/coletas?msg=sistema_zerado";
     }
 }
