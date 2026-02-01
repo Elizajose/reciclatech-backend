@@ -31,34 +31,39 @@ public class TelaController {
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private MaterialRepository materialRepository;
 
-    // --- HOME COM RECICLÔMETRO E RANKING CORRIGIDO ---
+    // --- HOME CORRIGIDA (BUSCA DIRETA DA UNIDADE) ---
     @GetMapping("/")
     public String home(Model model) {
         model.addAttribute("materiais", materialRepository.findAll());
 
-        // 1. Total Geral (Para o número grandão do Reciclômetro)
+        // 1. Total Geral
         Double total = ofertaRepository.somarPesoTotal(Oferta.StatusOferta.VENDIDO);
         model.addAttribute("totalReciclado", total != null ? total : 0.0);
 
-        // 2. Ranking Top 3 (Agora com suporte a UNIDADE correta)
+        // 2. Ranking Top 3
         List<Object[]> ranking = ofertaRepository.findRankingMateriais();
         List<RankingDTO> top3 = new ArrayList<>();
 
-        // Cria um mapa para consultar a unidade de cada material (Ex: "Litro" -> "UN")
-        Map<String, String> mapaUnidades = materialRepository.findAll().stream()
-                .collect(Collectors.toMap(Material::getNome, Material::getUnidade, (a, b) -> b));
+        // Cria uma lista simples com todos os materiais para busca
+        List<Material> todosMateriais = materialRepository.findAll();
 
-        // Pega apenas os 3 primeiros
         int limite = Math.min(ranking.size(), 3);
         for (int i = 0; i < limite; i++) {
             Object[] row = ranking.get(i);
-            String nome = (String) row[0];
+            String nomeRanking = (String) row[0];
             Double qtd = (Double) row[1];
 
-            // Busca a unidade correta no mapa. Se não achar, assume "kg".
-            String unidade = mapaUnidades.getOrDefault(nome, "kg");
+            // Busca a unidade varrendo a lista de materiais
+            // Isso garante que pegamos a unidade exata cadastrada para aquele nome
+            String unidade = "kg"; // Valor padrão
+            for (Material m : todosMateriais) {
+                if (m.getNome().equalsIgnoreCase(nomeRanking)) {
+                    unidade = m.getUnidade();
+                    break;
+                }
+            }
 
-            top3.add(new RankingDTO(nome, qtd, unidade));
+            top3.add(new RankingDTO(nomeRanking, qtd, unidade));
         }
         model.addAttribute("topMateriais", top3);
 
