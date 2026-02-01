@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>ReciclaTech - Soluções Ambientais</title>
+    <title>Coletaê Salgueiro - Soluções Ambientais</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -21,7 +21,7 @@
         /* --- HERO & RECICLÔMETRO --- */
         .hero-section { background: #009473; color: white; padding: 80px 0; position: relative; overflow: hidden; }
 
-        /* Box do Reciclômetro */
+        /* Box do Reciclômetro Melhorado */
         .reciclometro-box {
             background: rgba(255,255,255,0.1);
             border: 2px solid rgba(255,255,255,0.3);
@@ -117,13 +117,17 @@
                     </div>
 
                     <div class="d-flex flex-column gap-2 justify-content-center align-items-center mb-3">
+
                         <div th:each="item : ${topMateriais}" class="d-flex justify-content-between w-75 fw-bold"
                              style="color: #fdcb6e; font-size: 1.1rem; border-bottom: 1px dashed rgba(253, 203, 110, 0.3); padding-bottom: 4px;">
+
                             <span th:text="${item.nome}">Material</span>
                             <span>
-                                <span th:text="${#numbers.formatDecimal(item.peso, 1, 'POINT', 0, 'COMMA')}">0</span> kg
+                                <span th:text="${#numbers.formatDecimal(item.peso, 1, 'POINT', 0, 'COMMA')}">0</span>
+                                <span th:text="${item.unidade}" class="text-uppercase small">kg</span>
                             </span>
                         </div>
+
                         <div th:if="${#lists.isEmpty(topMateriais)}" class="text-white small opacity-50">
                             Ranking atualizando... Faça sua primeira venda!
                         </div>
@@ -184,7 +188,7 @@
             <div class="col-lg-6 ps-lg-5">
                 <h6 class="text-success fw-bold text-uppercase">Sobre Nós</h6>
                 <h2 class="fw-bold mb-4">Mais do que uma empresa de coleta, somos agentes de mudança.</h2>
-                <p class="text-muted">A ReciclaTech nasceu com um propósito simples: facilitar a reciclagem conectando quem gera resíduos com quem dá um novo destino a eles. Atuamos com transparência total, balanças digitais e pagamento justo.</p>
+                <p class="text-muted">A Coletaê Salgueiro nasceu com um propósito simples: facilitar a reciclagem conectando quem gera resíduos com quem dá um novo destino a eles. Atuamos com transparência total, balanças digitais e pagamento justo.</p>
 
                 <div class="d-flex gap-4 mt-4">
                     <div>
@@ -210,29 +214,27 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // 1. Script para ÍCONES DINÂMICOS (Faltava esse!)
+    // 1. Script para ÍCONES DINÂMICOS
     document.addEventListener("DOMContentLoaded", function() {
         const cards = document.querySelectorAll('.material-card');
         cards.forEach(card => {
-            // Pega o nome e o ícone
             const nomeEl = card.querySelector('.nome-material');
             const icone = card.querySelector('.icon-dinamico');
 
             if(nomeEl && icone) {
                 const nome = nomeEl.innerText.toLowerCase();
-                icone.classList.remove('bi-recycle'); // Tira o padrão
+                icone.classList.remove('bi-recycle');
 
-                // Lógica dos ícones
                 if (nome.includes('cobre') || nome.includes('ferro') || nome.includes('metal') || nome.includes('bateria')) {
-                    icone.classList.add('bi-magnet'); // Ímã
+                    icone.classList.add('bi-magnet');
                 } else if (nome.includes('alumínio') || nome.includes('lata')) {
-                    icone.classList.add('bi-collection'); // Latinhas
+                    icone.classList.add('bi-collection');
                 } else if (nome.includes('papel') || nome.includes('papelão')) {
-                    icone.classList.add('bi-box-seam'); // Caixa
+                    icone.classList.add('bi-box-seam');
                 } else if (nome.includes('plástico') || nome.includes('garrafa') || nome.includes('litro')) {
-                    icone.classList.add('bi-water'); // Garrafa
+                    icone.classList.add('bi-water');
                 } else {
-                    icone.classList.add('bi-recycle'); // Padrão
+                    icone.classList.add('bi-recycle');
                 }
             }
         });

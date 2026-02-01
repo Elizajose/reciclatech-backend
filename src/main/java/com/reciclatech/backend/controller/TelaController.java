@@ -31,33 +31,41 @@ public class TelaController {
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private MaterialRepository materialRepository;
 
-    // --- HOME COM RECICLÔMETRO ---
+    // --- HOME COM RECICLÔMETRO E RANKING CORRIGIDO ---
     @GetMapping("/")
     public String home(Model model) {
         model.addAttribute("materiais", materialRepository.findAll());
 
-        // 1. Total Geral (Para o número grandão)
+        // 1. Total Geral (Para o número grandão do Reciclômetro)
         Double total = ofertaRepository.somarPesoTotal(Oferta.StatusOferta.VENDIDO);
         model.addAttribute("totalReciclado", total != null ? total : 0.0);
 
-        // 2. Ranking Top 3 (Para a lista amarela abaixo)
+        // 2. Ranking Top 3 (Agora com suporte a UNIDADE correta)
         List<Object[]> ranking = ofertaRepository.findRankingMateriais();
         List<RankingDTO> top3 = new ArrayList<>();
 
-        // Pega apenas os 3 primeiros (ou menos, se tiver pouco dado)
+        // Cria um mapa para consultar a unidade de cada material (Ex: "Litro" -> "UN")
+        Map<String, String> mapaUnidades = materialRepository.findAll().stream()
+                .collect(Collectors.toMap(Material::getNome, Material::getUnidade, (a, b) -> b));
+
+        // Pega apenas os 3 primeiros
         int limite = Math.min(ranking.size(), 3);
         for (int i = 0; i < limite; i++) {
             Object[] row = ranking.get(i);
             String nome = (String) row[0];
-            Double peso = (Double) row[1];
-            top3.add(new RankingDTO(nome, peso));
+            Double qtd = (Double) row[1];
+
+            // Busca a unidade correta no mapa. Se não achar, assume "kg".
+            String unidade = mapaUnidades.getOrDefault(nome, "kg");
+
+            top3.add(new RankingDTO(nome, qtd, unidade));
         }
         model.addAttribute("topMateriais", top3);
 
         return "index";
     }
 
-    // --- GESTÃO DE MATERIAIS (ADICIONAR/REMOVER) ---
+    // --- GESTÃO DE MATERIAIS ---
     @PostMapping("/admin/material/novo")
     public String novoMaterial(@RequestParam String nome,
                                @RequestParam String unidade,
@@ -76,43 +84,35 @@ public class TelaController {
     @GetMapping("/admin/material/deletar/{id}")
     public String deletarMaterial(@PathVariable Long id, HttpSession session) {
         if(session.getAttribute("adminLogado")==null) return "redirect:/login";
-
-        // Nota: Se já tiver oferta com esse material, pode dar erro de chave estrangeira.
-        // O ideal seria "desativar", mas para simplificar vamos tentar deletar.
         try {
             materialRepository.deleteById(id);
         } catch (Exception e) {
-            // Se der erro (ex: já tem vendas), apenas ignora por enquanto
             System.out.println("Não foi possível deletar: " + e.getMessage());
         }
         return "redirect:/admin/precos";
     }
 
-    // --- MANTIVE TODO O RESTO IGUAL ---
-
     @GetMapping("/login") public String telaLogin() { return "login-admin"; }
 
-    // ---  ALTERAÇÃO DE SEGURANÇA ---
+    // --- LOGIN SEGURO ---
     @PostMapping("/login-admin")
     public String login(@RequestParam String senha, HttpSession session) {
 
-        // 1. Busca a senha configurada no Servidor
+        // 1. Busca a senha configurada no Servidor (Render)
         String senhaSecreta = System.getenv("SENHA_ADMIN");
 
-
+        // 2. Fallback para teste local
         if (senhaSecreta == null) {
             senhaSecreta = "admin123";
         }
 
-        // 3. Compara a senha
+        // 3. Verifica senha
         if (senhaSecreta.equals(senha)) {
             session.setAttribute("adminLogado", true);
             return "redirect:/admin/coletas";
         }
-
         return "redirect:/login?erro=true";
     }
-    // ------------------------------------------------
 
     @PostMapping("/publicar")
     public String solicitarColeta(@RequestParam(required = false) List<String> materiaisSelecionados,
@@ -264,9 +264,11 @@ public class TelaController {
         public PreVendaDTO(Material m, Double p, BigDecimal t) { this.material=m; this.peso=p; this.total=t; }
     }
 
+    // --- DTO ATUALIZADO (Com Unidade) ---
     public static class RankingDTO {
         public String nome;
         public Double peso;
-        public RankingDTO(String n, Double p) { this.nome = n; this.peso = p; }
+        public String unidade; // Campo novo para guardar "kg" ou "UN"
+        public RankingDTO(String n, Double p, String u) { this.nome = n; this.peso = p; this.unidade = u; }
     }
 }
