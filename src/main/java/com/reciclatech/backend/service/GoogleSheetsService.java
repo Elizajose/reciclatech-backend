@@ -29,12 +29,13 @@ public class GoogleSheetsService {
         this.sheetsService = sheetsService;
     }
 
-    // --- GESTÃO DE USUÁRIOS ---
+    // --- GESTÃO DE USUÁRIOS (Aba: Usuarios) ---
 
     public void salvarUsuario(Usuario usuario) throws IOException {
         usuario.prePersist();
+        // Colunas: A:ID, B:Nome, C:Telefone, D:CPF, E:Email, F:Endereco, G:Data, H:Status, I:Tipo
         List<Object> row = Arrays.asList(
-                System.currentTimeMillis(),
+                usuario.getId() != null ? usuario.getId() : System.currentTimeMillis(),
                 usuario.getNome(),
                 usuario.getTelefone(),
                 usuario.getCpf() != null ? usuario.getCpf() : "",
@@ -65,11 +66,12 @@ public class GoogleSheetsService {
             u.setId(Long.parseLong(row.get(0).toString()));
             u.setNome(row.get(1).toString());
             u.setTelefone(row.get(2).toString());
+            if (row.size() > 3) u.setCpf(row.get(3).toString());
             return u;
         }).collect(Collectors.toList());
     }
 
-    // --- GESTÃO DE MATERIAIS ---
+    // --- GESTÃO DE MATERIAIS (Aba: Materiais) ---
 
     public List<Material> listarMateriais() throws IOException {
         ValueRange response = sheetsService.spreadsheets().values()
@@ -106,7 +108,8 @@ public class GoogleSheetsService {
         if (rowIndex != -1) {
             String precoFormatado = String.format("%.2f", novoPreco).replace(".", ",");
             ValueRange body = new ValueRange().setValues(Collections.singletonList(Collections.singletonList(precoFormatado)));
-            sheetsService.spreadsheets().values().update(spreadsheetId, "Materiais!C" + rowIndex, body).setValueInputOption("USER_ENTERED").execute();
+            sheetsService.spreadsheets().values().update(spreadsheetId, "Materiais!C" + rowIndex, body)
+                    .setValueInputOption("USER_ENTERED").execute();
         }
     }
 
@@ -114,14 +117,14 @@ public class GoogleSheetsService {
         String precoFormatado = String.format("%.2f", material.getPrecoPorKg()).replace(".", ",");
         List<Object> row = Arrays.asList(System.currentTimeMillis(), material.getNome(), precoFormatado, material.getUnidade());
         ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
-        sheetsService.spreadsheets().values().append(spreadsheetId, "Materiais!A1", body).setValueInputOption("USER_ENTERED").execute();
+        sheetsService.spreadsheets().values().append(spreadsheetId, "Materiais!A1", body)
+                .setValueInputOption("USER_ENTERED").execute();
     }
 
     public void deletarMaterial(Long id) throws IOException {
         ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Materiais!A:A").execute();
         List<List<Object>> values = response.getValues();
         int rowIndex = -1;
-
         if (values != null) {
             for (int i = 0; i < values.size(); i++) {
                 if (!values.get(i).isEmpty() && values.get(i).get(0).toString().equals(id.toString())) {
@@ -130,25 +133,26 @@ public class GoogleSheetsService {
                 }
             }
         }
-
         if (rowIndex != -1) {
             sheetsService.spreadsheets().values().clear(spreadsheetId, "Materiais!A" + (rowIndex + 1) + ":D" + (rowIndex + 1), new ClearValuesRequest()).execute();
         }
     }
 
-    // No seu GoogleSheetsService.java
+    // --- OPERAÇÕES DE VENDA E RELATÓRIOS (Aba: Ofertas) ---
+
     public void registrarVendaFinal(String telefone, String material, Double peso, BigDecimal precoUn, BigDecimal total, String cpf) throws IOException {
+        // Colunas: A:ID, B:Materiais, C:Peso, D:Endereço, E:Preço_Un, F:Preço_Total, G:Data, H:Usuario_ID, I:Status, J:CPF
         List<Object> row = Arrays.asList(
-                System.currentTimeMillis(),           // A: ID
-                material,                             // B: Materiais
-                peso.toString().replace(".", ","),    // C: Peso
-                "ENTREGA NO LOCAL",                   // D: Endereço
-                precoUn.toString().replace(".", ","), // E: Preço_Unitário
-                total.toString().replace(".", ","),   // F: Preço_Total_Item
-                LocalDate.now().toString(),           // G: Data
-                telefone,                             // H: Usuario_ID
-                "VENDIDO",                            // I: Status
-                cpf != null ? cpf : "NÃO INFORMADO"   // J: CPF (AGORA NA POSIÇÃO CORRETA!)
+                System.currentTimeMillis(),
+                material,
+                peso.toString().replace(".", ","),
+                "ENTREGA NO LOCAL",
+                precoUn.toString().replace(".", ","),
+                total.toString().replace(".", ","),
+                LocalDate.now().toString(),
+                telefone,
+                "VENDIDO",
+                cpf != null ? cpf : "NÃO INFORMADO"
         );
 
         ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
@@ -158,30 +162,8 @@ public class GoogleSheetsService {
                 .execute();
     }
 
-    // 2. Cadastro de Usuário (Corrige a bagunça na aba Usuarios)
-    public void salvarUsuario(Usuario usuario) throws IOException {
-        usuario.prePersist();
-        List<Object> row = Arrays.asList(
-                usuario.getId() != null ? usuario.getId() : System.currentTimeMillis(), // A: ID
-                usuario.getNome(),             // B: Nome
-                usuario.getTelefone(),         // C: Telefone
-                usuario.getCpf() != null ? usuario.getCpf() : "", // D: CPF
-                usuario.getEmail() != null ? usuario.getEmail() : "", // E: Email
-                usuario.getEndereco(),         // F: Endereco
-                usuario.getDataColeta().toString(), // G: Data
-                usuario.getStatus().toString(), // H: Status
-                usuario.getTipo().toString()    // I: Tipo
-        );
-
-        ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
-        sheetsService.spreadsheets().values()
-                .append(spreadsheetId, "Usuarios!A1", body)
-                .setValueInputOption("USER_ENTERED")
-                .execute();
-    }
-
     public List<Oferta> buscarVendasPorUsuario(String telefone) throws IOException {
-        ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Ofertas!A2:I").execute();
+        ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Ofertas!A2:J").execute();
         List<List<Object>> values = response.getValues();
         if (values == null || values.isEmpty()) return Collections.emptyList();
 
@@ -191,15 +173,17 @@ public class GoogleSheetsService {
                     Oferta o = new Oferta();
                     o.setMaterial(row.get(1).toString());
                     o.setPeso(Double.parseDouble(row.get(2).toString().replace(",", ".")));
-                    o.setPrecoEstimado(new BigDecimal(row.get(5).toString().replace(",", ".")));
+                    o.setPrecoEstimado(new BigDecimal(row.get(5).toString().replace(",", "."))); // Coluna F
                     return o;
                 }).collect(Collectors.toList());
     }
 
     public void salvarSolicitacaoInicial(Usuario usuario, String endereco) throws IOException {
         salvarUsuario(usuario);
+        // Garante que a linha de solicitação inicial também siga o padrão de 10 colunas
         List<Object> rowOferta = Arrays.asList(
-                System.currentTimeMillis(), "Solicitação de Coleta", "0", endereco, "0", "0", LocalDate.now().toString(), usuario.getTelefone(), "DISPONIVEL", LocalDate.now().toString()
+                System.currentTimeMillis(), "Solicitação de Coleta", "0", endereco, "0", "0",
+                LocalDate.now().toString(), usuario.getTelefone(), "DISPONIVEL", LocalDate.now().toString()
         );
         ValueRange body = new ValueRange().setValues(Collections.singletonList(rowOferta));
         sheetsService.spreadsheets().values().append(spreadsheetId, "Ofertas!A1", body).setValueInputOption("USER_ENTERED").execute();
@@ -212,11 +196,8 @@ public class GoogleSheetsService {
 
         LocalDate hoje = LocalDate.now();
         Set<String> telefones = values.stream()
-                .filter(row -> row.size() > 9)
-                .filter(row -> "DISPONIVEL".equals(row.get(8).toString()))
-                .filter(row -> LocalDate.parse(row.get(9).toString()).isEqual(hoje))
-                .map(row -> row.get(7).toString())
-                .collect(Collectors.toSet());
+                .filter(row -> row.size() > 9 && "DISPONIVEL".equals(row.get(8).toString()) && LocalDate.parse(row.get(9).toString()).isEqual(hoje))
+                .map(row -> row.get(7).toString()).collect(Collectors.toSet());
 
         return listarUsuarios().stream().filter(u -> telefones.contains(u.getTelefone())).collect(Collectors.toList());
     }
@@ -238,20 +219,19 @@ public class GoogleSheetsService {
         if (values == null) return new ArrayList<>();
 
         Map<String, Double> soma = new HashMap<>();
-        for (List<Object> r : values) {
-            if (r.size() > 7 && "VENDIDO".equals(r.get(7).toString())) {
-                String nome = r.get(0).toString();
-                Double peso = Double.parseDouble(r.get(1).toString().replace(",", "."));
+        for (List<Object> row : values) {
+            if (row.size() > 7 && "VENDIDO".equals(row.get(7).toString())) {
+                String nome = row.get(0).toString();
+                Double peso = Double.parseDouble(row.get(1).toString().replace(",", "."));
                 soma.put(nome, soma.getOrDefault(nome, 0.0) + peso);
             }
         }
 
         List<Material> todos = listarMateriais();
         return soma.entrySet().stream().map(e -> {
-            // Busca a unidade manualmente para evitar erro de referência
             String un = "kg";
             for (Material m : todos) {
-                if (m.getNome().equalsIgnoreCase(e.getKey())) {
+                if (m.getNome() != null && m.getNome().equalsIgnoreCase(e.getKey())) {
                     un = m.getUnidade();
                     break;
                 }
