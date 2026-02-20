@@ -110,27 +110,34 @@ public class GoogleSheetsService {
         }
 
         if (rowIndex != -1) {
-            List<Object> row = Collections.singletonList(novoPreco.toString());
+            // Formata para 2 casas decimais com vírgula (ex: 0,50)
+            String precoFormatado = String.format("%.2f", novoPreco).replace(".", ",");
+
+            List<Object> row = Collections.singletonList(precoFormatado);
             ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
+
             sheetsService.spreadsheets().values()
                     .update(spreadsheetId, "Materiais!C" + rowIndex, body)
-                    .setValueInputOption("RAW")
+                    .setValueInputOption("USER_ENTERED") // USER_ENTERED respeita a formatação da célula
                     .execute();
         }
     }
 
     public void salvarMaterial(Material material) throws IOException {
+        // Formata para 2 casas decimais com vírgula (ex: 0,50)
+        String precoFormatado = String.format("%.2f", material.getPrecoPorKg()).replace(".", ",");
+
         List<Object> row = Arrays.asList(
                 System.currentTimeMillis(),
                 material.getNome(),
-                material.getPrecoPorKg().toString(),
+                precoFormatado,
                 material.getUnidade()
         );
 
         ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
         sheetsService.spreadsheets().values()
                 .append(spreadsheetId, "Materiais!A1", body)
-                .setValueInputOption("RAW")
+                .setValueInputOption("USER_ENTERED") // USER_ENTERED respeita a formatação da célula
                 .execute();
     }
 
@@ -237,5 +244,76 @@ public class GoogleSheetsService {
                 .sorted((a, b) -> b.peso.compareTo(a.peso))
                 .limit(3)
                 .collect(Collectors.toList());
+    }
+    // Adicione estes dois métodos no seu GoogleSheetsService.java
+
+    public void registrarVendaFinal(String telefone, String material, Double peso, BigDecimal precoUn, BigDecimal total) throws IOException {
+        // Agora salvamos cada informação na sua respectiva coluna (A até I)
+        List<Object> row = Arrays.asList(
+                System.currentTimeMillis(),             // A: ID
+                material,                               // B: Nome real do material
+                peso.toString().replace(".", ","),      // C: Peso
+                "ENTREGA NO LOCAL",                     // D: Endereco
+                precoUn.toString().replace(".", ","),   // E: Preco Unitário
+                total.toString().replace(".", ","),     // F: Preco Total do Item
+                java.time.LocalDate.now().toString(),   // G: Data
+                telefone,                               // H: Usuario_ID (Telefone)
+                "VENDIDO"                               // I: Status (ESSENCIAL PARA O EXTRATO)
+        );
+
+        ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
+        sheetsService.spreadsheets().values()
+                .append(spreadsheetId, "Ofertas!A1", body)
+                .setValueInputOption("USER_ENTERED")
+                .execute();
+    }
+
+    public List<Oferta> buscarVendasPorUsuario(String telefone) throws IOException {
+        ValueRange response = sheetsService.spreadsheets().values()
+                .get(spreadsheetId, "Ofertas!A2:I")
+                .execute();
+
+        List<List<Object>> values = response.getValues();
+        if (values == null || values.isEmpty()) return Collections.emptyList();
+
+        return values.stream()
+                .filter(row -> row.size() > 8 &&
+                        telefone.equals(row.get(7).toString()) &&
+                        "VENDIDO".equals(row.get(8).toString()))
+                .map(row -> {
+                    Oferta o = new Oferta();
+                    o.setMaterial(row.get(1).toString());
+                    o.setPeso(Double.parseDouble(row.get(2).toString().replace(",", ".")));
+                    // Busca o Preço Total na Coluna F (índice 5)
+                    o.setPrecoEstimado(new BigDecimal(row.get(5).toString().replace(",", ".")));
+                    return o;
+                }).collect(Collectors.toList());
+    }
+
+    // Lógica de Limpeza: Só mostra coletas das últimas 24 horas
+    public List<Usuario> buscarUsuariosComColetasPendentes() throws IOException {
+        ValueRange responseOfertas = sheetsService.spreadsheets().values()
+                .get(spreadsheetId, "Ofertas!A2:J")
+                .execute();
+
+        List<List<Object>> ofertasValues = responseOfertas.getValues();
+        if (ofertasValues == null) return Collections.emptyList();
+
+        LocalDate hoje = LocalDate.now();
+
+        Set<String> telefonesPendentes = ofertasValues.stream()
+                .filter(row -> row.size() > 9)
+                .filter(row -> "DISPONIVEL".equals(row.get(8).toString()))
+                .filter(row -> {
+                    // Se a data na coluna J for anterior a hoje, ignoramos (Limpeza automática de 24h)
+                    LocalDate dataOferta = LocalDate.parse(row.get(9).toString());
+                    return dataOferta.isEqual(hoje);
+                })
+                .map(row -> row.get(7).toString())
+                .collect(Collectors.toSet());
+
+        return listarUsuarios().stream()
+                .filter(u -> telefonesPendentes.contains(u.getTelefone()))
+                .toList();
     }
 }

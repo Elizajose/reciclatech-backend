@@ -202,6 +202,8 @@ public class TelaController {
     }
 
     @PostMapping("/admin/confirmar-finalizacao")
+    @PostMapping("/admin/confirmar-finalizacao")
+    @PostMapping("/admin/confirmar-finalizacao")
     public String confirmarFinalizacao(@RequestParam String idVendedor,
                                        @RequestParam List<Long> idsMateriais,
                                        @RequestParam List<Double> pesosFinais,
@@ -209,12 +211,12 @@ public class TelaController {
         try {
             for (int i = 0; i < idsMateriais.size(); i++) {
                 Material mat = googleSheetsService.buscarMaterialPorId(idsMateriais.get(i));
-                Usuario v = new Usuario();
-                v.setTelefone(idVendedor);
+                Double peso = pesosFinais.get(i);
+                BigDecimal precoUn = BigDecimal.valueOf(precosFinais.get(i));
+                BigDecimal totalItem = precoUn.multiply(BigDecimal.valueOf(peso));
 
-                // Registra como VENDIDO na aba Ofertas
-                // Aqui você pode criar um método específico no service se desejar separar de 'solicitacaoInicial'
-                googleSheetsService.salvarSolicitacaoInicial(v, "Venda Finalizada: " + mat.getNome());
+                // Chama o novo método com todas as colunas
+                googleSheetsService.registrarVendaFinal(idVendedor, mat.getNome(), peso, precoUn, totalItem);
             }
             return "redirect:/extrato/" + idVendedor;
         } catch (IOException e) {
@@ -231,13 +233,22 @@ public class TelaController {
 
             if (usuario == null) return "redirect:/";
 
+            // BUSCA AS VENDAS REAIS QUE ACABAMOS DE SALVAR NA PLANILHA!
+            List<Oferta> vendasReais = googleSheetsService.buscarVendasPorUsuario(id);
+
+            BigDecimal totalGeral = vendasReais.stream()
+                    .map(Oferta::getPrecoEstimado)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
             List<Material> mats = googleSheetsService.listarMateriais();
             model.addAttribute("mapaUnidades", mats.stream().collect(Collectors.toMap(Material::getNome, Material::getUnidade)));
             model.addAttribute("mapaPrecos", mats.stream().collect(Collectors.toMap(Material::getNome, Material::getPrecoPorKg)));
+
             model.addAttribute("vendedor", usuario);
-            model.addAttribute("vendas", new ArrayList<>()); // TODO: Buscar vendas reais da aba Ofertas
-            model.addAttribute("total", BigDecimal.ZERO);
-            model.addAttribute("dataHoje", LocalDate.now());
+            model.addAttribute("vendas", vendasReais); // Agora a lista NÃO está mais vazia!
+            model.addAttribute("total", totalGeral);
+            model.addAttribute("dataHoje", java.time.LocalDate.now());
+
         } catch (Exception e) {
             return "redirect:/?erro=extrato";
         }
