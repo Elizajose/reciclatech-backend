@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
+@Data // Gera getTelefone, getNome automaticamente
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity // Mantido para não quebrar a compilação atual

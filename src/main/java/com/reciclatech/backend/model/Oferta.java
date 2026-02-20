@@ -7,7 +7,7 @@ import lombok.AllArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Data
+@Data // Gera setPrecoEstimado, getMaterial automaticamente
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity // Mantido para suporte ao projeto atual enquanto migramos

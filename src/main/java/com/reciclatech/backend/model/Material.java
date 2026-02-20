@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.math.BigDecimal;
 
-@Data
+@Data // Gera getId, getNome, getUnidade automaticamente
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity // Mantido para o projeto compilar enquanto migramos

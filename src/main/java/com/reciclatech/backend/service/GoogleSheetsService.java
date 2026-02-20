@@ -214,23 +214,26 @@ public class GoogleSheetsService {
         if (values == null) return new ArrayList<>();
 
         Map<String, Double> soma = new HashMap<>();
-        for (List<Object> row : values) {
-            if (row.size() > 7 && "VENDIDO".equals(row.get(7).toString())) {
-                String nome = row.get(0).toString();
-                Double peso = Double.parseDouble(row.get(1).toString().replace(",", "."));
+        for (List<Object> r : values) {
+            if (r.size() > 7 && "VENDIDO".equals(r.get(7).toString())) {
+                String nome = r.get(0).toString();
+                Double peso = Double.parseDouble(r.get(1).toString().replace(",", "."));
                 soma.put(nome, soma.getOrDefault(nome, 0.0) + peso);
             }
         }
 
         List<Material> todos = listarMateriais();
-        return soma.entrySet().stream()
-                .map(e -> {
-                    String un = todos.stream().filter(m -> m.getNome().equalsIgnoreCase(e.getKey())).map(Material::getUnidade).findFirst().orElse("kg");
-                    return new RankingDTO(e.getKey(), e.getValue(), un);
-                })
-                .sorted((a, b) -> b.peso.compareTo(a.peso))
-                .limit(3)
-                .collect(Collectors.toList());
+        return soma.entrySet().stream().map(e -> {
+            // Busca a unidade manualmente para evitar erro de referência
+            String un = "kg";
+            for (Material m : todos) {
+                if (m.getNome().equalsIgnoreCase(e.getKey())) {
+                    un = m.getUnidade();
+                    break;
+                }
+            }
+            return new RankingDTO(e.getKey(), e.getValue(), un);
+        }).sorted((a, b) -> b.peso.compareTo(a.peso)).limit(3).collect(Collectors.toList());
     }
 
     public Material buscarMaterialPorId(Long id) throws IOException {
