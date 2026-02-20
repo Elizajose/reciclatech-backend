@@ -1,17 +1,11 @@
 package com.reciclatech.backend.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Data // Gera getTelefone, getNome automaticamente
-@NoArgsConstructor
-@AllArgsConstructor
-@Entity // Mantido para não quebrar a compilação atual
+@Entity
 public class Usuario {
 
     @Id
@@ -26,15 +20,11 @@ public class Usuario {
     private String cpf;
     private String email;
     private String endereco;
-
-    // 1. Data da Coleta
     private LocalDateTime dataColeta;
 
-    // 2. Status (AGUARDANDO, CONCLUIDO...)
     @Enumerated(EnumType.STRING)
     private StatusColeta status;
 
-    // 3. Lista de itens (No Sheets, isso será gerenciado pelo ID na aba de Ofertas)
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL)
     private List<Oferta> ofertas = new ArrayList<>();
 
@@ -42,13 +32,42 @@ public class Usuario {
     private TipoUsuario tipo;
 
     public enum TipoUsuario {
-        CATADOR,
-        COMPRADOR
+        CATADOR, COMPRADOR
     }
 
-    // --- IMPORTANTE PARA O GOOGLE SHEETS ---
-    // Como a planilha não executa o @PrePersist sozinha,
-    // chamaremos este método manualmente no Service antes de salvar.
+    public Usuario() {}
+
+    // Getters e Setters Manuais (Resolvem o erro do getTelefone)
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getNome() { return nome; }
+    public void setNome(String nome) { this.nome = nome; }
+
+    public String getTelefone() { return telefone; }
+    public void setTelefone(String telefone) { this.telefone = telefone; }
+
+    public String getCpf() { return cpf; }
+    public void setCpf(String cpf) { this.cpf = cpf; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public String getEndereco() { return endereco; }
+    public void setEndereco(String endereco) { this.endereco = endereco; }
+
+    public LocalDateTime getDataColeta() { return dataColeta; }
+    public void setDataColeta(LocalDateTime dataColeta) { this.dataColeta = dataColeta; }
+
+    public StatusColeta getStatus() { return status; }
+    public void setStatus(StatusColeta status) { this.status = status; }
+
+    public List<Oferta> getOfertas() { return ofertas; }
+    public void setOfertas(List<Oferta> ofertas) { this.ofertas = ofertas; }
+
+    public TipoUsuario getTipo() { return tipo; }
+    public void setTipo(TipoUsuario tipo) { this.tipo = tipo; }
+
     @PrePersist
     public void prePersist() {
         if (this.dataColeta == null) {
