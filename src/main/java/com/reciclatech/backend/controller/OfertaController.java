@@ -1,4 +1,4 @@
-package com.reciclatech.backend.controller;
+/*package com.reciclatech.backend.controller;
 
 import com.reciclatech.backend.model.Oferta;
 import com.reciclatech.backend.service.OfertaService;
@@ -36,3 +36,5 @@ public class OfertaController {
         return service.aceitarOferta(id);
     }
 }
+
+ */

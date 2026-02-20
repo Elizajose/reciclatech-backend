@@ -1,4 +1,4 @@
-package com.reciclatech.backend.service;
+/*package com.reciclatech.backend.service;
 
 import com.reciclatech.backend.model.Oferta;
 import com.reciclatech.backend.model.Usuario;
@@ -80,3 +80,5 @@ public class OfertaService {
         return ofertaRepository.save(oferta);
     }
 }
+
+ */
