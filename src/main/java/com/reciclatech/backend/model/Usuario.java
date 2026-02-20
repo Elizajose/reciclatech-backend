@@ -2,12 +2,16 @@ package com.reciclatech.backend.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import java.time.LocalDateTime; // Importante para a data
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Data // O Lombok gera getDataColeta(), getStatus(), etc automaticamente
-@Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity // Mantido para não quebrar a compilação atual
 public class Usuario {
 
     @Id
@@ -21,22 +25,19 @@ public class Usuario {
 
     private String cpf;
     private String email;
-    private String endereco; // Adicionei pois o formulário do site envia "endereco"
+    private String endereco;
 
-    // --- CAMPOS NOVOS (ESSENCIAIS PARA O ERRO SUMIR) ---
-
-    // 1. Data da Coleta (O Controller precisa disso para o filtro de 24h)
+    // 1. Data da Coleta
     private LocalDateTime dataColeta;
 
     // 2. Status (AGUARDANDO, CONCLUIDO...)
     @Enumerated(EnumType.STRING)
     private StatusColeta status;
 
-    // 3. Lista de itens que ele está vendendo
+    // 3. Lista de itens (No Sheets, isso será gerenciado pelo ID na aba de Ofertas)
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL)
     private List<Oferta> ofertas = new ArrayList<>();
 
-    // --- SEU ENUM ANTIGO (Mantive para não quebrar nada) ---
     @Enumerated(EnumType.STRING)
     private TipoUsuario tipo;
 
@@ -45,8 +46,9 @@ public class Usuario {
         COMPRADOR
     }
 
-    // --- AUTOMATIZAÇÃO ---
-    // Isso garante que todo usuário novo já nasça com Data de Hoje e Status Aguardando
+    // --- IMPORTANTE PARA O GOOGLE SHEETS ---
+    // Como a planilha não executa o @PrePersist sozinha,
+    // chamaremos este método manualmente no Service antes de salvar.
     @PrePersist
     public void prePersist() {
         if (this.dataColeta == null) {

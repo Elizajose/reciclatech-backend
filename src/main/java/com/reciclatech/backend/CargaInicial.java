@@ -1,4 +1,4 @@
-package com.reciclatech.backend;
+/*package com.reciclatech.backend;
 
 import com.reciclatech.backend.model.Material;
 import com.reciclatech.backend.repository.MaterialRepository;
@@ -41,3 +41,5 @@ public class CargaInicial {
         repo.save(m);
     }
 }
+
+ */

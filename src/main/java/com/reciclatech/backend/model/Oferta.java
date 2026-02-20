@@ -2,11 +2,15 @@ package com.reciclatech.backend.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
-@Entity
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity // Mantido para suporte ao projeto atual enquanto migramos
 public class Oferta {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -14,8 +18,8 @@ public class Oferta {
 
     private String material;
 
-    private Double peso; // Agora começa zerado e o comprador preenche depois
-    private String endereco; // <--- NOVO CAMPO
+    private Double peso;
+    private String endereco;
 
     // Latitude e Longitude (Mantemos para o futuro mapa)
     private Double latitude;
@@ -23,15 +27,12 @@ public class Oferta {
 
     private BigDecimal precoEstimado;
 
-    // --- A CORREÇÃO ESTÁ AQUI ---
-    // Renomeado de 'vendedor' para 'usuario' para casar com o mappedBy="usuario"
     @ManyToOne
-    @JoinColumn(name = "usuario_id") // Cria a coluna usuario_id no banco
+    @JoinColumn(name = "usuario_id")
     private Usuario usuario;
-    // ----------------------------
 
     @Enumerated(EnumType.STRING)
-    private StatusOferta status = StatusOferta.DISPONIVEL; // Começa Disponível
+    private StatusOferta status = StatusOferta.DISPONIVEL;
 
     private LocalDate dataCriacao = LocalDate.now();
 

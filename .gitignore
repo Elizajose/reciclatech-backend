@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Google Cloud Security ###
+# Protege a chave da conta de serviço do Coletaê
+src/main/resources/credentials.json
