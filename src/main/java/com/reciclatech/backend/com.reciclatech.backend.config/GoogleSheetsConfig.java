@@ -26,7 +26,7 @@ public class GoogleSheetsConfig {
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
     @Value("${google.credentials.path}")
-    private String credentialsPath;
+    private String credentialsPath; // Captura o valor do application.properties
 
     private final ResourceLoader resourceLoader;
 
@@ -38,8 +38,12 @@ public class GoogleSheetsConfig {
     public Sheets googleSheetsService() throws IOException, GeneralSecurityException {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
 
-        // Carrega o arquivo JSON da pasta resources
-        Resource resource = resourceLoader.getResource("classpath:credentials.json");
+        // Lógica para diferenciar ambiente Local de Nuvem (Render)
+        // Se o caminho começar com "/" (ex: /etc/secrets/), usamos "file:".
+        // Caso contrário, usamos "classpath:" para buscar na pasta resources do projeto.
+        String prefixo = (credentialsPath != null && credentialsPath.startsWith("/")) ? "file:" : "classpath:";
+
+        Resource resource = resourceLoader.getResource(prefixo + credentialsPath);
 
         GoogleCredentials credentials = GoogleCredentials.fromStream(resource.getInputStream())
                 .createScoped(Collections.singleton(SheetsScopes.SPREADSHEETS));
