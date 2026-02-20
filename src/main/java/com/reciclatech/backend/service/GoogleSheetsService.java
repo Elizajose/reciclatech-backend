@@ -136,24 +136,48 @@ public class GoogleSheetsService {
         }
     }
 
-    // --- OPERAÇÕES DE VENDA E RELATÓRIOS ---
-
-    public void registrarVendaFinal(String telefone, String material, Double peso, BigDecimal precoUn, BigDecimal total) throws IOException {
+    // No seu GoogleSheetsService.java
+    public void registrarVendaFinal(String telefone, String material, Double peso, BigDecimal precoUn, BigDecimal total, String cpf) throws IOException {
         List<Object> row = Arrays.asList(
-                System.currentTimeMillis(),             // A: ID
-                material,                               // B: Nome
-                peso.toString().replace(".", ","),      // C: Peso
-                "ENTREGA NO LOCAL",                     // D: Endereço
-                precoUn.toString().replace(".", ","),   // E: Preço Unitário
-                total.toString().replace(".", ","),     // F: Total Item
-                LocalDate.now().toString(),             // G: Data
-                telefone,                               // H: Usuario_ID
-                "VENDIDO",                              // I: Status
-                LocalDate.now().toString()              // J: Data Filtro
+                System.currentTimeMillis(),           // A: ID
+                material,                             // B: Materiais
+                peso.toString().replace(".", ","),    // C: Peso
+                "ENTREGA NO LOCAL",                   // D: Endereço
+                precoUn.toString().replace(".", ","), // E: Preço_Unitário
+                total.toString().replace(".", ","),   // F: Preço_Total_Item
+                LocalDate.now().toString(),           // G: Data
+                telefone,                             // H: Usuario_ID
+                "VENDIDO",                            // I: Status
+                cpf != null ? cpf : "NÃO INFORMADO"   // J: CPF (AGORA NA POSIÇÃO CORRETA!)
         );
 
         ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
-        sheetsService.spreadsheets().values().append(spreadsheetId, "Ofertas!A1", body).setValueInputOption("USER_ENTERED").execute();
+        sheetsService.spreadsheets().values()
+                .append(spreadsheetId, "Ofertas!A1", body)
+                .setValueInputOption("USER_ENTERED")
+                .execute();
+    }
+
+    // 2. Cadastro de Usuário (Corrige a bagunça na aba Usuarios)
+    public void salvarUsuario(Usuario usuario) throws IOException {
+        usuario.prePersist();
+        List<Object> row = Arrays.asList(
+                usuario.getId() != null ? usuario.getId() : System.currentTimeMillis(), // A: ID
+                usuario.getNome(),             // B: Nome
+                usuario.getTelefone(),         // C: Telefone
+                usuario.getCpf() != null ? usuario.getCpf() : "", // D: CPF
+                usuario.getEmail() != null ? usuario.getEmail() : "", // E: Email
+                usuario.getEndereco(),         // F: Endereco
+                usuario.getDataColeta().toString(), // G: Data
+                usuario.getStatus().toString(), // H: Status
+                usuario.getTipo().toString()    // I: Tipo
+        );
+
+        ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
+        sheetsService.spreadsheets().values()
+                .append(spreadsheetId, "Usuarios!A1", body)
+                .setValueInputOption("USER_ENTERED")
+                .execute();
     }
 
     public List<Oferta> buscarVendasPorUsuario(String telefone) throws IOException {
