@@ -34,15 +34,13 @@ public class GoogleSheetsConfig {
         this.resourceLoader = resourceLoader;
     }
 
+    // No arquivo GoogleSheetsConfig.java
+
     @Bean
-    public Sheets googleSheetsService() throws IOException, GeneralSecurityException {
+    public Sheets sheets() throws IOException, GeneralSecurityException { // Alterado de googleSheetsService para sheets
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
 
-        // Lógica para diferenciar ambiente Local de Nuvem (Render)
-        // Se o caminho começar com "/" (ex: /etc/secrets/), usamos "file:".
-        // Caso contrário, usamos "classpath:" para buscar na pasta resources do projeto.
         String prefixo = (credentialsPath != null && credentialsPath.startsWith("/")) ? "file:" : "classpath:";
-
         Resource resource = resourceLoader.getResource(prefixo + credentialsPath);
 
         GoogleCredentials credentials = GoogleCredentials.fromStream(resource.getInputStream())
