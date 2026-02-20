@@ -202,8 +202,6 @@ public class TelaController {
     }
 
     @PostMapping("/admin/confirmar-finalizacao")
-    @PostMapping("/admin/confirmar-finalizacao")
-    @PostMapping("/admin/confirmar-finalizacao")
     public String confirmarFinalizacao(@RequestParam String idVendedor,
                                        @RequestParam List<Long> idsMateriais,
                                        @RequestParam List<Double> pesosFinais,
