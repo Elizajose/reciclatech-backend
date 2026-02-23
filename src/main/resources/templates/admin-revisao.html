@@ -54,22 +54,23 @@
                         <tbody>
                         <tr th:each="item : ${itens}">
                             <input type="hidden" name="idsMateriais" th:value="${item.material.id}">
-                            <input type="hidden" name="pesosFinais" th:value="${item.peso}">
 
                             <td>
                                 <span class="fw-bold text-dark" th:text="${item.material.nome}">Mat</span>
                             </td>
 
                             <td class="text-center">
-            <span class="badge bg-secondary" style="font-size: 0.9rem;"
-                  th:text="${item.peso} + ' ' + ${item.material.unidade}">10 KG</span>
+                                <input type="hidden" name="pesosFinais" th:value="${item.peso}">
+                                <span class="badge bg-secondary" style="font-size: 0.9rem;"
+                                      th:text="${item.peso} + ' ' + ${item.material.unidade}">10 KG</span>
                             </td>
 
                             <td>
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-text bg-white">R$</span>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0">R$</span>
+
                                     <input type="number" step="0.01" name="precosFinais"
-                                           class="form-control fw-bold text-success"
+                                           class="form-control fw-bold text-success border-start-0"
                                            th:value="${item.material.precoPorKg}"
                                            inputmode="decimal">
                                 </div>

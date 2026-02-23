@@ -3,82 +3,151 @@ package com.reciclatech.backend.controller;
 import com.reciclatech.backend.model.Material;
 import com.reciclatech.backend.model.Oferta;
 import com.reciclatech.backend.model.Usuario;
+import com.reciclatech.backend.model.StatusColeta;
+import com.reciclatech.backend.repository.MaterialRepository;
+import com.reciclatech.backend.repository.OfertaRepository;
+import com.reciclatech.backend.repository.UsuarioRepository;
 import com.reciclatech.backend.service.GoogleSheetsService;
+
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Controller
 public class TelaController {
 
+    @Autowired(required = false) private OfertaRepository ofertaRepository;
+    @Autowired(required = false) private UsuarioRepository usuarioRepository;
+    @Autowired(required = false) private MaterialRepository materialRepository;
+
     @Autowired private GoogleSheetsService googleSheetsService;
 
+    // --- HOME (Reciclômetro e Ranking via Google Sheets) ---
     @GetMapping("/")
     public String home(Model model) {
         try {
             model.addAttribute("materiais", googleSheetsService.listarMateriais());
             model.addAttribute("topMateriais", googleSheetsService.buscarRankingMateriais());
-            model.addAttribute("totalReciclado", googleSheetsService.calcularTotalReciclado());
-        } catch (Exception e) { }
+
+            Double total = googleSheetsService.calcularTotalReciclado();
+            model.addAttribute("totalReciclado", total != null ? total : 0.0);
+        } catch (Exception e) {
+            model.addAttribute("materiais", new ArrayList<>());
+            model.addAttribute("topMateriais", new ArrayList<>());
+            model.addAttribute("totalReciclado", 0.0);
+        }
         return "index";
     }
 
+    // --- GESTÃO DE MATERIAIS ---
     @GetMapping("/admin/precos")
     public String painelPrecos(Model m, HttpSession s) {
         if(s.getAttribute("adminLogado") == null) return "redirect:/login";
-        try { m.addAttribute("materiais", googleSheetsService.listarMateriais()); } catch (Exception e) { }
+        try {
+            m.addAttribute("materiais", googleSheetsService.listarMateriais());
+        } catch (Exception e) {
+            m.addAttribute("materiais", new ArrayList<>());
+        }
         return "admin-precos";
     }
 
     @PostMapping("/admin/material/novo")
-    public String novoMaterial(@RequestParam String nome, @RequestParam String unidade, @RequestParam Double preco, HttpSession session) {
+    public String novoMaterial(@RequestParam String nome, @RequestParam String unidade,
+                               @RequestParam Double preco, HttpSession session) {
         if(session.getAttribute("adminLogado") == null) return "redirect:/login";
-        Material m = new Material(); m.setNome(nome); m.setUnidade(unidade); m.setPrecoPorKg(BigDecimal.valueOf(preco));
-        try { googleSheetsService.salvarMaterial(m); } catch (Exception e) { }
+
+        Material m = new Material();
+        m.setNome(nome);
+        m.setUnidade(unidade);
+        m.setPrecoPorKg(BigDecimal.valueOf(preco));
+
+        try {
+            googleSheetsService.salvarMaterial(m);
+        } catch (Exception e) {
+            System.err.println("Erro ao gravar material: " + e.getMessage());
+        }
         return "redirect:/admin/precos";
     }
 
     @PostMapping("/admin/atualizar")
     public String upd(@RequestParam Long id, @RequestParam Double novoPreco) {
-        try { googleSheetsService.atualizarPrecoMaterial(id, BigDecimal.valueOf(novoPreco)); } catch (Exception e) { }
+        try {
+            googleSheetsService.atualizarPrecoMaterial(id, BigDecimal.valueOf(novoPreco));
+        } catch (Exception e) {
+            System.err.println("Erro ao atualizar preço: " + e.getMessage());
+        }
         return "redirect:/admin/precos";
     }
 
     @GetMapping("/admin/material/deletar/{id}")
     public String deletarMaterial(@PathVariable Long id, HttpSession session) {
         if(session.getAttribute("adminLogado") == null) return "redirect:/login";
-        try { googleSheetsService.deletarMaterial(id); } catch (Exception e) { }
+        try {
+            googleSheetsService.deletarMaterial(id);
+        } catch (Exception e) {
+            System.err.println("Erro ao deletar: " + e.getMessage());
+        }
         return "redirect:/admin/precos";
     }
 
+    // --- LOGIN ---
     @GetMapping("/login") public String telaLogin() { return "login-admin"; }
+
     @PostMapping("/login-admin")
     public String login(@RequestParam String senha, HttpSession session) {
-        String s = System.getenv("SENHA_ADMIN"); if (s == null) s = "admin123";
-        if (s.equals(senha)) { session.setAttribute("adminLogado", true); return "redirect:/admin/coletas"; }
+        String senhaSecreta = System.getenv("SENHA_ADMIN");
+        if (senhaSecreta == null) senhaSecreta = "admin123";
+
+        if (senhaSecreta.equals(senha)) {
+            session.setAttribute("adminLogado", true);
+            return "redirect:/admin/coletas";
+        }
         return "redirect:/login?erro=true";
     }
 
-    @GetMapping("/sair") public String logout(HttpSession session) { session.invalidate(); return "redirect:/login"; }
+    @GetMapping("/sair") public String logout(HttpSession session) {
+        session.invalidate();
+        return "redirect:/login";
+    }
 
+    // --- OPERAÇÕES DE COLETA (Agora via Planilha) ---
     @PostMapping("/publicar")
-    public String solicitarColeta(@RequestParam String endereco, @RequestParam String nomeVendedor, @RequestParam String telefoneVendedor) {
-        Usuario n = new Usuario(); n.setNome(nomeVendedor); n.setTelefone(telefoneVendedor.replaceAll("\\D", "")); n.setEndereco(endereco);
-        try { googleSheetsService.salvarSolicitacaoInicial(n, endereco); } catch (IOException e) { }
+    public String solicitarColeta(@RequestParam String endereco,
+                                  @RequestParam String nomeVendedor,
+                                  @RequestParam String telefoneVendedor) {
+        String zapLimpo = telefoneVendedor.replaceAll("\\D", "");
+        Usuario novo = new Usuario();
+        novo.setNome(nomeVendedor);
+        novo.setTelefone(zapLimpo);
+        novo.setEndereco(endereco);
+        novo.setTipo(Usuario.TipoUsuario.CATADOR);
+
+        try {
+            googleSheetsService.salvarSolicitacaoInicial(novo, endereco);
+        } catch (IOException e) {
+            System.err.println("Erro ao publicar: " + e.getMessage());
+        }
         return "redirect:/?sucesso=true";
     }
 
     @GetMapping("/admin/coletas")
     public String telaListaColetas(Model model, HttpSession session) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
-        try { model.addAttribute("usuarios", googleSheetsService.buscarUsuariosComColetasPendentes()); } catch (IOException e) { }
+        try {
+            model.addAttribute("usuarios", googleSheetsService.buscarUsuariosComColetasPendentes());
+        } catch (IOException e) {
+            model.addAttribute("usuarios", new ArrayList<>());
+        }
         return "admin-lista-coletas";
     }
 
@@ -86,83 +155,116 @@ public class TelaController {
     public String telaChecklist(@PathVariable String idUsuario, Model model, HttpSession session) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         try {
-            Usuario v = googleSheetsService.listarUsuarios().stream()
+            // Busca o vendedor na lista da planilha
+            Usuario vendedor = googleSheetsService.listarUsuarios().stream()
                     .filter(u -> u.getTelefone().equals(idUsuario) || u.getId().toString().equals(idUsuario))
                     .findFirst().orElseThrow();
-            model.addAttribute("vendedor", v);
+
+            model.addAttribute("vendedor", vendedor);
             model.addAttribute("todosMateriais", googleSheetsService.listarMateriais());
-        } catch (Exception e) { return "redirect:/admin/coletas?erro=usuario"; }
+        } catch (Exception e) {
+            return "redirect:/admin/coletas?erro=usuario";
+        }
         return "admin-checklist";
     }
 
     @PostMapping("/admin/revisar-coleta")
     public String revisarColeta(@RequestParam String idVendedor, @RequestParam Map<String, String> params, Model model) {
         try {
-            Usuario v = googleSheetsService.listarUsuarios().stream()
+            Usuario vendedor = googleSheetsService.listarUsuarios().stream()
                     .filter(u -> u.getTelefone().equals(idVendedor) || u.getId().toString().equals(idVendedor))
                     .findFirst().orElseThrow();
-            List<PreVendaDTO> itens = new ArrayList<>();
-            BigDecimal total = BigDecimal.ZERO;
+
+            List<PreVendaDTO> itensRevisao = new ArrayList<>();
+            BigDecimal totalEstimado = BigDecimal.ZERO;
+
             for (String key : params.keySet()) {
                 if (key.startsWith("qtd_") && !params.get(key).isEmpty()) {
                     try {
-                        Long idMat = Long.parseLong(key.replace("qtd_", ""));
-                        Double qtd = Double.parseDouble(params.get(key));
-                        if (qtd > 0) {
-                            Material m = googleSheetsService.buscarMaterialPorId(idMat);
-                            BigDecimal sub = m.getPrecoPorKg().multiply(BigDecimal.valueOf(qtd));
-                            itens.add(new PreVendaDTO(m, qtd, sub));
-                            total = total.add(sub);
+                        Long idMaterial = Long.parseLong(key.replace("qtd_", ""));
+                        Double quantidade = Double.parseDouble(params.get(key));
+                        if (quantidade > 0) {
+                            Material mat = googleSheetsService.buscarMaterialPorId(idMaterial);
+                            BigDecimal totalItem = mat.getPrecoPorKg().multiply(BigDecimal.valueOf(quantidade));
+                            itensRevisao.add(new PreVendaDTO(mat, quantidade, totalItem));
+                            totalEstimado = totalEstimado.add(totalItem);
                         }
                     } catch (Exception e) { }
                 }
             }
-            model.addAttribute("vendedor", v); model.addAttribute("itens", itens); model.addAttribute("totalEstimado", total);
+            model.addAttribute("vendedor", vendedor);
+            model.addAttribute("itens", itensRevisao);
+            model.addAttribute("totalEstimado", totalEstimado);
             return "admin-revisao";
-        } catch (Exception e) { return "redirect:/admin/coletas?erro=revisao"; }
+        } catch (IOException e) {
+            return "redirect:/admin/coletas?erro=planilha";
+        }
     }
 
     @PostMapping("/admin/confirmar-finalizacao")
-    public String confirmarFinalizacao(@RequestParam String idVendedor, @RequestParam(required = false) String cpfFinal,
-                                       @RequestParam List<Long> idsMateriais, @RequestParam List<Double> pesosFinais, @RequestParam List<Double> precosFinais) {
+    public String confirmarFinalizacao(@RequestParam String idVendedor,
+                                       @RequestParam List<Long> idsMateriais,
+                                       @RequestParam List<Double> pesosFinais,
+                                       @RequestParam List<Double> precosFinais) {
         try {
             for (int i = 0; i < idsMateriais.size(); i++) {
-                Material m = googleSheetsService.buscarMaterialPorId(idsMateriais.get(i));
-                BigDecimal pr = BigDecimal.valueOf(precosFinais.get(i));
-                BigDecimal t = pr.multiply(BigDecimal.valueOf(pesosFinais.get(i)));
-                googleSheetsService.registrarVendaFinal(idVendedor, m.getNome(), pesosFinais.get(i), pr, t, cpfFinal);
+                Material mat = googleSheetsService.buscarMaterialPorId(idsMateriais.get(i));
+                Double peso = pesosFinais.get(i);
+                BigDecimal precoUn = BigDecimal.valueOf(precosFinais.get(i));
+                BigDecimal totalItem = precoUn.multiply(BigDecimal.valueOf(peso));
+
+                // Chama o novo método com todas as colunas
+                googleSheetsService.registrarVendaFinal(idVendedor, mat.getNome(), peso, precoUn, totalItem);
             }
             return "redirect:/extrato/" + idVendedor;
-        } catch (Exception e) { return "redirect:/admin/coletas?erro=venda"; }
+        } catch (IOException e) {
+            return "redirect:/admin/coletas?erro=venda";
+        }
     }
 
     @GetMapping("/extrato/{id}")
     public String gerarExtratoIndividual(@PathVariable String id, Model model) {
         try {
-            Usuario u = googleSheetsService.listarUsuarios().stream()
-                    .filter(user -> user.getTelefone().equals(id) || user.getId().toString().equals(id))
+            Usuario usuario = googleSheetsService.listarUsuarios().stream()
+                    .filter(u -> u.getTelefone().equals(id) || u.getId().toString().equals(id))
                     .findFirst().orElse(null);
-            if (u == null) return "redirect:/?erro=usuario_nao_encontrado";
-            List<Oferta> vendas = googleSheetsService.buscarVendasPorUsuario(id);
-            BigDecimal total = vendas.stream().map(Oferta::getPrecoEstimado).reduce(BigDecimal.ZERO, BigDecimal::add);
-            model.addAttribute("vendedor", u); model.addAttribute("vendas", vendas); model.addAttribute("total", total); model.addAttribute("dataHoje", LocalDate.now());
-        } catch (Exception e) { return "redirect:/?erro=extrato"; }
+
+            if (usuario == null) return "redirect:/";
+
+            // BUSCA AS VENDAS REAIS QUE ACABAMOS DE SALVAR NA PLANILHA!
+            List<Oferta> vendasReais = googleSheetsService.buscarVendasPorUsuario(id);
+
+            BigDecimal totalGeral = vendasReais.stream()
+                    .map(Oferta::getPrecoEstimado)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            List<Material> mats = googleSheetsService.listarMateriais();
+            model.addAttribute("mapaUnidades", mats.stream().collect(Collectors.toMap(Material::getNome, Material::getUnidade)));
+            model.addAttribute("mapaPrecos", mats.stream().collect(Collectors.toMap(Material::getNome, Material::getPrecoPorKg)));
+
+            model.addAttribute("vendedor", usuario);
+            model.addAttribute("vendas", vendasReais); // Agora a lista NÃO está mais vazia!
+            model.addAttribute("total", totalGeral);
+            model.addAttribute("dataHoje", java.time.LocalDate.now());
+
+        } catch (Exception e) {
+            return "redirect:/?erro=extrato";
+        }
         return "extrato";
     }
 
-    @GetMapping("/meus-extratos")
-    public String buscaManual(@RequestParam(required = false) String telefone) {
-        if(telefone != null) return "redirect:/extrato/" + telefone.replaceAll("\\D", "");
-        return "busca-extrato";
-    }
-
+    // --- DTOs ---
     public static class PreVendaDTO {
-        public Material material; public Double peso; public BigDecimal total;
+        public Material material;
+        public Double peso;
+        public BigDecimal total;
         public PreVendaDTO(Material m, Double p, BigDecimal t) { this.material = m; this.peso = p; this.total = t; }
     }
 
     public static class RankingDTO {
-        public String nome; public Double peso; public String unidade;
+        public String nome;
+        public Double peso;
+        public String unidade;
         public RankingDTO(String n, Double p, String u) { this.nome = n; this.peso = p; this.unidade = u; }
     }
 }
