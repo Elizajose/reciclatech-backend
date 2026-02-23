@@ -203,21 +203,21 @@ public class TelaController {
 
     @PostMapping("/admin/confirmar-finalizacao")
     public String confirmarFinalizacao(@RequestParam String idVendedor,
+                                       @RequestParam(required = false) String cpfFinal,
                                        @RequestParam List<Long> idsMateriais,
                                        @RequestParam List<Double> pesosFinais,
                                        @RequestParam List<Double> precosFinais) {
         try {
             for (int i = 0; i < idsMateriais.size(); i++) {
                 Material mat = googleSheetsService.buscarMaterialPorId(idsMateriais.get(i));
-                Double peso = pesosFinais.get(i);
                 BigDecimal precoUn = BigDecimal.valueOf(precosFinais.get(i));
-                BigDecimal totalItem = precoUn.multiply(BigDecimal.valueOf(peso));
+                BigDecimal total = precoUn.multiply(BigDecimal.valueOf(pesosFinais.get(i)));
 
-                // Chama o novo método com todas as colunas
-                googleSheetsService.registrarVendaFinal(idVendedor, mat.getNome(), peso, precoUn, totalItem);
+                // AQUI ESTAVA O ERRO: Faltava o 'cpfFinal' no final da lista de argumentos
+                googleSheetsService.registrarVendaFinal(idVendedor, mat.getNome(), pesosFinais.get(i), precoUn, total, cpfFinal);
             }
             return "redirect:/extrato/" + idVendedor;
-        } catch (IOException e) {
+        } catch (Exception e) {
             return "redirect:/admin/coletas?erro=venda";
         }
     }
