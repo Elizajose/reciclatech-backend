@@ -53,28 +53,21 @@
                         </thead>
                         <tbody>
                         <tr th:each="item : ${itens}">
-                            <input type="hidden" name="idsMateriais" th:value="${item.material.id}">
+                            <td style="display:none">
+                                <input type="hidden" name="idsMateriais" th:value="${item.material.id}">
+                                <input type="hidden" name="pesosFinais" th:value="${item.peso}">
+                                <input type="hidden" name="precosFinais" th:value="${item.material.precoPorKg}">
+                            </td>
 
                             <td>
                                 <span class="fw-bold text-dark" th:text="${item.material.nome}">Mat</span>
                             </td>
 
                             <td class="text-center">
-                                <input type="hidden" name="pesosFinais" th:value="${item.peso}">
-                                <span class="badge bg-secondary" style="font-size: 0.9rem;"
-                                      th:text="${item.peso} + ' ' + ${item.material.unidade}">10 KG</span>
+        <span class="badge bg-secondary" style="font-size: 0.9rem;"
+              th:text="${item.peso} + ' ' + ${item.material.unidade}">10 KG</span>
                             </td>
 
-                            <td>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-white border-end-0">R$</span>
-
-                                    <input type="number" step="0.01" name="precosFinais"
-                                           class="form-control fw-bold text-success border-start-0"
-                                           th:value="${item.material.precoPorKg}"
-                                           inputmode="decimal">
-                                </div>
-                            </td>
                         </tr>
                         </tbody>
                     </table>

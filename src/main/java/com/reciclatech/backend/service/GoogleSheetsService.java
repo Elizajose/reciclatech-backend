@@ -54,8 +54,9 @@ public class GoogleSheetsService {
     }
 
     public List<Usuario> listarUsuarios() throws IOException {
+        // Agora lemos até a coluna F (índice 5) para pegar o endereço
         ValueRange response = sheetsService.spreadsheets().values()
-                .get(spreadsheetId, "Usuarios!A2:I")
+                .get(spreadsheetId, "Usuarios!A2:F")
                 .execute();
 
         List<List<Object>> values = response.getValues();
@@ -66,7 +67,10 @@ public class GoogleSheetsService {
             u.setId(Long.parseLong(row.get(0).toString()));
             u.setNome(row.get(1).toString());
             u.setTelefone(row.get(2).toString());
-            if (row.size() > 3) u.setCpf(row.get(3).toString());
+            // Se houver dado na Coluna F (índice 5), salvamos o endereço
+            if (row.size() > 5) {
+                u.setEndereco(row.get(5).toString());
+            }
             return u;
         }).collect(Collectors.toList());
     }

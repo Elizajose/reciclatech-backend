@@ -220,7 +220,7 @@ public class TelaController {
         } catch (IOException e) { return "redirect:/admin/coletas?erro=venda"; }
     }
 
-    @GetMapping("/extrato/{id}")
+    @GetMapping("/meus-extratos")
     public String gerarExtratoIndividual(@PathVariable String id, Model model) {
         try {
             Usuario usuario = googleSheetsService.listarUsuarios().stream()
