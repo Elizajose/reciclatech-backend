@@ -323,24 +323,28 @@ public class TelaController {
         }
         return "lista-extratos"; // Nome do seu novo arquivo HTML
     }
-    // --- PESAGEM RÁPIDA (ATENDIMENTO AVULSO) ---
+    // --- PESAGEM RÁPIDA (ATENDIMENTO AVULSO SEM TELEFONE) ---
     @PostMapping("/admin/pesagem-rapida")
-    public String pesagemRapida(@RequestParam String nome, @RequestParam String telefone, HttpSession session) {
+    public String pesagemRapida(@RequestParam String nome, HttpSession session) {
         if(session.getAttribute("adminLogado") == null) return "redirect:/login";
 
-        String zapLimpo = telefone.replaceAll("\\D", "");
+        // Geramos o ID único do cliente avulso na hora
+        Long idGerado = System.currentTimeMillis();
+
         Usuario novoAvulso = new Usuario();
+        novoAvulso.setId(idGerado); // Define o ID
         novoAvulso.setNome(nome);
-        novoAvulso.setTelefone(zapLimpo);
-        novoAvulso.setEndereco("Atendimento (Pesagem Rápida)"); // Marca de onde veio
+        // Colocamos o ID no lugar do telefone para o sistema não se perder, mas o cliente não vê isso!
+        novoAvulso.setTelefone(idGerado.toString());
+        novoAvulso.setEndereco("Atendimento Avulso");
         novoAvulso.setTipo(Usuario.TipoUsuario.CATADOR);
 
         try {
-            // Salva na planilha como "DISPONIVEL" (igual quando vem do site)
+            // Salva na planilha como "DISPONIVEL"
             googleSheetsService.salvarSolicitacaoInicial(novoAvulso, novoAvulso.getEndereco());
 
-            // Pulo do gato: redireciona direto para a tela de pesar os materiais dele!
-            return "redirect:/admin/atender/" + zapLimpo;
+            // Redireciona direto para a tela de pesar os materiais usando o ID
+            return "redirect:/admin/atender/" + idGerado;
         } catch (IOException e) {
             System.err.println("Erro ao gerar pesagem rápida: " + e.getMessage());
             return "redirect:/admin/coletas?erro=pesagem_rapida";

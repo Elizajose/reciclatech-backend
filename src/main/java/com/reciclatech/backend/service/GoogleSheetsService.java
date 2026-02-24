@@ -9,6 +9,7 @@ import com.reciclatech.backend.model.Oferta;
 import com.reciclatech.backend.controller.TelaController.RankingDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -281,26 +282,103 @@ public class GoogleSheetsService {
     }
     // Método para tirar o cliente da fila de espera após o atendimento
     public void marcarSolicitacaoComoConcluida(String idVendedor) throws IOException {
+        // 1. Busca o usuário para garantir que temos tanto o ID quanto o Telefone em mãos
+        Usuario usuario = listarUsuarios().stream()
+                .filter(u -> u.getId().toString().equals(idVendedor) || u.getTelefone().equals(idVendedor))
+                .findFirst()
+                .orElse(null);
+
+        String telefone = usuario != null ? usuario.getTelefone() : idVendedor;
+        String idStr = usuario != null ? usuario.getId().toString() : idVendedor;
+
+        // 2. Vasculha a planilha nas colunas H (Identificador) e I (Status)
         ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Ofertas!H:I").execute();
         List<List<Object>> values = response.getValues();
 
         if (values != null) {
             for (int i = 0; i < values.size(); i++) {
                 List<Object> row = values.get(i);
+
                 if (row.size() >= 2) {
                     String identificadorPlanilha = row.get(0).toString();
                     String statusPlanilha = row.get(1).toString();
 
-                    if (identificadorPlanilha.equals(idVendedor) && statusPlanilha.equals("DISPONIVEL")) {
-                        int numeroDaLinha = i + 1;
+                    // 3. A MÁGICA: Se a planilha tiver o Telefone OU o ID, ele dá baixa!
+                    if ((identificadorPlanilha.equals(telefone) || identificadorPlanilha.equals(idStr)) && statusPlanilha.equals("DISPONIVEL")) {
+                        int numeroDaLinha = i + 1; // +1 porque a planilha começa na linha 1
+
                         ValueRange body = new ValueRange().setValues(Collections.singletonList(Collections.singletonList("FINALIZADO")));
 
                         sheetsService.spreadsheets().values()
                                 .update(spreadsheetId, "Ofertas!I" + numeroDaLinha, body)
-                                .setValueInputOption("USER_ENTERED").execute();
+                                .setValueInputOption("USER_ENTERED")
+                                .execute();
                     }
                 }
             }
+        }
+    }
+    // --- ROBÔ FAXINEIRO (AGENDAMENTO AUTOMÁTICO) ---
+
+    // Roda todo dia às 03:00 da manhã (Cron: Segundos Minutos Horas Dia Mês DiaDaSemana)
+    @Scheduled(cron = "0 0 3 * * *")
+    public void limparOfertasAntigasAutomaticamente() {
+        try {
+            System.out.println("🤖 Robô Faxineiro: Iniciando limpeza de registros com mais de 30 dias...");
+
+            // 1. Pega todas as linhas atuais da aba Ofertas
+            ValueRange response = sheetsService.spreadsheets().values()
+                    .get(spreadsheetId, "Ofertas!A2:J")
+                    .execute();
+            List<List<Object>> todasAsLinhas = response.getValues();
+
+            if (todasAsLinhas == null || todasAsLinhas.isEmpty()) return;
+
+            // Define o limite de tempo (Hoje menos 30 dias)
+            LocalDate dataLimite = LocalDate.now().minusDays(2);
+
+            // 2. Filtra a lista: Guarda APENAS as coisas RECENTES (que vão sobreviver à limpeza)
+            List<List<Object>> linhasParaManter = todasAsLinhas.stream()
+                    .filter(row -> {
+                        try {
+                            // A data fica na coluna G (índice 6)
+                            if (row.size() > 6) {
+                                LocalDate dataRow = LocalDate.parse(row.get(6).toString());
+                                // Mantém a linha se a data dela for DEPOIS (mais nova) ou igual ao limite
+                                return dataRow.isAfter(dataLimite) || dataRow.isEqual(dataLimite);
+                            }
+                            return true; // Se a linha não tiver data por algum erro, não exclui por segurança
+                        } catch (Exception e) {
+                            return true;
+                        }
+                    })
+                    .collect(Collectors.toList());
+
+            // Se o tamanho for igual, não tem nada velho para apagar
+            if (todasAsLinhas.size() == linhasParaManter.size()) {
+                System.out.println("🤖 Robô Faxineiro: Nenhuma oferta antiga para limpar hoje.");
+                return;
+            }
+
+            // 3. APAGA TUDO da planilha (Da linha 2 pra baixo)
+            sheetsService.spreadsheets().values()
+                    .clear(spreadsheetId, "Ofertas!A2:J", new ClearValuesRequest())
+                    .execute();
+
+            // 4. ESCREVE DE VOLTA só as linhas recentes que separamos
+            if (!linhasParaManter.isEmpty()) {
+                ValueRange body = new ValueRange().setValues(linhasParaManter);
+                sheetsService.spreadsheets().values()
+                        .update(spreadsheetId, "Ofertas!A2", body)
+                        .setValueInputOption("USER_ENTERED")
+                        .execute();
+            }
+
+            int apagados = todasAsLinhas.size() - linhasParaManter.size();
+            System.out.println("🤖 Robô Faxineiro: Limpeza concluída! " + apagados + " registros antigos apagados da planilha.");
+
+        } catch (Exception e) {
+            System.err.println("Erro no Robô Faxineiro: " + e.getMessage());
         }
     }
 }
