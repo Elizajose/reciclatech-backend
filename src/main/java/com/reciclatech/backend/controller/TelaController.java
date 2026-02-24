@@ -256,6 +256,8 @@ public class TelaController {
 
             // 🌟 Salva todos os itens de uma vez só em 1 única requisição!
             googleSheetsService.registrarVendasEmLote(loteDeVendas);
+            // 👇 A MÁGICA DE LIMPAR A TELA ACONTECE AQUI! 👇
+            googleSheetsService.marcarSolicitacaoComoConcluida(idVendedor);
 
             return "redirect:/extrato/" + idVendedor;
         } catch (Exception e) {
@@ -320,5 +322,28 @@ public class TelaController {
             model.addAttribute("usuarios", new ArrayList<>());
         }
         return "lista-extratos"; // Nome do seu novo arquivo HTML
+    }
+    // --- PESAGEM RÁPIDA (ATENDIMENTO AVULSO) ---
+    @PostMapping("/admin/pesagem-rapida")
+    public String pesagemRapida(@RequestParam String nome, @RequestParam String telefone, HttpSession session) {
+        if(session.getAttribute("adminLogado") == null) return "redirect:/login";
+
+        String zapLimpo = telefone.replaceAll("\\D", "");
+        Usuario novoAvulso = new Usuario();
+        novoAvulso.setNome(nome);
+        novoAvulso.setTelefone(zapLimpo);
+        novoAvulso.setEndereco("Atendimento (Pesagem Rápida)"); // Marca de onde veio
+        novoAvulso.setTipo(Usuario.TipoUsuario.CATADOR);
+
+        try {
+            // Salva na planilha como "DISPONIVEL" (igual quando vem do site)
+            googleSheetsService.salvarSolicitacaoInicial(novoAvulso, novoAvulso.getEndereco());
+
+            // Pulo do gato: redireciona direto para a tela de pesar os materiais dele!
+            return "redirect:/admin/atender/" + zapLimpo;
+        } catch (IOException e) {
+            System.err.println("Erro ao gerar pesagem rápida: " + e.getMessage());
+            return "redirect:/admin/coletas?erro=pesagem_rapida";
+        }
     }
 }

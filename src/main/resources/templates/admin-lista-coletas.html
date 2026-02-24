@@ -30,6 +30,41 @@
     </div>
 </nav>
 
+<div class="container mt-4 mb-3" style="max-width: 800px;">
+    <button class="btn btn-warning w-100 fw-bold shadow-sm py-3" data-bs-toggle="modal" data-bs-target="#modalPesagemRapida">
+        <i class="bi bi-lightning-charge-fill"></i> COLETA RÁPIDA
+    </button>
+</div>
+
+<div class="modal fade" id="modalPesagemRapida" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form action="/admin/pesagem-rapida" method="post">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-lightning-charge-fill"></i> Nova Pesagem Rápida</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-4">Use para atender vizinhos ou clientes na rua que não agendaram pelo site.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nome do Cliente</label>
+                        <input type="text" name="nome" class="form-control form-control-lg" required placeholder="Ex: João da Silva">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">WhatsApp (Apenas números)</label>
+                        <input type="text" name="telefone" class="form-control form-control-lg" required placeholder="Ex: 87999999999">
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="submit" class="btn btn-success w-100 btn-lg fw-bold">Iniciar Pesagem Agora <i class="bi bi-arrow-right"></i></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="container" style="max-width: 800px;">
 
     <h5 class="text-muted mb-3 border-bottom pb-2">

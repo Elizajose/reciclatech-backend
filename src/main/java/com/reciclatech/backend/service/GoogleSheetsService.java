@@ -279,4 +279,28 @@ public class GoogleSheetsService {
                 .setValueInputOption("USER_ENTERED")
                 .execute();
     }
+    // Método para tirar o cliente da fila de espera após o atendimento
+    public void marcarSolicitacaoComoConcluida(String idVendedor) throws IOException {
+        ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Ofertas!H:I").execute();
+        List<List<Object>> values = response.getValues();
+
+        if (values != null) {
+            for (int i = 0; i < values.size(); i++) {
+                List<Object> row = values.get(i);
+                if (row.size() >= 2) {
+                    String identificadorPlanilha = row.get(0).toString();
+                    String statusPlanilha = row.get(1).toString();
+
+                    if (identificadorPlanilha.equals(idVendedor) && statusPlanilha.equals("DISPONIVEL")) {
+                        int numeroDaLinha = i + 1;
+                        ValueRange body = new ValueRange().setValues(Collections.singletonList(Collections.singletonList("FINALIZADO")));
+
+                        sheetsService.spreadsheets().values()
+                                .update(spreadsheetId, "Ofertas!I" + numeroDaLinha, body)
+                                .setValueInputOption("USER_ENTERED").execute();
+                    }
+                }
+            }
+        }
+    }
 }
