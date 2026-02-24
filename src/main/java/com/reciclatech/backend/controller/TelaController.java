@@ -276,6 +276,6 @@ public class TelaController {
         } catch (IOException e) {
             model.addAttribute("usuarios", new ArrayList<>());
         }
-        return "meus-extratos"; // Nome do seu novo arquivo HTML
+        return "lista-extratos"; // Nome do seu novo arquivo HTML
     }
 }
