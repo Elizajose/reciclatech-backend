@@ -8,12 +8,12 @@ import com.reciclatech.backend.repository.MaterialRepository;
 import com.reciclatech.backend.repository.OfertaRepository;
 import com.reciclatech.backend.repository.UsuarioRepository;
 import com.reciclatech.backend.service.GoogleSheetsService;
-
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import java.util.Arrays;
 
 import java.io.IOException;
 import java.math.BigDecimal;
