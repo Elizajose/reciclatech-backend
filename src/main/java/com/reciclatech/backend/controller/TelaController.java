@@ -204,20 +204,40 @@ public class TelaController {
     @PostMapping("/admin/confirmar-finalizacao")
     public String confirmarFinalizacao(@RequestParam String idVendedor,
                                        @RequestParam(required = false) String cpfFinal,
-                                       @RequestParam List<Long> idsMateriais,
-                                       @RequestParam List<Double> pesosFinais,
-                                       @RequestParam List<Double> precosFinais) {
+                                       @RequestParam(required = false) List<Long> idsMateriais,
+                                       @RequestParam(required = false) List<Double> pesosFinais,
+                                       @RequestParam(required = false) List<Double> precosFinais) {
         try {
+            // 1. Prevenção: Se não vier nenhum material, aborta antes de dar erro
+            if (idsMateriais == null || idsMateriais.isEmpty()) {
+                System.out.println("Nenhum material foi recebido do formulário!");
+                return "redirect:/admin/coletas?erro=sem_materiais";
+            }
+
+            // 2. Otimização: Busca todos os materiais UMA ÚNICA VEZ para não travar a API do Google Sheets
+            List<Material> todosMateriais = googleSheetsService.listarMateriais();
+
             for (int i = 0; i < idsMateriais.size(); i++) {
-                Material mat = googleSheetsService.buscarMaterialPorId(idsMateriais.get(i));
+                Long idMat = idsMateriais.get(i);
+
+                // Procura o material na lista que já está na memória
+                Material mat = todosMateriais.stream()
+                        .filter(m -> m.getId().equals(idMat))
+                        .findFirst()
+                        .orElseThrow(() -> new RuntimeException("Material não encontrado: " + idMat));
+
                 BigDecimal precoUn = BigDecimal.valueOf(precosFinais.get(i));
                 BigDecimal total = precoUn.multiply(BigDecimal.valueOf(pesosFinais.get(i)));
 
-                // AQUI ESTAVA O ERRO: Faltava o 'cpfFinal' no final da lista de argumentos
+                // Salva a venda
                 googleSheetsService.registrarVendaFinal(idVendedor, mat.getNome(), pesosFinais.get(i), precoUn, total, cpfFinal);
             }
             return "redirect:/extrato/" + idVendedor;
+
         } catch (Exception e) {
+            // 3. Radar: Isso vai imprimir o ERRO EXATO lá nos Logs do Render!
+            System.err.println("ERRO GRAVE NA FINALIZAÇÃO DA COLETA:");
+            e.printStackTrace();
             return "redirect:/admin/coletas?erro=venda";
         }
     }
