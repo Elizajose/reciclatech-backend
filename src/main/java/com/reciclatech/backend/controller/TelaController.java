@@ -178,25 +178,38 @@ public class TelaController {
             List<PreVendaDTO> itensRevisao = new ArrayList<>();
             BigDecimal totalEstimado = BigDecimal.ZERO;
 
+            // 🌟 OTIMIZAÇÃO: Busca todos os materiais UMA SÓ VEZ!
+            List<Material> todosMateriais = googleSheetsService.listarMateriais();
+
             for (String key : params.keySet()) {
                 if (key.startsWith("qtd_") && !params.get(key).isEmpty()) {
                     try {
                         Long idMaterial = Long.parseLong(key.replace("qtd_", ""));
-                        Double quantidade = Double.parseDouble(params.get(key));
+                        Double quantidade = Double.parseDouble(params.get(key).replace(",", ".")); // Previne erro de vírgula
+
                         if (quantidade > 0) {
-                            Material mat = googleSheetsService.buscarMaterialPorId(idMaterial);
-                            BigDecimal totalItem = mat.getPrecoPorKg().multiply(BigDecimal.valueOf(quantidade));
-                            itensRevisao.add(new PreVendaDTO(mat, quantidade, totalItem));
-                            totalEstimado = totalEstimado.add(totalItem);
+                            // 🌟 Busca na memória, sem perturbar o Google Sheets
+                            Material mat = todosMateriais.stream()
+                                    .filter(m -> m.getId().equals(idMaterial))
+                                    .findFirst().orElse(null);
+
+                            if (mat != null) {
+                                BigDecimal totalItem = mat.getPrecoPorKg().multiply(BigDecimal.valueOf(quantidade));
+                                itensRevisao.add(new PreVendaDTO(mat, quantidade, totalItem));
+                                totalEstimado = totalEstimado.add(totalItem);
+                            }
                         }
-                    } catch (Exception e) { }
+                    } catch (Exception e) {
+                        System.err.println("Erro ao processar item na revisão: " + e.getMessage());
+                    }
                 }
             }
             model.addAttribute("vendedor", vendedor);
             model.addAttribute("itens", itensRevisao);
             model.addAttribute("totalEstimado", totalEstimado);
             return "admin-revisao";
-        } catch (IOException e) {
+        } catch (Exception e) {
+            e.printStackTrace();
             return "redirect:/admin/coletas?erro=planilha";
         }
     }
@@ -208,19 +221,15 @@ public class TelaController {
                                        @RequestParam(required = false) List<Double> pesosFinais,
                                        @RequestParam(required = false) List<Double> precosFinais) {
         try {
-            // 1. Prevenção: Se não vier nenhum material, aborta antes de dar erro
             if (idsMateriais == null || idsMateriais.isEmpty()) {
-                System.out.println("Nenhum material foi recebido do formulário!");
                 return "redirect:/admin/coletas?erro=sem_materiais";
             }
 
-            // 2. Otimização: Busca todos os materiais UMA ÚNICA VEZ para não travar a API do Google Sheets
             List<Material> todosMateriais = googleSheetsService.listarMateriais();
+            List<List<Object>> loteDeVendas = new ArrayList<>();
 
             for (int i = 0; i < idsMateriais.size(); i++) {
                 Long idMat = idsMateriais.get(i);
-
-                // Procura o material na lista que já está na memória
                 Material mat = todosMateriais.stream()
                         .filter(m -> m.getId().equals(idMat))
                         .findFirst()
@@ -229,13 +238,27 @@ public class TelaController {
                 BigDecimal precoUn = BigDecimal.valueOf(precosFinais.get(i));
                 BigDecimal total = precoUn.multiply(BigDecimal.valueOf(pesosFinais.get(i)));
 
-                // Salva a venda
-                googleSheetsService.registrarVendaFinal(idVendedor, mat.getNome(), pesosFinais.get(i), precoUn, total, cpfFinal);
+                // 🌟 Prepara a linha para salvar
+                List<Object> row = Arrays.asList(
+                        System.currentTimeMillis() + i, // '+ i' garante que os IDs na planilha não fiquem repetidos!
+                        mat.getNome(),
+                        pesosFinais.get(i).toString().replace(".", ","),
+                        "ENTREGA NO LOCAL",
+                        precoUn.toString().replace(".", ","),
+                        total.toString().replace(".", ","),
+                        LocalDate.now().toString(),
+                        idVendedor,
+                        "VENDIDO",
+                        cpfFinal != null && !cpfFinal.trim().isEmpty() ? cpfFinal : "NÃO INFORMADO"
+                );
+                loteDeVendas.add(row);
             }
-            return "redirect:/extrato/" + idVendedor;
 
+            // 🌟 Salva todos os itens de uma vez só em 1 única requisição!
+            googleSheetsService.registrarVendasEmLote(loteDeVendas);
+
+            return "redirect:/extrato/" + idVendedor;
         } catch (Exception e) {
-            // 3. Radar: Isso vai imprimir o ERRO EXATO lá nos Logs do Render!
             System.err.println("ERRO GRAVE NA FINALIZAÇÃO DA COLETA:");
             e.printStackTrace();
             return "redirect:/admin/coletas?erro=venda";

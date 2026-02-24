@@ -269,4 +269,14 @@ public class GoogleSheetsService {
                 .filter(u -> identificadores.contains(u.getTelefone()) || identificadores.contains(u.getId().toString()))
                 .collect(Collectors.toList());
     }
+    // Novo método para salvar várias vendas de uma vez só!
+    public void registrarVendasEmLote(List<List<Object>> linhasParaSalvar) throws IOException {
+        if (linhasParaSalvar == null || linhasParaSalvar.isEmpty()) return;
+
+        ValueRange body = new ValueRange().setValues(linhasParaSalvar);
+        sheetsService.spreadsheets().values()
+                .append(spreadsheetId, "Ofertas!A1", body)
+                .setValueInputOption("USER_ENTERED")
+                .execute();
+    }
 }
