@@ -258,14 +258,15 @@ public class GoogleSheetsService {
 
         String hoje = LocalDate.now().toString();
 
-        // Filtramos apenas quem tem status VENDIDO e data de hoje
-        Set<String> telefones = values.stream()
+        // Pegamos os identificadores da coluna H (índice 7). Pode ser ID ou Telefone.
+        Set<String> identificadores = values.stream()
                 .filter(row -> row.size() > 8 && "VENDIDO".equals(row.get(8).toString()) && hoje.equals(row.get(6).toString()))
                 .map(row -> row.get(7).toString())
                 .collect(Collectors.toSet());
 
+        // Filtramos cruzando com o Telefone OU com o ID do usuário
         return listarUsuarios().stream()
-                .filter(u -> telefones.contains(u.getTelefone()))
+                .filter(u -> identificadores.contains(u.getTelefone()) || identificadores.contains(u.getId().toString()))
                 .collect(Collectors.toList());
     }
 }
