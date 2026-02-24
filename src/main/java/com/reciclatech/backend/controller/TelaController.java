@@ -267,4 +267,15 @@ public class TelaController {
         public String unidade;
         public RankingDTO(String n, Double p, String u) { this.nome = n; this.peso = p; this.unidade = u; }
     }
+    // Rota para abrir a lista de extratos do dia
+    @GetMapping("/meus-extratos")
+    public String listaExtratosDoDia(Model model) {
+        try {
+            // Buscamos quem vendeu hoje para listar na tela
+            model.addAttribute("usuarios", googleSheetsService.buscarUsuariosComVendasHoje());
+        } catch (IOException e) {
+            model.addAttribute("usuarios", new ArrayList<>());
+        }
+        return "meus-extratos"; // Nome do seu novo arquivo HTML
+    }
 }

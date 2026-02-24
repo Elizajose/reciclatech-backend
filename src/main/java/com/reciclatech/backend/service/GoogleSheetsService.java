@@ -248,4 +248,24 @@ public class GoogleSheetsService {
         return listarMateriais().stream().filter(m -> m.getId().equals(id)).findFirst()
                 .orElseThrow(() -> new RuntimeException("Material não encontrado"));
     }
+    // Novo método para alimentar a tela de extratos (meus-extratos.html)
+    public List<Usuario> buscarUsuariosComVendasHoje() throws IOException {
+        ValueRange response = sheetsService.spreadsheets().values()
+                .get(spreadsheetId, "Ofertas!A2:J")
+                .execute();
+        List<List<Object>> values = response.getValues();
+        if (values == null) return Collections.emptyList();
+
+        String hoje = LocalDate.now().toString();
+
+        // Filtramos apenas quem tem status VENDIDO e data de hoje
+        Set<String> telefones = values.stream()
+                .filter(row -> row.size() > 8 && "VENDIDO".equals(row.get(8).toString()) && hoje.equals(row.get(6).toString()))
+                .map(row -> row.get(7).toString())
+                .collect(Collectors.toSet());
+
+        return listarUsuarios().stream()
+                .filter(u -> telefones.contains(u.getTelefone()))
+                .collect(Collectors.toList());
+    }
 }
