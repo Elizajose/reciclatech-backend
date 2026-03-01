@@ -31,6 +31,7 @@ public class GoogleSheetsService {
     }
 
     // --- GESTÃO DE USUÁRIOS (Aba: Usuarios) ---
+    // --- Troca de BD remover esse comentario Eli foi só um teste ---
 
     public void salvarUsuario(Usuario usuario) throws IOException {
         usuario.prePersist();
