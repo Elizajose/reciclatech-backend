@@ -9,6 +9,7 @@ import com.reciclatech.backend.repository.OfertaRepository;
 import com.reciclatech.backend.repository.UsuarioRepository;
 import com.reciclatech.backend.service.GoogleSheetsService;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -51,8 +52,14 @@ public class TelaController {
 
     // --- GESTÃO DE MATERIAIS ---
     @GetMapping("/admin/precos")
-    public String painelPrecos(Model m, HttpSession s) {
+    public String painelPrecos(Model m, HttpSession s, HttpServletResponse response) { // RESPONSE ADICIONADO
         if(s.getAttribute("adminLogado") == null) return "redirect:/login";
+
+        // BLOQUEIA O CACHE PARA EVITAR O BUG DE VOLTAR
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0);
+
         try {
             m.addAttribute("materiais", googleSheetsService.listarMateriais());
         } catch (Exception e) {
@@ -141,8 +148,14 @@ public class TelaController {
     }
 
     @GetMapping("/admin/coletas")
-    public String telaListaColetas(Model model, HttpSession session) {
+    public String telaListaColetas(Model model, HttpSession session, HttpServletResponse response) { // RESPONSE ADICIONADO
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+
+        // BLOQUEIA O CACHE PARA EVITAR O BUG DE VOLTAR
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0);
+
         try {
             model.addAttribute("usuarios", googleSheetsService.buscarUsuariosComColetasPendentes());
         } catch (IOException e) {
@@ -152,8 +165,14 @@ public class TelaController {
     }
 
     @GetMapping("/admin/atender/{idUsuario}")
-    public String telaChecklist(@PathVariable String idUsuario, Model model, HttpSession session) {
+    public String telaChecklist(@PathVariable String idUsuario, Model model, HttpSession session, HttpServletResponse response) { // RESPONSE ADICIONADO
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+
+        // BLOQUEIA O CACHE PARA EVITAR O BUG DE VOLTAR
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0);
+
         try {
             // Busca o vendedor na lista da planilha
             Usuario vendedor = googleSheetsService.listarUsuarios().stream()
@@ -312,6 +331,7 @@ public class TelaController {
         public String unidade;
         public RankingDTO(String n, Double p, String u) { this.nome = n; this.peso = p; this.unidade = u; }
     }
+
     // Rota para abrir a lista de extratos do dia
     @GetMapping("/meus-extratos")
     public String listaExtratosDoDia(Model model) {
@@ -323,6 +343,7 @@ public class TelaController {
         }
         return "lista-extratos"; // Nome do seu novo arquivo HTML
     }
+
     // --- PESAGEM RÁPIDA (ATENDIMENTO AVULSO SEM TELEFONE) ---
     @PostMapping("/admin/pesagem-rapida")
     public String pesagemRapida(@RequestParam String nome, HttpSession session) {
