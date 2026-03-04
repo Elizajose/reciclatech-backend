@@ -274,9 +274,8 @@ public class TelaController {
                 BigDecimal precoUn = BigDecimal.valueOf(precosFinais.get(i));
                 BigDecimal total = precoUn.multiply(BigDecimal.valueOf(pesosFinais.get(i)));
 
-                // 🌟 Prepara a linha para salvar
                 List<Object> row = Arrays.asList(
-                        System.currentTimeMillis() + i, // '+ i' garante que os IDs na planilha não fiquem repetidos!
+                        System.currentTimeMillis() + i,
                         mat.getNome(),
                         pesosFinais.get(i).toString().replace(".", ","),
                         "ENTREGA NO LOCAL",
@@ -290,9 +289,13 @@ public class TelaController {
                 loteDeVendas.add(row);
             }
 
-            // 🌟 Salva todos os itens de uma vez só em 1 única requisição!
+            // Salva as vendas
             googleSheetsService.registrarVendasEmLote(loteDeVendas);
-            // 👇 A MÁGICA DE LIMPAR A TELA ACONTECE AQUI! 👇
+
+            // 👇 A CORREÇÃO ENTRA AQUI! Atualiza o CPF no cadastro do cliente 👇
+            googleSheetsService.atualizarCpfUsuario(idVendedor, cpfFinal);
+
+            // Limpa a tela
             googleSheetsService.marcarSolicitacaoComoConcluida(idVendedor);
 
             return "redirect:/extrato/" + idVendedor;

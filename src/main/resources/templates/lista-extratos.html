@@ -48,9 +48,8 @@
                         </td>
                         <td><span class="badge bg-secondary" th:text="'ID: ' + ${user.id}">ID</span></td>
                         <td class="text-end pe-4">
-                            <a th:href="@{'/extrato/' + ${user.id}}" class="btn btn-success btn-sm rounded-pill px-3 text-nowrap">
-                                <i class="bi bi-printer"></i> <span class="d-none d-sm-inline">Imprimir Extrato</span>
-                                <span class="d-inline d-sm-none">Extrato</span>
+                            <a th:href="@{|/extrato/${user.id}?autoPrint=true|}" target="_blank" class="btn btn-success rounded-pill">
+                                <i class="bi bi-printer"></i> Imprimir Extrato
                             </a>
                         </td>
                     </tr>

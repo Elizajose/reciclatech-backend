@@ -28,7 +28,12 @@
 </head>
 <body>
 
-<div class="text-center mb-4 no-print d-flex justify-content-center gap-2 botoes-topo">
+<div class="text-center mb-4 no-print d-flex flex-wrap justify-content-center gap-2 botoes-topo">
+
+    <a href="/meus-extratos" class="btn btn-outline-secondary fw-bold">
+        <i class="bi bi-arrow-left"></i> Voltar p/ Extratos
+    </a>
+
     <button onclick="window.print()" class="btn btn-success">
         <i class="bi bi-printer"></i> Imprimir / PDF
     </button>
@@ -105,13 +110,13 @@
         </tfoot>
     </table>
 
-    <div class="mt-5 text-center w-50 mx-auto" style="position: relative;">
+    <div class="mt-5 text-center w-50 mx-auto">
         <img src="/img/assinatura.png"
              alt="Assinatura"
-             style="width: 200px; mix-blend-mode: multiply; filter: contrast(150%) brightness(110%); margin-bottom: -15px;"
+             style="width: 200px; mix-blend-mode: multiply; filter: contrast(150%) brightness(110%); margin-bottom: 5px;"
              onerror="this.style.display='none'">
-        <div class="border-top border-dark"></div>
-        <small class="text-muted">Assinatura do Responsável</small>
+        <div class="border-top border-dark border-2"></div>
+        <small class="text-muted fw-bold">Assinatura do Responsável</small>
     </div>
 </div>
 
@@ -128,6 +133,18 @@
         let url = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(msg)}`;
         window.open(url, '_blank');
     }
+</script>
+<script>
+    // Se a URL tiver o "?autoPrint=true", ele abre a janela de impressão sozinho!
+    window.onload = function() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('autoPrint') === 'true') {
+            // Delay de 0.5s para garantir que as imagens (assinatura) carreguem antes de gerar o PDF
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        }
+    };
 </script>
 </body>
 </html>

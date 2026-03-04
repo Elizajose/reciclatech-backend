@@ -66,11 +66,50 @@ public class GoogleSheetsService {
             u.setId(Long.parseLong(row.get(0).toString()));
             u.setNome(row.get(1).toString());
             u.setTelefone(row.get(2).toString());
+
+            // LÊ O CPF (Coluna D - Índice 3)
+            if (row.size() > 3 && !row.get(3).toString().trim().isEmpty()) {
+                u.setCpf(row.get(3).toString());
+            }
+
             if (row.size() > 5) {
                 u.setEndereco(row.get(5).toString());
             }
             return u;
         }).collect(Collectors.toList());
+    }
+
+    // --- NOVO METODO: ATUALIZA O CPF DO CLIENTE NO CADASTRO ---
+    public void atualizarCpfUsuario(String idVendedor, String cpfFinal) throws IOException {
+        if (cpfFinal == null || cpfFinal.trim().isEmpty() || cpfFinal.equals("NÃO INFORMADO")) {
+            return; // Se não digitou CPF, não faz nada
+        }
+
+        ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Usuarios!A:C").execute();
+        List<List<Object>> values = response.getValues();
+
+        if (values != null) {
+            for (int i = 0; i < values.size(); i++) {
+                List<Object> row = values.get(i);
+                if (row.size() >= 3) {
+                    String idStr = row.get(0).toString();
+                    String telStr = row.get(2).toString();
+
+                    // Acha o cliente pelo ID ou Telefone
+                    if (idStr.equals(idVendedor) || telStr.equals(idVendedor)) {
+                        int rowIndex = i + 1; // +1 porque a planilha começa na linha 1
+
+                        // Grava o CPF na coluna D
+                        ValueRange body = new ValueRange().setValues(Collections.singletonList(Collections.singletonList(cpfFinal)));
+                        sheetsService.spreadsheets().values()
+                                .update(spreadsheetId, "Usuarios!D" + rowIndex, body)
+                                .setValueInputOption("USER_ENTERED")
+                                .execute();
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     // --- GESTÃO DE MATERIAIS (Aba: Materiais) ---
