@@ -52,7 +52,7 @@ public class TelaController {
 
     // --- GESTÃO DE MATERIAIS ---
     @GetMapping("/admin/precos")
-    public String painelPrecos(Model m, HttpSession s, HttpServletResponse response) { // RESPONSE ADICIONADO
+    public String painelPrecos(Model m, HttpSession s, HttpServletResponse response) {
         if(s.getAttribute("adminLogado") == null) return "redirect:/login";
 
         // BLOQUEIA O CACHE PARA EVITAR O BUG DE VOLTAR
@@ -148,7 +148,7 @@ public class TelaController {
     }
 
     @GetMapping("/admin/coletas")
-    public String telaListaColetas(Model model, HttpSession session, HttpServletResponse response) { // RESPONSE ADICIONADO
+    public String telaListaColetas(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
 
         // BLOQUEIA O CACHE PARA EVITAR O BUG DE VOLTAR
@@ -165,7 +165,7 @@ public class TelaController {
     }
 
     @GetMapping("/admin/atender/{idUsuario}")
-    public String telaChecklist(@PathVariable String idUsuario, Model model, HttpSession session, HttpServletResponse response) { // RESPONSE ADICIONADO
+    public String telaChecklist(@PathVariable String idUsuario, Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
 
         // BLOQUEIA O CACHE PARA EVITAR O BUG DE VOLTAR
@@ -174,6 +174,9 @@ public class TelaController {
         response.setDateHeader("Expires", 0);
 
         try {
+            // 🌟 TRAVA DE CONCORRÊNCIA: Avisa a planilha que este usuário já está sendo atendido por você
+            googleSheetsService.marcarComoEmAtendimento(idUsuario);
+
             // Busca o vendedor na lista da planilha
             Usuario vendedor = googleSheetsService.listarUsuarios().stream()
                     .filter(u -> u.getTelefone().equals(idUsuario) || u.getId().toString().equals(idUsuario))
@@ -185,6 +188,20 @@ public class TelaController {
             return "redirect:/admin/coletas?erro=usuario";
         }
         return "admin-checklist";
+    }
+
+    @GetMapping("/admin/cancelar/{id}")
+    public String cancelarColeta(@PathVariable String id, HttpSession session) {
+        if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+
+        try {
+            // Reaproveita o metodo que marca como concluída na planilha, limpando da tela
+            googleSheetsService.marcarSolicitacaoComoConcluida(id);
+        } catch (Exception e) {
+            System.err.println("Erro ao cancelar coleta: " + e.getMessage());
+        }
+
+        return "redirect:/admin/coletas";
     }
 
     @PostMapping("/admin/revisar-coleta")
@@ -334,7 +351,15 @@ public class TelaController {
 
     // Rota para abrir a lista de extratos do dia
     @GetMapping("/meus-extratos")
-    public String listaExtratosDoDia(Model model) {
+    public String listaExtratosDoDia(Model model, HttpSession session, HttpServletResponse response) {
+        // 1. Verifica se o gestor está logado
+        if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+
+        // 2. Bloqueia o cache para evitar o bug do "Voltar"
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0);
+
         try {
             // Buscamos quem vendeu hoje para listar na tela
             model.addAttribute("usuarios", googleSheetsService.buscarUsuariosComVendasHoje());

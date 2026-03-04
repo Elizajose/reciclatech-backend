@@ -75,9 +75,20 @@
                     </p>
                 </div>
 
-                <a th:href="@{'/admin/atender/' + ${u.id}}" class="btn btn-success fw-bold px-4">
-                    ATENDER <i class="bi bi-chevron-right"></i>
-                </a>
+                <div class="d-flex gap-2">
+                    <a th:href="@{'/admin/cancelar/' + ${u.telefone}}" class="btn btn-outline-danger d-flex align-items-center" onclick="return confirm('Tem certeza que deseja cancelar e remover este atendimento da lista?');" title="Cancelar Coleta">
+                        <i class="bi bi-trash3-fill"></i>
+                    </a>
+
+                    <a th:if="${u.statusPlanilha == 'DISPONIVEL'}" th:href="@{'/admin/atender/' + ${u.id}}" class="btn btn-success fw-bold px-4">
+                        ATENDER <i class="bi bi-chevron-right"></i>
+                    </a>
+
+                    <button th:if="${u.statusPlanilha == 'EM_ATENDIMENTO'}" class="btn btn-secondary fw-bold px-4 disabled" style="cursor: not-allowed;" title="Outro funcionário está atendendo">
+                        <i class="bi bi-lock-fill"></i> EM ATENDIMENTO
+                    </button>
+                </div>
+
             </div>
         </div>
 

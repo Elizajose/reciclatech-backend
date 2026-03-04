@@ -32,10 +32,8 @@ public class GoogleSheetsService {
 
     // --- GESTÃO DE USUÁRIOS (Aba: Usuarios) ---
 
-
     public void salvarUsuario(Usuario usuario) throws IOException {
         usuario.prePersist();
-        // Colunas: A:ID, B:Nome, C:Telefone, D:CPF, E:Email, F:Endereco, G:Data, H:Status, I:Tipo
         List<Object> row = Arrays.asList(
                 usuario.getId() != null ? usuario.getId() : System.currentTimeMillis(),
                 usuario.getNome(),
@@ -56,7 +54,6 @@ public class GoogleSheetsService {
     }
 
     public List<Usuario> listarUsuarios() throws IOException {
-        // Agora lemos até a coluna F (índice 5) para pegar o endereço
         ValueRange response = sheetsService.spreadsheets().values()
                 .get(spreadsheetId, "Usuarios!A2:F")
                 .execute();
@@ -69,7 +66,6 @@ public class GoogleSheetsService {
             u.setId(Long.parseLong(row.get(0).toString()));
             u.setNome(row.get(1).toString());
             u.setTelefone(row.get(2).toString());
-            // Se houver dado na Coluna F (índice 5), salvamos o endereço
             if (row.size() > 5) {
                 u.setEndereco(row.get(5).toString());
             }
@@ -147,7 +143,6 @@ public class GoogleSheetsService {
     // --- OPERAÇÕES DE VENDA E RELATÓRIOS (Aba: Ofertas) ---
 
     public void registrarVendaFinal(String telefone, String material, Double peso, BigDecimal precoUn, BigDecimal total, String cpf) throws IOException {
-        // Colunas: A:ID, B:Materiais, C:Peso, D:Endereço, E:Preço_Un, F:Preço_Total, G:Data, H:Usuario_ID, I:Status, J:CPF
         List<Object> row = Arrays.asList(
                 System.currentTimeMillis(),
                 material,
@@ -179,14 +174,13 @@ public class GoogleSheetsService {
                     Oferta o = new Oferta();
                     o.setMaterial(row.get(1).toString());
                     o.setPeso(Double.parseDouble(row.get(2).toString().replace(",", ".")));
-                    o.setPrecoEstimado(new BigDecimal(row.get(5).toString().replace(",", "."))); // Coluna F
+                    o.setPrecoEstimado(new BigDecimal(row.get(5).toString().replace(",", ".")));
                     return o;
                 }).collect(Collectors.toList());
     }
 
     public void salvarSolicitacaoInicial(Usuario usuario, String endereco) throws IOException {
         salvarUsuario(usuario);
-        // Garante que a linha de solicitação inicial também siga o padrão de 10 colunas
         List<Object> rowOferta = Arrays.asList(
                 System.currentTimeMillis(), "Solicitação de Coleta", "0", endereco, "0", "0",
                 LocalDate.now().toString(), usuario.getTelefone(), "DISPONIVEL", LocalDate.now().toString()
@@ -201,11 +195,25 @@ public class GoogleSheetsService {
         if (values == null) return Collections.emptyList();
 
         LocalDate hoje = LocalDate.now();
-        Set<String> telefones = values.stream()
-                .filter(row -> row.size() > 9 && "DISPONIVEL".equals(row.get(8).toString()) && LocalDate.parse(row.get(9).toString()).isEqual(hoje))
-                .map(row -> row.get(7).toString()).collect(Collectors.toSet());
 
-        return listarUsuarios().stream().filter(u -> telefones.contains(u.getTelefone())).collect(Collectors.toList());
+        // 🌟 NOVO: Mapeia o Telefone para o Status ("DISPONIVEL" ou "EM_ATENDIMENTO")
+        Map<String, String> statusMap = new HashMap<>();
+        for (List<Object> row : values) {
+            if (row.size() > 9) {
+                String status = row.get(8).toString();
+                String dataStr = row.get(9).toString();
+                String telefone = row.get(7).toString();
+
+                if (("DISPONIVEL".equals(status) || "EM_ATENDIMENTO".equals(status)) && LocalDate.parse(dataStr).isEqual(hoje)) {
+                    statusMap.put(telefone, status);
+                }
+            }
+        }
+
+        return listarUsuarios().stream()
+                .filter(u -> statusMap.containsKey(u.getTelefone()))
+                .peek(u -> u.setStatusPlanilha(statusMap.get(u.getTelefone()))) // Injeta o status no objeto!
+                .collect(Collectors.toList());
     }
 
     public Double calcularTotalReciclado() throws IOException {
@@ -250,7 +258,7 @@ public class GoogleSheetsService {
         return listarMateriais().stream().filter(m -> m.getId().equals(id)).findFirst()
                 .orElseThrow(() -> new RuntimeException("Material não encontrado"));
     }
-    // Novo método para alimentar a tela de extratos (meus-extratos.html)
+
     public List<Usuario> buscarUsuariosComVendasHoje() throws IOException {
         ValueRange response = sheetsService.spreadsheets().values()
                 .get(spreadsheetId, "Ofertas!A2:J")
@@ -260,18 +268,16 @@ public class GoogleSheetsService {
 
         String hoje = LocalDate.now().toString();
 
-        // Pegamos os identificadores da coluna H (índice 7). Pode ser ID ou Telefone.
         Set<String> identificadores = values.stream()
                 .filter(row -> row.size() > 8 && "VENDIDO".equals(row.get(8).toString()) && hoje.equals(row.get(6).toString()))
                 .map(row -> row.get(7).toString())
                 .collect(Collectors.toSet());
 
-        // Filtramos cruzando com o Telefone OU com o ID do usuário
         return listarUsuarios().stream()
                 .filter(u -> identificadores.contains(u.getTelefone()) || identificadores.contains(u.getId().toString()))
                 .collect(Collectors.toList());
     }
-    // Novo método para salvar várias vendas de uma vez só!
+
     public void registrarVendasEmLote(List<List<Object>> linhasParaSalvar) throws IOException {
         if (linhasParaSalvar == null || linhasParaSalvar.isEmpty()) return;
 
@@ -281,9 +287,9 @@ public class GoogleSheetsService {
                 .setValueInputOption("USER_ENTERED")
                 .execute();
     }
-    // Método para tirar o cliente da fila de espera após o atendimento
-    public void marcarSolicitacaoComoConcluida(String idVendedor) throws IOException {
-        // 1. Busca o usuário para garantir que temos tanto o ID quanto o Telefone em mãos
+
+    // 🌟 NOVO: Método que o TelaController chama logo ao abrir a tela de Check-list
+    public void marcarComoEmAtendimento(String idVendedor) throws IOException {
         Usuario usuario = listarUsuarios().stream()
                 .filter(u -> u.getId().toString().equals(idVendedor) || u.getTelefone().equals(idVendedor))
                 .findFirst()
@@ -292,7 +298,6 @@ public class GoogleSheetsService {
         String telefone = usuario != null ? usuario.getTelefone() : idVendedor;
         String idStr = usuario != null ? usuario.getId().toString() : idVendedor;
 
-        // 2. Vasculha a planilha nas colunas H (Identificador) e I (Status)
         ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Ofertas!H:I").execute();
         List<List<Object>> values = response.getValues();
 
@@ -304,9 +309,45 @@ public class GoogleSheetsService {
                     String identificadorPlanilha = row.get(0).toString();
                     String statusPlanilha = row.get(1).toString();
 
-                    // 3. A MÁGICA: Se a planilha tiver o Telefone OU o ID, ele dá baixa!
                     if ((identificadorPlanilha.equals(telefone) || identificadorPlanilha.equals(idStr)) && statusPlanilha.equals("DISPONIVEL")) {
-                        int numeroDaLinha = i + 1; // +1 porque a planilha começa na linha 1
+                        int numeroDaLinha = i + 1;
+
+                        ValueRange body = new ValueRange().setValues(Collections.singletonList(Collections.singletonList("EM_ATENDIMENTO")));
+
+                        sheetsService.spreadsheets().values()
+                                .update(spreadsheetId, "Ofertas!I" + numeroDaLinha, body)
+                                .setValueInputOption("USER_ENTERED")
+                                .execute();
+                    }
+                }
+            }
+        }
+    }
+
+    public void marcarSolicitacaoComoConcluida(String idVendedor) throws IOException {
+        Usuario usuario = listarUsuarios().stream()
+                .filter(u -> u.getId().toString().equals(idVendedor) || u.getTelefone().equals(idVendedor))
+                .findFirst()
+                .orElse(null);
+
+        String telefone = usuario != null ? usuario.getTelefone() : idVendedor;
+        String idStr = usuario != null ? usuario.getId().toString() : idVendedor;
+
+        ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Ofertas!H:I").execute();
+        List<List<Object>> values = response.getValues();
+
+        if (values != null) {
+            for (int i = 0; i < values.size(); i++) {
+                List<Object> row = values.get(i);
+
+                if (row.size() >= 2) {
+                    String identificadorPlanilha = row.get(0).toString();
+                    String statusPlanilha = row.get(1).toString();
+
+                    // 🌟 AJUSTE: Limpa o card da tela tanto se estava Disponível quanto Em Atendimento
+                    if ((identificadorPlanilha.equals(telefone) || identificadorPlanilha.equals(idStr)) &&
+                            (statusPlanilha.equals("DISPONIVEL") || statusPlanilha.equals("EM_ATENDIMENTO"))) {
+                        int numeroDaLinha = i + 1;
 
                         ValueRange body = new ValueRange().setValues(Collections.singletonList(Collections.singletonList("FINALIZADO")));
 
@@ -319,15 +360,12 @@ public class GoogleSheetsService {
             }
         }
     }
-    // --- ROBÔ FAXINEIRO (AGENDAMENTO AUTOMÁTICO) ---
 
-    // Roda todo dia às 03:00 da manhã (Cron: Segundos Minutos Horas Dia Mês DiaDaSemana)
     @Scheduled(cron = "0 0 3 * * *")
     public void limparOfertasAntigasAutomaticamente() {
         try {
             System.out.println("🤖 Robô Faxineiro: Iniciando limpeza de registros com mais de 30 dias...");
 
-            // 1. Pega todas as linhas atuais da aba Ofertas
             ValueRange response = sheetsService.spreadsheets().values()
                     .get(spreadsheetId, "Ofertas!A2:J")
                     .execute();
@@ -335,38 +373,31 @@ public class GoogleSheetsService {
 
             if (todasAsLinhas == null || todasAsLinhas.isEmpty()) return;
 
-            // Define o limite de tempo (Hoje menos 30 dias)
             LocalDate dataLimite = LocalDate.now().minusDays(2);
 
-            // 2. Filtra a lista: Guarda APENAS as coisas RECENTES (que vão sobreviver à limpeza)
             List<List<Object>> linhasParaManter = todasAsLinhas.stream()
                     .filter(row -> {
                         try {
-                            // A data fica na coluna G (índice 6)
                             if (row.size() > 6) {
                                 LocalDate dataRow = LocalDate.parse(row.get(6).toString());
-                                // Mantém a linha se a data dela for DEPOIS (mais nova) ou igual ao limite
                                 return dataRow.isAfter(dataLimite) || dataRow.isEqual(dataLimite);
                             }
-                            return true; // Se a linha não tiver data por algum erro, não exclui por segurança
+                            return true;
                         } catch (Exception e) {
                             return true;
                         }
                     })
                     .collect(Collectors.toList());
 
-            // Se o tamanho for igual, não tem nada velho para apagar
             if (todasAsLinhas.size() == linhasParaManter.size()) {
                 System.out.println("🤖 Robô Faxineiro: Nenhuma oferta antiga para limpar hoje.");
                 return;
             }
 
-            // 3. APAGA TUDO da planilha (Da linha 2 pra baixo)
             sheetsService.spreadsheets().values()
                     .clear(spreadsheetId, "Ofertas!A2:J", new ClearValuesRequest())
                     .execute();
 
-            // 4. ESCREVE DE VOLTA só as linhas recentes que separamos
             if (!linhasParaManter.isEmpty()) {
                 ValueRange body = new ValueRange().setValues(linhasParaManter);
                 sheetsService.spreadsheets().values()

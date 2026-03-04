@@ -22,6 +22,10 @@ public class Usuario {
     private String endereco;
     private LocalDateTime dataColeta;
 
+    // NOVO CAMPO: Para transportar o status lá da Planilha Google para o HTML
+    @Transient
+    private String statusPlanilha;
+
     @Enumerated(EnumType.STRING)
     private StatusColeta status;
 
@@ -58,6 +62,9 @@ public class Usuario {
 
     public LocalDateTime getDataColeta() { return dataColeta; }
     public void setDataColeta(LocalDateTime dataColeta) { this.dataColeta = dataColeta; }
+
+    public String getStatusPlanilha() { return statusPlanilha; }
+    public void setStatusPlanilha(String statusPlanilha) { this.statusPlanilha = statusPlanilha; }
 
     public StatusColeta getStatus() { return status; }
     public void setStatus(StatusColeta status) { this.status = status; }
