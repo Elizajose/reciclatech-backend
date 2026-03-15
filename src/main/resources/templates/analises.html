@@ -7,61 +7,53 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <meta http-equiv="refresh" content="30">
+
+    <style>
+        .card { border-radius: 15px; border: none; }
+        .bg-gradient-primary { background: linear-gradient(45deg, #007bff, #0056b3); }
+        .bg-gradient-success { background: linear-gradient(45deg, #28a745, #1e7e34); }
+        .bg-gradient-warning { background: linear-gradient(45deg, #ffc107, #d39e00); }
+    </style>
 </head>
 <body class="bg-light">
+
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-bar-chart-steps"></i> Inteligência de Negócio</h2>
-        <a href="/admin/coletas" class="btn btn-secondary">Voltar</a>
+        <h2><i class="bi bi-bar-chart-line-fill text-primary"></i> Inteligência de Negócio</h2>
+        <a href="/admin/coletas" class="btn btn-outline-secondary shadow-sm">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
     </div>
-
-    <div class="row">
-        <div class="col-md-8 mb-4">
-            <div class="card shadow-sm p-3">
-                <h5 class="card-title">Volume Coletado (KG) - Últimos 7 Dias</h5>
-                <canvas id="graficoVolume"></canvas>
-            </div>
-        </div>
-
-        <div class="col-md-4 mb-4">
-            <div class="card shadow-sm p-3">
-                <h5 class="card-title">Materiais mais Vendidos</h5>
-                <canvas id="graficoMateriais"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<div class="container-fluid mt-4">
-    <h2 class="mb-4">📊 Painel de Análises - ReciclaTech</h2>
 
     <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white shadow">
+        <div class="col-md-4">
+            <div class="card bg-gradient-primary text-white shadow-sm">
                 <div class="card-body text-center">
-                    <h6>Total de Atendimentos</h6>
-                    <h2 th:text="${totalAtendimentos}">0</h2>
+                    <h6 class="text-uppercase small">Total de Atendimentos</h6>
+                    <h2 class="display-6 fw-bold" th:text="${totalAtendimentos}">0</h2>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white shadow">
+        <div class="col-md-4">
+            <div class="card bg-gradient-success text-white shadow-sm">
                 <div class="card-body text-center">
-                    <h6>Peso Total (kg)</h6>
-                    <h2 th:text="${#numbers.formatDecimal(volumeDados.values().stream().mapToDouble(Double::doubleValue).sum(), 1, 2)}">0</h2>
+                    <h6 class="text-uppercase small">Volume Total Reciclado</h6>
+                    <h2 class="display-6 fw-bold">
+                        <span th:text="${#numbers.formatDecimal(materialDados.values().stream().mapToDouble(Double::doubleValue).sum(), 1, 2)}">0</span> <small style="font-size: 0.5em">KG</small>
+                    </h2>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-dark shadow">
+        <div class="col-md-4">
+            <div class="card bg-gradient-warning text-dark shadow-sm">
                 <div class="card-body text-center">
-                    <h6>Faturamento Total</h6>
-                    <h2>R$ <span th:text="${#numbers.formatDecimal(financeiroDados.values().stream().mapToDouble(Double::doubleValue).sum(), 1, 2)}">0,00</span></h2>
+                    <h6 class="text-uppercase small fw-bold">Faturamento Total Estimado</h6>
+                    <h2 class="display-6 fw-bold">
+                        R$ <span th:text="${#numbers.formatDecimal(financeiroDados.values().stream().mapToDouble(Double::doubleValue).sum(), 1, 2)}">0,00</span>
+                    </h2>
                 </div>
             </div>
         </div>
@@ -69,8 +61,8 @@
 
     <div class="row">
         <div class="col-md-8 mb-4">
-            <div class="card shadow">
-                <div class="card-header">📈 Tendência de Coletas (Volume kg / Dia)</div>
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white fw-bold"><i class="bi bi-graph-up"></i> Tendência de Coletas (KG por Dia)</div>
                 <div class="card-body">
                     <canvas id="graficoLinha"></canvas>
                 </div>
@@ -78,8 +70,8 @@
         </div>
 
         <div class="col-md-4 mb-4">
-            <div class="card shadow">
-                <div class="card-header">♻️ Mix de Materiais (Peso %)</div>
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white fw-bold"><i class="bi bi-pie-chart"></i> Mix de Materiais (Peso)</div>
                 <div class="card-body">
                     <canvas id="graficoPizza"></canvas>
                 </div>
@@ -88,12 +80,14 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script th:inline="javascript">
-    // Dados vindos do Java (Controller)
+    // Pegando os dados do Java de forma segura
     const volumeData = /*[[${volumeDados}]]*/ {};
     const materialData = /*[[${materialDados}]]*/ {};
 
-    // Gráfico de Linha
+    // Configuração do Gráfico de Linha
     new Chart(document.getElementById('graficoLinha'), {
         type: 'line',
         data: {
@@ -102,23 +96,28 @@
                 label: 'Quilos Reciclados',
                 data: Object.values(volumeData),
                 borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                borderWidth: 3,
                 fill: true,
-                backgroundColor: 'rgba(40, 167, 69, 0.1)'
+                tension: 0.3 // Deixa a linha curvada, mais elegante
             }]
-        }
+        },
+        options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // Gráfico de Pizza
+    // Configuração do Gráfico de Pizza
     new Chart(document.getElementById('graficoPizza'), {
         type: 'doughnut',
         data: {
             labels: Object.keys(materialData),
             datasets: [{
                 data: Object.values(materialData),
-                backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6610f2']
+                backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6610f2', '#fd7e14']
             }]
-        }
+        },
+        options: { responsive: true, maintainAspectRatio: false }
     });
 </script>
+
 </body>
 </html>
