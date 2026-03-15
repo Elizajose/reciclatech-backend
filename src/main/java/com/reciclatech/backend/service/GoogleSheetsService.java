@@ -400,56 +400,79 @@ public class GoogleSheetsService {
         }
     }
 
-    @Scheduled(cron = "0 0 3 * * *")
+
+    @Scheduled(cron = "0 0 3 * * *") // Roda às 3h da manhã
     public void limparOfertasAntigasAutomaticamente() {
         try {
-            System.out.println("🤖 Robô Faxineiro: Iniciando limpeza de registros com mais de 30 dias...");
+            System.out.println("🤖 Robô Faxineiro: Iniciando arquivamento de registros com mais de 365 dias...");
 
+            // 1. Puxa os dados da aba Ofertas (da linha 2 até a coluna J)
             ValueRange response = sheetsService.spreadsheets().values()
                     .get(spreadsheetId, "Ofertas!A2:J")
                     .execute();
             List<List<Object>> todasAsLinhas = response.getValues();
 
-            if (todasAsLinhas == null || todasAsLinhas.isEmpty()) return;
-
-            LocalDate dataLimite = LocalDate.now().minusDays(2);
-
-            List<List<Object>> linhasParaManter = todasAsLinhas.stream()
-                    .filter(row -> {
-                        try {
-                            if (row.size() > 6) {
-                                LocalDate dataRow = LocalDate.parse(row.get(6).toString());
-                                return dataRow.isAfter(dataLimite) || dataRow.isEqual(dataLimite);
-                            }
-                            return true;
-                        } catch (Exception e) {
-                            return true;
-                        }
-                    })
-                    .collect(Collectors.toList());
-
-            if (todasAsLinhas.size() == linhasParaManter.size()) {
-                System.out.println("🤖 Robô Faxineiro: Nenhuma oferta antiga para limpar hoje.");
+            if (todasAsLinhas == null || todasAsLinhas.isEmpty()) {
+                System.out.println("🤖 Robô Faxineiro: Nenhuma oferta encontrada para processar.");
                 return;
             }
 
+            LocalDate dataLimite = LocalDate.now().minusDays(365);
+            List<List<Object>> linhasParaManter = new ArrayList<>();
+            List<List<Object>> linhasParaArquivar = new ArrayList<>();
+
+            for (List<Object> row : todasAsLinhas) {
+                try {
+                    // A data está na coluna G (índice 6)
+                    if (row.size() > 6 && row.get(6) != null) {
+                        LocalDate dataRow = LocalDate.parse(row.get(6).toString());
+
+                        if (dataRow.isBefore(dataLimite)) {
+                            linhasParaArquivar.add(row);
+                        } else {
+                            linhasParaManter.add(row);
+                        }
+                    } else {
+                        // Se a linha estiver incompleta ou sem data, mantemos na principal para não perder informação
+                        linhasParaManter.add(row);
+                    }
+                } catch (Exception e) {
+                    // Em caso de erro de formatação na data, mantém a linha na aba ativa
+                    linhasParaManter.add(row);
+                }
+            }
+
+            // 2. Se houver o que arquivar, manda para a aba Historico_Ofertas
+            if (!linhasParaArquivar.isEmpty()) {
+                ValueRange bodyArquivo = new ValueRange().setValues(linhasParaArquivar);
+                sheetsService.spreadsheets().values()
+                        .append(spreadsheetId, "Historico_Ofertas!A1", bodyArquivo)
+                        .setValueInputOption("USER_ENTERED")
+                        .execute();
+                System.out.println("✅ " + linhasParaArquivar.size() + " registros movidos para o Histórico.");
+            } else {
+                System.out.println("ℹ️ Nenhuma oferta com mais de 365 dias para arquivar.");
+                return; // Interrompe aqui para não limpar a aba principal sem necessidade
+            }
+
+            // 3. Limpa a aba Ofertas e recoloca apenas o que é recente (manter)
             sheetsService.spreadsheets().values()
                     .clear(spreadsheetId, "Ofertas!A2:J", new ClearValuesRequest())
                     .execute();
 
             if (!linhasParaManter.isEmpty()) {
-                ValueRange body = new ValueRange().setValues(linhasParaManter);
+                ValueRange bodyManter = new ValueRange().setValues(linhasParaManter);
                 sheetsService.spreadsheets().values()
-                        .update(spreadsheetId, "Ofertas!A2", body)
+                        .update(spreadsheetId, "Ofertas!A2", bodyManter)
                         .setValueInputOption("USER_ENTERED")
                         .execute();
             }
 
-            int apagados = todasAsLinhas.size() - linhasParaManter.size();
-            System.out.println("🤖 Robô Faxineiro: Limpeza concluída! " + apagados + " registros antigos apagados da planilha.");
+            System.out.println("🤖 Robô Faxineiro: Operação finalizada com sucesso!");
 
         } catch (Exception e) {
-            System.err.println("Erro no Robô Faxineiro: " + e.getMessage());
+            System.err.println("❌ Erro crítico no Robô Faxineiro: " + e.getMessage());
         }
     }
+
 }
