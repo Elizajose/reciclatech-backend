@@ -2,46 +2,127 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Coletaê Análises</title>
+    <meta charset="UTF-8">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .card { border-radius: 12px; border: none; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); }
+        .stat-card { color: white; }
+    </style>
 </head>
 <body class="bg-light">
+
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-bar-chart-steps"></i> Inteligência de Negócio</h2>
-        <a href="/admin/analises" class="btn btn-secondary">Voltar</a>
+        <h2><i class="bi bi-cpu"></i> Inteligência de Negócio - Coletaê</h2>
+        <a href="/admin/coletas" class="btn btn-outline-dark"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm p-3 bg-success text-white">
+                <h6>Total de Atendimentos</h6>
+                <h3 th:text="${totalAtendimentos}">0</h3>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm p-3 bg-primary text-white">
+                <h6>Volume Total (KG)</h6>
+                <h3 th:text="${#numbers.formatDecimal(materialDados.values().stream().mapToDouble(Double::doubleValue).sum(), 1, 2)}">0</h3>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm p-3 bg-warning text-dark">
+                <h6>Faturamento Estimado</h6>
+                <h3>R$ <span th:text="${#numbers.formatDecimal(financeiroDados.values().stream().mapToDouble(Double::doubleValue).sum(), 1, 2)}">0,00</span></h3>
+            </div>
+        </div>
     </div>
 
     <div class="row">
         <div class="col-md-8 mb-4">
             <div class="card shadow-sm p-3">
-                <h5 class="card-title">Volume Coletado (KG) - Últimos 7 Dias</h5>
-                <canvas id="graficoVolume"></canvas>
+                <h5 class="card-title fw-bold text-muted"><i class="bi bi-graph-up"></i> Volume Coletado por Data</h5>
+                <hr>
+                <div style="height: 300px;">
+                    <canvas id="graficoVolume"></canvas>
+                </div>
             </div>
         </div>
 
         <div class="col-md-4 mb-4">
             <div class="card shadow-sm p-3">
-                <h5 class="card-title">Materiais mais Vendidos</h5>
-                <canvas id="graficoMateriais"></canvas>
+                <h5 class="card-title fw-bold text-muted"><i class="bi bi-pie-chart"></i> Mix de Materiais</h5>
+                <hr>
+                <div style="height: 300px;">
+                    <canvas id="graficoMateriais"></canvas>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<script>
-    // Aqui o Java injetará os dados dinamicamente
-    const ctxVolume = document.getElementById('graficoVolume');
+
+
+<script th:inline="javascript">
+    /* Anotação th:inline="javascript" permite que o Thymeleaf
+       injete os Maps do Java diretamente como objetos JSON
+    */
+    const volumeData = /*[[${volumeDados}]]*/ {};
+    const materialData = /*[[${materialDados}]]*/ {};
+
+    // 1. Gráfico de Volume (Linha)
+    const ctxVolume = document.getElementById('graficoVolume').getContext('2d');
     new Chart(ctxVolume, {
         type: 'line',
         data: {
-            labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'],
+            labels: Object.keys(volumeData), // Datas da planilha
             datasets: [{
-                label: 'Quilos Coletados',
-                data: [120, 190, 300, 250, 400, 150, 0], // Dados de exemplo
+                label: 'KG Coletados',
+                data: Object.values(volumeData), // Pesos da planilha
                 borderColor: '#198754',
-                tension: 0.3
+                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 5,
+                pointBackgroundColor: '#198754'
             }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    // 2. Gráfico de Materiais (Rosca/Doughnut)
+    const ctxMateriais = document.getElementById('graficoMateriais').getContext('2d');
+    new Chart(ctxMateriais, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(materialData),
+            datasets: [{
+                data: Object.values(materialData),
+                backgroundColor: [
+                    '#0d6efd', '#198754', '#ffc107', '#dc3545', '#6610f2', '#fd7e14'
+                ],
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
         }
     });
 </script>
