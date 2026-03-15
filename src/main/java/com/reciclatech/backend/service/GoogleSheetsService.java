@@ -509,11 +509,15 @@ public class GoogleSheetsService {
                     o.setPeso(Double.parseDouble(row.get(2).toString().replace(",", ".")));
                     o.setPrecoEstimado(new BigDecimal(row.get(5).toString().replace(",", ".")));
 
-                    // CORREÇÃO SEGURA: Verifica se a coluna G (índice 6) existe antes de ler
+                    // 🌟 ESSENCIAL: Captura o identificador do usuário (Coluna H - índice 7)
+                    if (row.size() > 7 && row.get(7) != null) {
+                        o.setIdUsuario(row.get(7).toString());
+                    }
+
                     if (row.size() > 6 && row.get(6) != null) {
                         o.setData(row.get(6).toString());
                     } else {
-                        o.setData("Sem Data"); // Valor padrão caso a célula esteja vazia
+                        o.setData("Sem Data");
                     }
 
                     return o;

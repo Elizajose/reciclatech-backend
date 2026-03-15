@@ -402,37 +402,53 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
 
         try {
+            // 1. Buscamos os dados das duas planilhas
             List<Oferta> historico = googleSheetsService.getHistoricoCompleto();
+            List<Usuario> usuariosCadastrados = googleSheetsService.getUsuarios(); // Pega da aba Usuários
 
-            // 📊 1. Peso total por Material
+            // 📊 1. Peso total por Material (Dados das Ofertas)
             Map<String, Double> materialDados = historico.stream()
+                    .filter(o -> o.getMaterial() != null)
                     .collect(Collectors.groupingBy(Oferta::getMaterial,
                             Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
 
-            // 📈 2. Volume por Data
+            // 📈 2. Volume por Data (Dados das Ofertas)
             Map<String, Double> volumePorDia = historico.stream()
                     .filter(o -> o.getData() != null)
                     .collect(Collectors.groupingBy(Oferta::getData,
                             TreeMap::new,
                             Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
 
-            // 💰 3. Financeiro
+            // 💰 3. Financeiro por Material (Dados das Ofertas)
             Map<String, Double> financeiroDados = historico.stream()
+                    .filter(o -> o.getMaterial() != null)
                     .collect(Collectors.groupingBy(Oferta::getMaterial,
                             Collectors.summingDouble(o -> o.getPrecoEstimado() != null ? o.getPrecoEstimado().doubleValue() : 0.0)));
 
-            // --- CÁLCULOS TOTAIS NO JAVA (Mais seguro que no HTML) ---
+            // --- MUDANÇA ESTRATÉGICA ---
+            // Agora contamos quantos usuários existem na planilha de usuários
+            // Isso ignora se o usuário tem 1 ou 50 itens na outra aba.
+            long totalAtendimentosReais = (usuariosCadastrados != null) ? usuariosCadastrados.size() : 0;
+
+            // --- CÁLCULOS TOTAIS GERAIS ---
             Double pesoTotalTotal = materialDados.values().stream().mapToDouble(Double::doubleValue).sum();
             Double faturamentoTotalTotal = financeiroDados.values().stream().mapToDouble(Double::doubleValue).sum();
 
+            // Cálculo do Ticket Médio (Faturamento / Quantidade de Usuários)
+            Double ticketMedio = (totalAtendimentosReais > 0) ? faturamentoTotalTotal / totalAtendimentosReais : 0.0;
+
+            // Enviando tudo para a tela (Thymeleaf)
             model.addAttribute("materialDados", materialDados);
             model.addAttribute("volumeDados", volumePorDia);
             model.addAttribute("financeiroDados", financeiroDados);
-            model.addAttribute("totalAtendimentos", historico.size());
-            model.addAttribute("pesoTotalTotal", pesoTotalTotal); // Nova variável
-            model.addAttribute("faturamentoTotalTotal", faturamentoTotalTotal); // Nova variável
+
+            model.addAttribute("totalAtendimentos", totalAtendimentosReais);
+            model.addAttribute("pesoTotalTotal", pesoTotalTotal);
+            model.addAttribute("faturamentoTotalTotal", faturamentoTotalTotal);
+            model.addAttribute("ticketMedio", ticketMedio);
 
         } catch (Exception e) {
+            System.err.println("Erro ao carregar análises: " + e.getMessage());
             e.printStackTrace();
             return "redirect:/admin/coletas?erro=analises";
         }

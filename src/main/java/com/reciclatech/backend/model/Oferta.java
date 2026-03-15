@@ -39,6 +39,11 @@ public class Oferta {
     public Oferta() {}
 
     // Getters e Setters
+    public String getIdUsuario() {
+        return (this.usuario != null && this.usuario.getId() != null)
+                ? this.usuario.getId().toString()
+                : null;
+    }
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
