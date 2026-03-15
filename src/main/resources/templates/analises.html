@@ -30,13 +30,13 @@
         <div class="col-md-4">
             <div class="card shadow-sm p-3 bg-primary text-white">
                 <h6>Volume Total (KG)</h6>
-                <h3 th:text="${#numbers.formatDecimal(materialDados.values().stream().mapToDouble(Double::doubleValue).sum(), 1, 2)}">0</h3>
+                <h3 th:text="${#numbers.formatDecimal(pesoTotalTotal, 1, 2)}">0</h3>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card shadow-sm p-3 bg-warning text-dark">
                 <h6>Faturamento Estimado</h6>
-                <h3>R$ <span th:text="${#numbers.formatDecimal(financeiroDados.values().stream().mapToDouble(Double::doubleValue).sum(), 1, 2)}">0,00</span></h3>
+                <h3>R$ <span th:text="${#numbers.formatDecimal(faturamentoTotalTotal, 1, 2)}">0,00</span></h3>
             </div>
         </div>
     </div>

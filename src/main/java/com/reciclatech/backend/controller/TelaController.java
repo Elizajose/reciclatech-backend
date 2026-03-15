@@ -402,35 +402,40 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
 
         try {
-            // Busca todos os registros (atuais e arquivados)
             List<Oferta> historico = googleSheetsService.getHistoricoCompleto();
 
-            // 📊 1. Peso total por Material (Gráfico de Pizza)
+            // 📊 1. Peso total por Material
             Map<String, Double> materialDados = historico.stream()
                     .collect(Collectors.groupingBy(Oferta::getMaterial,
-                            Collectors.summingDouble(Oferta::getPeso)));
+                            Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
 
-            // 📈 2. Volume de peso por Data (Gráfico de Linha - últimos 30 registros/dias)
+            // 📈 2. Volume por Data
             Map<String, Double> volumePorDia = historico.stream()
+                    .filter(o -> o.getData() != null)
                     .collect(Collectors.groupingBy(Oferta::getData,
-                            TreeMap::new, // AGORA FUNCIONA PORQUE ADICIONAMOS O IMPORT java.util.*
-                            Collectors.summingDouble(Oferta::getPeso)));
+                            TreeMap::new,
+                            Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
 
-            // 💰 3. Faturamento total por Material
+            // 💰 3. Financeiro
             Map<String, Double> financeiroDados = historico.stream()
                     .collect(Collectors.groupingBy(Oferta::getMaterial,
-                            Collectors.summingDouble(o -> o.getPrecoEstimado().doubleValue())));
+                            Collectors.summingDouble(o -> o.getPrecoEstimado() != null ? o.getPrecoEstimado().doubleValue() : 0.0)));
+
+            // --- CÁLCULOS TOTAIS NO JAVA (Mais seguro que no HTML) ---
+            Double pesoTotalTotal = materialDados.values().stream().mapToDouble(Double::doubleValue).sum();
+            Double faturamentoTotalTotal = financeiroDados.values().stream().mapToDouble(Double::doubleValue).sum();
 
             model.addAttribute("materialDados", materialDados);
             model.addAttribute("volumeDados", volumePorDia);
             model.addAttribute("financeiroDados", financeiroDados);
             model.addAttribute("totalAtendimentos", historico.size());
+            model.addAttribute("pesoTotalTotal", pesoTotalTotal); // Nova variável
+            model.addAttribute("faturamentoTotalTotal", faturamentoTotalTotal); // Nova variável
 
         } catch (Exception e) {
             e.printStackTrace();
             return "redirect:/admin/coletas?erro=analises";
         }
-
         return "analises";
     }
 }
