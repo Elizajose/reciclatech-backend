@@ -22,10 +22,11 @@
             font-size: 0.75rem;
         }
 
-        .logo-assinatura {
-            width: 100px;
-            margin-bottom: 10px;
-            opacity: 0.8;
+        /* Ajuste na logo central */
+        .logo-central {
+            width: 80px;
+            margin-top: 10px;
+            opacity: 0.9;
         }
 
         #qrcode {
@@ -60,15 +61,15 @@
         <i class="bi bi-arrow-left"></i> Voltar p/ Extratos
     </a>
     <button onclick="window.print()" class="btn btn-success">
-        <i class="bi bi-printer"></i> Imprimir / PDF
+        <i class="bi bi-printer"></i> Imprimir / PDF [cite: 5]
     </button>
     <button onclick="enviarZap('empresa')" class="btn btn-primary">
-        <i class="bi bi-whatsapp"></i> Enviar p/ Empresa
+        <i class="bi bi-whatsapp"></i> Enviar p/ Empresa [cite: 6]
     </button>
     <button onclick="enviarZap('cliente')" class="btn btn-outline-info text-dark fw-bold">
-        <i class="bi bi-person-check"></i> Enviar p/ Cliente
+        <i class="bi bi-person-check"></i> Enviar p/ Cliente [cite: 7]
     </button>
-    <a href="/admin/coletas" class="btn btn-secondary">Nova Coleta</a>
+    <a href="/admin/coletas" class="btn btn-secondary">Nova Coleta [cite: 8]</a>
 </div>
 
 <input type="hidden" id="jsNome" th:value="${vendedor.nome}">
@@ -77,53 +78,53 @@
 
 <div class="folha shadow">
     <div class="text-center border-bottom pb-4 mb-4">
-        <h2 class="fw-bold text-success text-uppercase">Coletaê Salgueiro</h2>
-        <p class="text-muted small">RECIBO DE PAGAMENTO / COMPROVANTE DE RENDA</p>
+        <h2 class="fw-bold text-success text-uppercase">Coletaê Salgueiro [cite: 9]</h2>
+        <p class="text-muted small">RECIBO DE PAGAMENTO / COMPROVANTE DE RENDA [cite: 10]</p>
     </div>
 
     <div class="row mb-4">
         <div class="col-8">
-            <strong>BENEFICIÁRIO:</strong><br>
-            <span th:text="${vendedor.nome}" class="fs-5 text-uppercase">NOME</span><br>
-            <small class="text-muted">CPF: <span th:text="${vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO'}"></span></small>
+            <strong>BENEFICIÁRIO: [cite: 2]</strong><br>
+            <span th:text="${vendedor.nome}" class="fs-5 text-uppercase">NOME [cite: 11]</span><br>
+            <small class="text-muted">CPF: <span th:text="${vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO'}"> [cite: 12]</span></small>
         </div>
         <div class="col-4 text-end">
-            <strong>DATA:</strong><br>
-            <span th:text="${#temporals.format(dataHoje, 'dd/MM/yyyy')}">Data</span>
+            <strong>DATA: [cite: 13]</strong><br>
+            <span th:text="${#temporals.format(dataHoje, 'dd/MM/yyyy')}">Data [cite: 1, 13]</span>
         </div>
     </div>
 
     <table class="table table-bordered border-dark align-middle">
         <thead class="table-light">
         <tr>
-            <th>MATERIAL</th>
-            <th class="text-center">QTD/PESO</th>
-            <th class="text-center">PREÇO UN.</th>
-            <th class="text-end">TOTAL</th>
+            <th>MATERIAL [cite: 14]</th>
+            <th class="text-center">QTD/PESO [cite: 14]</th>
+            <th class="text-center">PREÇO UN. [cite: 14]</th>
+            <th class="text-end">TOTAL [cite: 14]</th>
         </tr>
         </thead>
         <tbody>
         <tr th:each="venda : ${vendas}">
-            <td th:text="${venda.material}">Material</td>
+            <td th:text="${venda.material}">Material [cite: 14]</td>
             <td class="text-center">
-                <span th:text="${venda.peso}">0.0</span>
-                <span th:text="${mapaUnidades.getOrDefault(venda.material, 'UN')}" class="small text-muted">KG</span>
+                <span th:text="${venda.peso}">0.0 [cite: 14]</span>
+                <span th:text="${mapaUnidades.getOrDefault(venda.material, 'UN')}" class="small text-muted">KG [cite: 14]</span>
             </td>
             <td class="text-center">
-                R$ <span th:text="${#numbers.formatDecimal(mapaPrecos.get(venda.material), 1, 'POINT', 2, 'COMMA')}">0,00</span>
+                R$ <span th:text="${#numbers.formatDecimal(mapaPrecos.get(venda.material), 1, 'POINT', 2, 'COMMA')}">0,00 [cite: 14]</span>
             </td>
             <td class="text-end fw-bold"
                 th:text="'R$ ' + ${#numbers.formatDecimal(venda.precoEstimado, 1, 'POINT', 2, 'COMMA')}">
-                R$ 0,00
+                R$ 0,00 [cite: 14]
             </td>
         </tr>
         </tbody>
         <tfoot>
         <tr class="table-success">
-            <td colspan="3" class="text-end fw-bold">TOTAL LÍQUIDO:</td>
+            <td colspan="3" class="text-end fw-bold text-uppercase">Total Líquido: [cite: 14]</td>
             <td class="text-end fw-bold fs-4"
                 th:text="'R$ ' + ${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}">
-                R$ 0,00
+                R$ 0,00 [cite: 14]
             </td>
         </tr>
         </tfoot>
@@ -133,33 +134,32 @@
         <div class="row align-items-end">
             <div class="col-4 text-center">
                 <div style="height: 60px;"></div>
-                <div class="linha-assinatura">Assinatura do Cliente</div>
-                <small class="text-muted" style="font-size: 10px;" th:text="${vendedor.nome}">Nome</small>
+                <div class="linha-assinatura">Assinatura do Cliente [cite: 15]</div>
+                <small class="text-muted" style="font-size: 10px;" th:text="${vendedor.nome}">Nome [cite: 16]</small>
             </div>
 
             <div class="col-4 text-center">
                 <div id="qrcode"></div>
-                <small class="text-muted" style="font-size: 9px; display: block;">VERIFICAR AUTENTICIDADE</small>
+                <small class="text-muted" style="font-size: 9px; display: block; font-weight: bold;">VERIFICAR AUTENTICIDADE </small>
+                <img src="/img/logo-coletae.png" alt="Coletaê" class="logo-central" onerror="this.style.display='none'">
             </div>
 
             <div class="col-4 text-center">
                 <div style="height: 60px;"></div>
-                <div class="linha-assinatura">Assinatura Coletaê</div>
-                <small class="text-muted" style="font-size: 10px;">Responsável Salgueiro-PE</small>
+                <div class="linha-assinatura">Assinatura do Comprador</div>
+                <small class="text-muted" style="font-size: 10px;">Responsável Salgueiro-PE [cite: 18]</small>
             </div>
         </div>
 
         <div class="text-center mt-5">
-            <img src="/img/logo-coletae.png" alt="Coletaê" class="logo-assinatura" onerror="this.style.display='none'">
-            <br>
-            <small style="font-size: 9px;" class="text-muted">Documento gerado eletronicamente pela Plataforma Coletaê</small>
+            <small style="font-size: 9px;" class="text-muted">Documento gerado eletronicamente pela Plataforma Coletaê [cite: 19]</small>
         </div>
     </div>
 </div>
 
 <script>
     function gerarQRCode() {
-        const linkAtual = window.location.href;
+        const linkAtual = window.location.href; // [cite: 20]
         new QRCode(document.getElementById("qrcode"), {
             text: linkAtual,
             width: 80,
