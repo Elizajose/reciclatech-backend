@@ -475,4 +475,50 @@ public class GoogleSheetsService {
         }
     }
 
+
+    // --- MÉTODO PARA DASHBOARD: BUSCA TUDO (OFERTAS ATUAIS + HISTÓRICO) ---
+    public List<Oferta> getHistoricoCompleto() throws IOException {
+        List<Oferta> listaTotal = new ArrayList<>();
+
+        // 1. LER ABA "Ofertas" (Movimentação Recente)
+        ValueRange resOfertas = sheetsService.spreadsheets().values().get(spreadsheetId, "Ofertas!A2:J").execute();
+        if (resOfertas.getValues() != null) {
+            listaTotal.addAll(converterLinhasParaOfertas(resOfertas.getValues()));
+        }
+
+        // 2. LER ABA "Historico_Ofertas" (Movimentação Antiga)
+        try {
+            ValueRange resHistorico = sheetsService.spreadsheets().values().get(spreadsheetId, "Historico_Ofertas!A2:J").execute();
+            if (resHistorico.getValues() != null) {
+                listaTotal.addAll(converterLinhasParaOfertas(resHistorico.getValues()));
+            }
+        } catch (Exception e) {
+            System.out.println("Aba Historico_Ofertas ainda não existe ou está vazia.");
+        }
+
+        return listaTotal;
+    }
+
+    // Método auxiliar para não repetir código
+    private List<Oferta> converterLinhasParaOfertas(List<List<Object>> values) {
+        return values.stream()
+                .filter(row -> row.size() > 8 && "VENDIDO".equals(row.get(8).toString()))
+                .map(row -> {
+                    Oferta o = new Oferta();
+                    o.setMaterial(row.get(1).toString());
+                    o.setPeso(Double.parseDouble(row.get(2).toString().replace(",", ".")));
+                    o.setPrecoEstimado(new BigDecimal(row.get(5).toString().replace(",", ".")));
+
+                    // CORREÇÃO SEGURA: Verifica se a coluna G (índice 6) existe antes de ler
+                    if (row.size() > 6 && row.get(6) != null) {
+                        o.setData(row.get(6).toString());
+                    } else {
+                        o.setData("Sem Data"); // Valor padrão caso a célula esteja vazia
+                    }
+
+                    return o;
+                }).collect(Collectors.toList());
+    }
+
+
 }

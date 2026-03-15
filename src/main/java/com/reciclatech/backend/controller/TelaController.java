@@ -14,14 +14,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import java.util.Arrays;
+//import java.util.Arrays;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -398,5 +396,41 @@ public class TelaController {
             System.err.println("Erro ao gerar pesagem rápida: " + e.getMessage());
             return "redirect:/admin/coletas?erro=pesagem_rapida";
         }
+    }
+    @GetMapping("/admin/analises")
+    public String mostrarAnalises(Model model, HttpSession session) {
+        if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+
+        try {
+            // Busca todos os registros (atuais e arquivados)
+            List<Oferta> historico = googleSheetsService.getHistoricoCompleto();
+
+            // 📊 1. Peso total por Material (Gráfico de Pizza)
+            Map<String, Double> materialDados = historico.stream()
+                    .collect(Collectors.groupingBy(Oferta::getMaterial,
+                            Collectors.summingDouble(Oferta::getPeso)));
+
+            // 📈 2. Volume de peso por Data (Gráfico de Linha - últimos 30 registros/dias)
+            Map<String, Double> volumePorDia = historico.stream()
+                    .collect(Collectors.groupingBy(Oferta::getData,
+                            TreeMap::new, // AGORA FUNCIONA PORQUE ADICIONAMOS O IMPORT java.util.*
+                            Collectors.summingDouble(Oferta::getPeso)));
+
+            // 💰 3. Faturamento total por Material
+            Map<String, Double> financeiroDados = historico.stream()
+                    .collect(Collectors.groupingBy(Oferta::getMaterial,
+                            Collectors.summingDouble(o -> o.getPrecoEstimado().doubleValue())));
+
+            model.addAttribute("materialDados", materialDados);
+            model.addAttribute("volumeDados", volumePorDia);
+            model.addAttribute("financeiroDados", financeiroDados);
+            model.addAttribute("totalAtendimentos", historico.size());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "redirect:/admin/coletas?erro=analises";
+        }
+
+        return "analises";
     }
 }
