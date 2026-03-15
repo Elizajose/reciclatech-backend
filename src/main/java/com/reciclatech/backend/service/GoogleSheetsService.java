@@ -499,7 +499,7 @@ public class GoogleSheetsService {
         return listaTotal;
     }
 
-    // Método auxiliar para não repetir código
+    // Metodo auxiliar para não repetir código
     private List<Oferta> converterLinhasParaOfertas(List<List<Object>> values) {
         return values.stream()
                 .filter(row -> row.size() > 8 && "VENDIDO".equals(row.get(8).toString()))
@@ -508,16 +508,11 @@ public class GoogleSheetsService {
                     o.setMaterial(row.get(1).toString());
                     o.setPeso(Double.parseDouble(row.get(2).toString().replace(",", ".")));
                     o.setPrecoEstimado(new BigDecimal(row.get(5).toString().replace(",", ".")));
+                    o.setData(row.size() > 6 ? row.get(6).toString() : "Sem Data");
 
-                    // 🌟 ESSENCIAL: Captura o identificador do usuário (Coluna H - índice 7)
+                    // Agora o setIdUsuario existe no Model Oferta!
                     if (row.size() > 7 && row.get(7) != null) {
                         o.setIdUsuario(row.get(7).toString());
-                    }
-
-                    if (row.size() > 6 && row.get(6) != null) {
-                        o.setData(row.get(6).toString());
-                    } else {
-                        o.setData("Sem Data");
                     }
 
                     return o;

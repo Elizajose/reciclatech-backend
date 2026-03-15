@@ -77,4 +77,18 @@ public class Oferta {
 
     public LocalDate getDataCriacao() { return dataCriacao; }
     public void setDataCriacao(LocalDate dataCriacao) { this.dataCriacao = dataCriacao; }
+
+    // Setter para o Service conseguir preencher o ID vindo da planilha
+    public void setIdUsuario(String idUsuarioStr) {
+        if (idUsuarioStr != null && !idUsuarioStr.isEmpty()) {
+            if (this.usuario == null) {
+                this.usuario = new Usuario();
+            }
+            try {
+                this.usuario.setId(Long.parseLong(idUsuarioStr));
+            } catch (NumberFormatException e) {
+                // Se não for número, ignora para não quebrar o código
+            }
+        }
+    }
 }

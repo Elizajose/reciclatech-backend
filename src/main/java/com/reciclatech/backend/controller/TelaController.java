@@ -402,53 +402,74 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
 
         try {
-            // 1. Buscamos os dados das duas planilhas
+            // 1. Busca dados das três fontes necessárias
             List<Oferta> historico = googleSheetsService.getHistoricoCompleto();
-            List<Usuario> usuariosCadastrados = googleSheetsService.getUsuarios(); // Pega da aba Usuários
+            List<Usuario> usuariosCadastrados = googleSheetsService.listarUsuarios();
+            List<Material> materiaisCadastrados = googleSheetsService.listarMateriais();
 
-            // 📊 1. Peso total por Material (Dados das Ofertas)
-            Map<String, Double> materialDados = historico.stream()
+            // 💰 Agrupamento Financeiro por Material (Para cálculos internos)
+            Map<String, Double> financeiroDados = historico.stream()
                     .filter(o -> o.getMaterial() != null)
                     .collect(Collectors.groupingBy(Oferta::getMaterial,
-                            Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
+                            Collectors.summingDouble(o -> o.getPrecoEstimado() != null ? o.getPrecoEstimado().doubleValue() : 0.0)));
 
-            // 📈 2. Volume por Data (Dados das Ofertas)
+            // 📈 Volume por Data (Gráfico de Linha principal)
             Map<String, Double> volumePorDia = historico.stream()
                     .filter(o -> o.getData() != null)
                     .collect(Collectors.groupingBy(Oferta::getData,
                             TreeMap::new,
                             Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
 
-            // 💰 3. Financeiro por Material (Dados das Ofertas)
-            Map<String, Double> financeiroDados = historico.stream()
-                    .filter(o -> o.getMaterial() != null)
+            // --- LÓGICA DE SEPARAÇÃO: KG vs UN ---
+            Map<String, String> unidadesMap = materiaisCadastrados.stream()
+                    .collect(Collectors.toMap(Material::getNome, Material::getUnidade, (v1, v2) -> v1));
+
+            Double totalKg = 0.0;
+            Double totalUn = 0.0;
+
+            for (Oferta o : historico) {
+                String unidade = unidadesMap.getOrDefault(o.getMaterial(), "KG");
+                Double valor = (o.getPeso() != null) ? o.getPeso() : 0.0;
+
+                if ("UN".equalsIgnoreCase(unidade)) {
+                    totalUn += valor;
+                } else {
+                    totalKg += valor;
+                }
+            }
+
+            // --- NOVO: Agrupamentos específicos para os dois gráficos de rosca ---
+
+            // Gráfico 1: Apenas materiais em KG
+            Map<String, Double> dadosRoscaKg = historico.stream()
+                    .filter(o -> !"UN".equalsIgnoreCase(unidadesMap.getOrDefault(o.getMaterial(), "KG")))
                     .collect(Collectors.groupingBy(Oferta::getMaterial,
-                            Collectors.summingDouble(o -> o.getPrecoEstimado() != null ? o.getPrecoEstimado().doubleValue() : 0.0)));
+                            Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
 
-            // --- MUDANÇA ESTRATÉGICA ---
-            // Agora contamos quantos usuários existem na planilha de usuários
-            // Isso ignora se o usuário tem 1 ou 50 itens na outra aba.
+            // Gráfico 2: Apenas materiais em UN (Pitu, Garrafas, etc)
+            Map<String, Double> dadosRoscaUn = historico.stream()
+                    .filter(o -> "UN".equalsIgnoreCase(unidadesMap.getOrDefault(o.getMaterial(), "KG")))
+                    .collect(Collectors.groupingBy(Oferta::getMaterial,
+                            Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
+
+            // --- CÁLCULOS FINAIS PARA OS CARDS ---
             long totalAtendimentosReais = (usuariosCadastrados != null) ? usuariosCadastrados.size() : 0;
+            Double totalPagoAosClientes = financeiroDados.values().stream().mapToDouble(Double::doubleValue).sum();
+            Double custoMedioPorAtendimento = (totalAtendimentosReais > 0) ? totalPagoAosClientes / totalAtendimentosReais : 0.0;
 
-            // --- CÁLCULOS TOTAIS GERAIS ---
-            Double pesoTotalTotal = materialDados.values().stream().mapToDouble(Double::doubleValue).sum();
-            Double faturamentoTotalTotal = financeiroDados.values().stream().mapToDouble(Double::doubleValue).sum();
-
-            // Cálculo do Ticket Médio (Faturamento / Quantidade de Usuários)
-            Double ticketMedio = (totalAtendimentosReais > 0) ? faturamentoTotalTotal / totalAtendimentosReais : 0.0;
-
-            // Enviando tudo para a tela (Thymeleaf)
-            model.addAttribute("materialDados", materialDados);
+            // Enviando para o Model (Injeção no Thymeleaf)
             model.addAttribute("volumeDados", volumePorDia);
-            model.addAttribute("financeiroDados", financeiroDados);
+            model.addAttribute("dadosRoscaKg", dadosRoscaKg);
+            model.addAttribute("dadosRoscaUn", dadosRoscaUn);
 
             model.addAttribute("totalAtendimentos", totalAtendimentosReais);
-            model.addAttribute("pesoTotalTotal", pesoTotalTotal);
-            model.addAttribute("faturamentoTotalTotal", faturamentoTotalTotal);
-            model.addAttribute("ticketMedio", ticketMedio);
+            model.addAttribute("totalPago", totalPagoAosClientes);
+            model.addAttribute("totalKg", totalKg);
+            model.addAttribute("totalUn", totalUn);
+            model.addAttribute("custoMedio", custoMedioPorAtendimento);
 
         } catch (Exception e) {
-            System.err.println("Erro ao carregar análises: " + e.getMessage());
+            System.err.println("Erro Crítico nas Análises: " + e.getMessage());
             e.printStackTrace();
             return "redirect:/admin/coletas?erro=analises";
         }

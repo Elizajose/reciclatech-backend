@@ -10,6 +10,7 @@
         .card { border-radius: 12px; border: none; transition: transform 0.2s; }
         .card:hover { transform: translateY(-5px); }
         .stat-card { color: white; }
+        .chart-container { height: 250px; position: relative; }
     </style>
 </head>
 <body class="bg-light">
@@ -20,31 +21,37 @@
         <a href="/admin/coletas" class="btn btn-outline-dark"><i class="bi bi-arrow-left"></i> Voltar</a>
     </div>
 
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card shadow-sm p-3 bg-success text-white">
-                <h6>Total de Atendimentos</h6>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm p-3 bg-primary text-white">
+                <h6><i class="bi bi-people"></i> Clientes Atendidos</h6>
                 <h3 th:text="${totalAtendimentos}">0</h3>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card shadow-sm p-3 bg-primary text-white">
-                <h6>Volume Total (KG)</h6>
-                <h3 th:text="${#numbers.formatDecimal(pesoTotalTotal, 1, 2)}">0</h3>
+        <div class="col-md-3">
+            <div class="card shadow-sm p-3 bg-danger text-white">
+                <h6><i class="bi bi-cash-stack"></i> Total Pago (Saída)</h6>
+                <h3>R$ <span th:text="${#numbers.formatDecimal(totalPago, 1, 'POINT', 2, 'COMMA')}">0,00</span></h3>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm p-3 bg-success text-white">
+                <h6><i class="bi bi-box-seam"></i> Volume Total (KG)</h6>
+                <h3><span th:text="${#numbers.formatDecimal(totalKg, 1, 'POINT', 2, 'COMMA')}">0,00</span> kg</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
             <div class="card shadow-sm p-3 bg-warning text-dark">
-                <h6>Faturamento Estimado</h6>
-                <h3>R$ <span th:text="${#numbers.formatDecimal(faturamentoTotalTotal, 1, 2)}">0,00</span></h3>
+                <h6><i class="bi bi-layers"></i> Volume Total (UN)</h6>
+                <h3><span th:text="${#numbers.formatInteger(totalUn, 1)}">0</span> un</h3>
             </div>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-8 mb-4">
+        <div class="col-md-12 mb-4">
             <div class="card shadow-sm p-3">
-                <h5 class="card-title fw-bold text-muted"><i class="bi bi-graph-up"></i> Volume Coletado por Data</h5>
+                <h5 class="card-title fw-bold text-muted"><i class="bi bi-graph-up"></i> Evolução de Compras (Volume Geral)</h5>
                 <hr>
                 <div style="height: 300px;">
                     <canvas id="graficoVolume"></canvas>
@@ -52,77 +59,83 @@
             </div>
         </div>
 
-        <div class="col-md-4 mb-4">
+        <div class="col-md-6 mb-4">
             <div class="card shadow-sm p-3">
-                <h5 class="card-title fw-bold text-muted"><i class="bi bi-pie-chart"></i> Mix de Materiais</h5>
+                <h5 class="card-title fw-bold text-muted text-center"><i class="bi bi-pie-chart"></i> Mix de Materiais (KG)</h5>
                 <hr>
-                <div style="height: 300px;">
-                    <canvas id="graficoMateriais"></canvas>
+                <div class="chart-container">
+                    <canvas id="graficoKg"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm p-3">
+                <h5 class="card-title fw-bold text-muted text-center"><i class="bi bi-pie-chart-fill"></i> Mix de Materiais (UN)</h5>
+                <hr>
+                <div class="chart-container">
+                    <canvas id="graficoUn"></canvas>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-
-
 <script th:inline="javascript">
-    /* Anotação th:inline="javascript" permite que o Thymeleaf
-       injete os Maps do Java diretamente como objetos JSON
-    */
     const volumeData = /*[[${volumeDados}]]*/ {};
-    const materialData = /*[[${materialDados}]]*/ {};
+    const dataKg = /*[[${dadosRoscaKg}]]*/ {};
+    const dataUn = /*[[${dadosRoscaUn}]]*/ {};
+
+    const cores = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6610f2', '#fd7e14', '#20c997', '#adb5bd'];
 
     // 1. Gráfico de Volume (Linha)
-    const ctxVolume = document.getElementById('graficoVolume').getContext('2d');
-    new Chart(ctxVolume, {
+    new Chart(document.getElementById('graficoVolume').getContext('2d'), {
         type: 'line',
         data: {
-            labels: Object.keys(volumeData), // Datas da planilha
+            labels: Object.keys(volumeData),
             datasets: [{
-                label: 'KG Coletados',
-                data: Object.values(volumeData), // Pesos da planilha
-                borderColor: '#198754',
-                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                label: 'Volume Total',
+                data: Object.values(volumeData),
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
                 fill: true,
-                tension: 0.4,
-                borderWidth: 3,
-                pointRadius: 5,
-                pointBackgroundColor: '#198754'
+                tension: 0.4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // 2. Gráfico KG (Rosca)
+    new Chart(document.getElementById('graficoKg').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(dataKg),
+            datasets: [{
+                data: Object.values(dataKg),
+                backgroundColor: cores
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                y: { beginAtZero: true }
-            }
+            plugins: { legend: { position: 'bottom' } }
         }
     });
 
-    // 2. Gráfico de Materiais (Rosca/Doughnut)
-    const ctxMateriais = document.getElementById('graficoMateriais').getContext('2d');
-    new Chart(ctxMateriais, {
+    // 3. Gráfico UN (Rosca)
+    new Chart(document.getElementById('graficoUn').getContext('2d'), {
         type: 'doughnut',
         data: {
-            labels: Object.keys(materialData),
+            labels: Object.keys(dataUn),
             datasets: [{
-                data: Object.values(materialData),
-                backgroundColor: [
-                    '#0d6efd', '#198754', '#ffc107', '#dc3545', '#6610f2', '#fd7e14'
-                ],
-                hoverOffset: 10
+                data: Object.values(dataUn),
+                backgroundColor: cores
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom' }
-            }
+            plugins: { legend: { position: 'bottom' } }
         }
     });
 </script>
