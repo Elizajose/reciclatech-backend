@@ -11,7 +11,12 @@
 
     <style>
         body { background: #555; padding: 40px; font-family: 'Courier New', monospace; }
-        .folha { background: white; max-width: 800px; margin: 0 auto; padding: 50px; position: relative; border-radius: 4px; }
+        .folha { background: white; max-width: 800px; margin: 0 auto; padding: 50px; position: relative; border-radius: 4px; min-height: 1000px; }
+
+        /* Espaço de assinatura aumentado para não ficar apertado */
+        .espaco-assinatura {
+            height: 100px;
+        }
 
         .linha-assinatura {
             border-top: 2px solid #212529;
@@ -30,10 +35,13 @@
             margin-right: auto;
         }
 
+        /* Centralização do QR Code */
         #qrcode {
             display: flex;
             justify-content: center;
+            align-items: center;
             margin-bottom: 5px;
+            min-height: 80px;
         }
 
         #qrcode img {
@@ -41,21 +49,34 @@
             height: 80px;
         }
 
+        /* MODO CLIENTE: Esconde botões ao acessar via QR Code (?view=resumo) */
+        body.modo-cliente .no-print,
+        body.modo-cliente .botoes-topo {
+            display: none !important;
+        }
+
+        body.modo-cliente {
+            background: #f8f9fa;
+            padding: 20px 10px;
+        }
+
         @media (max-width: 768px) {
             body { padding: 10px; }
-            .folha { padding: 20px; width: 100%; }
+            .folha { padding: 25px 15px; width: 100%; }
             .botoes-topo { flex-direction: column; }
             .btn { width: 100%; margin-bottom: 10px; }
+            /* No mobile, as assinaturas empilham para não quebrar */
+            .col-4 { width: 100% !important; margin-bottom: 30px; }
         }
 
         @media print {
             body { background: white; padding: 0; }
-            .no-print { display: none; }
+            .no-print { display: none !important; }
             .folha { box-shadow: none !important; margin: 0; width: 100%; max-width: 100%; padding: 20px; }
         }
     </style>
 </head>
-<body>
+<body th:classappend="${param.view != null && param.view[0] == 'resumo'} ? 'modo-cliente' : ''">
 
 <div class="text-center mb-4 no-print d-flex flex-wrap justify-content-center gap-2 botoes-topo">
     <a th:if="${session.adminLogado}" href="/meus-extratos" class="btn btn-outline-secondary fw-bold">
@@ -134,7 +155,7 @@
     <div class="mt-5 pt-4">
         <div class="row align-items-end">
             <div class="col-4 text-center">
-                <div style="height: 60px;"></div>
+                <div class="espaco-assinatura"></div>
                 <div class="linha-assinatura">Assinatura do Cliente</div>
                 <small class="text-muted" style="font-size: 10px;" th:text="${vendedor.nome}">Nome</small>
             </div>
@@ -147,7 +168,7 @@
             </div>
 
             <div class="col-4 text-center">
-                <div style="height: 60px;"></div>
+                <div class="espaco-assinatura"></div>
                 <div class="linha-assinatura">Assinatura do Comprador</div>
                 <small class="text-muted" style="font-size: 10px;">Responsável em Salgueiro-PE</small>
             </div>
@@ -161,9 +182,11 @@
 
 <script>
     function gerarQRCode() {
-        const linkAtual = window.location.href;
+        const urlBase = window.location.origin + window.location.pathname;
+        const linkResumo = urlBase + "?view=resumo"; // Link especial para o cliente
+
         new QRCode(document.getElementById("qrcode"), {
-            text: linkAtual,
+            text: linkResumo,
             width: 80,
             height: 80,
             colorDark : "#000000",
@@ -176,7 +199,10 @@
         let nome = document.getElementById("jsNome").value;
         let total = document.getElementById("jsTotal").value;
         let telefoneCliente = document.getElementById("jsTelefone").value;
-        let linkRecibo = window.location.href;
+
+        // Enviamos o link resumido para o cliente
+        const urlBase = window.location.origin + window.location.pathname;
+        let linkRecibo = urlBase + "?view=resumo";
 
         let msg = `🧾 *RECIBO COLETAÊ SALGUEIRO*\n\nOlá *${nome}*,\nSeu pagamento de *R$ ${total}* foi processado com sucesso.\n\n🔗 *Recibo Digital:* ${linkRecibo}\n\n✅ *Status:* Pago\n📍 *Local:* Salgueiro-PE\n\n_Obrigado por reciclar conosco!_`;
 
@@ -190,7 +216,8 @@
         gerarQRCode();
 
         const params = new URLSearchParams(window.location.search);
-        if (params.get('autoPrint') === 'true') {
+        // Não auto-imprime no modo cliente
+        if (params.get('autoPrint') === 'true' && params.get('view') !== 'resumo') {
             setTimeout(function() {
                 window.print();
             }, 800);

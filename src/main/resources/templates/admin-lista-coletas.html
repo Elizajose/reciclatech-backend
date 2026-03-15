@@ -10,29 +10,61 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <meta http-equiv="refresh" content="30">
+
+    <style>
+        /* Estabilização dos botões do menu para evitar perda de foco/sumiço */
+        .btn-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px; /* Espaço fixo entre ícone e texto */
+            transition: all 0.2s ease-in-out;
+            font-weight: 600;
+            white-space: nowrap; /* Impede que o texto quebre ou desapareça */
+            vertical-align: middle;
+        }
+
+        .btn-nav:hover {
+            transform: translateY(-2px); /* Efeito de elevação suave */
+            filter: brightness(1.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .btn-nav i {
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+
+        /* Ajuste para Navbar em dispositivos móveis */
+        @media (max-width: 576px) {
+            .navbar-brand { font-size: 1.1rem; }
+            .btn-nav { padding: 0.5rem 0.7rem; font-size: 0.85rem; }
+        }
+    </style>
 </head>
 <body class="bg-light">
 
 <nav class="navbar navbar-dark bg-dark shadow-sm mb-4">
     <div class="container">
         <span class="navbar-brand mb-0 h1 fw-bold">
-            <i class="bi bi-truck"></i> Área do Gestor
+            <i class="bi bi-truck text-warning"></i> Área do Gestor
         </span>
 
         <div class="d-flex gap-2 flex-wrap">
-            <a href="/admin/analises" class="btn btn-outline-info fw-bold text-info border-info">
-                <i class="bi bi-file-text"></i> Coletaê Análises
+            <a href="/admin/analises" class="btn btn-outline-info btn-nav border-info">
+                <i class="bi bi-bar-chart-line-fill"></i> Análises
             </a>
 
-            <a href="/admin/precos" class="btn btn-warning fw-bold text-dark">
-                <i class="bi bi-file-text"></i> Preços
+            <a href="/admin/precos" class="btn btn-warning btn-nav text-dark">
+                <i class="bi bi-currency-dollar"></i> Preços
             </a>
 
-            <a href="/meus-extratos" class="btn btn-outline-light">
-                <i class="bi bi-file-text"></i> Extratos
+            <a href="/meus-extratos" class="btn btn-outline-light btn-nav">
+                <i class="bi bi-file-earmark-text"></i> Extratos
             </a>
 
-            <a href="/sair" class="btn btn-danger">Sair</a>
+            <a href="/sair" class="btn btn-danger btn-nav">
+                <i class="bi bi-box-arrow-right"></i> Sair
+            </a>
         </div>
     </div>
 </nav>
@@ -43,7 +75,7 @@
             <h5 class="fw-bold text-dark mb-2">
                 <i class="bi bi-lightning-charge-fill text-warning"></i> Coleta Rápida
             </h5>
-            <p class="small text-muted mb-3">Atendimento expresso de balcão. Informe o nome do cliente para começar.</p>
+            <p class="small text-muted mb-3">Atendimento expresso. Informe o nome do cliente para começar.</p>
 
             <form action="/admin/pesagem-rapida" method="post" class="d-flex flex-column flex-sm-row gap-2">
                 <input type="text" name="nome" class="form-control form-control-lg flex-grow-1 bg-light" required placeholder="Ex: João da Silva">
@@ -84,7 +116,7 @@
                         <i class="bi bi-trash3-fill"></i>
                     </a>
 
-                    <a th:if="${u.statusPlanilha == 'DISPONIVEL'}" th:href="@{'/admin/atender/' + ${u.id}}" class="btn btn-success fw-bold px-4">
+                    <a th:if="${u.statusPlanilha == 'DISPONIVEL'}" th:href="@{'/admin/atender/' + ${u.id}}" class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2">
                         ATENDER <i class="bi bi-chevron-right"></i>
                     </a>
 
