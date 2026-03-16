@@ -11,14 +11,34 @@
         .card:hover { transform: translateY(-5px); }
         .stat-card { color: white; }
         .chart-container { height: 250px; position: relative; }
+
+        /* Estilos para a Impressão do PDF (Balanço Semanal) */
+        @media print {
+            .btn, .bi-arrow-left, hr, .chart-container, canvas, .no-print {
+                display: none !important;
+            }
+            .container { width: 100% !important; max-width: none !important; margin: 0 !important; }
+            .card { border: 1px solid #ddd !important; box-shadow: none !important; break-inside: avoid; }
+            body { background-color: white !important; padding-top: 0 !important; }
+            .print-only { display: block !important; }
+            .row { display: flex !important; flex-wrap: wrap !important; }
+            .col-md-3 { width: 25% !important; float: left; }
+        }
+
+        .print-only { display: none; }
     </style>
 </head>
 <body class="bg-light">
 
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
         <h2><i class="bi bi-cpu"></i> Inteligência de Negócio - Coletaê</h2>
-        <a href="/admin/coletas" class="btn btn-outline-dark"><i class="bi bi-arrow-left"></i> Voltar</a>
+        <div>
+            <button onclick="window.print()" class="btn btn-success me-2">
+                <i class="bi bi-file-earmark-pdf"></i> Gerar Balanço Semanal
+            </button>
+            <a href="/admin/coletas" class="btn btn-outline-dark"><i class="bi bi-arrow-left"></i> Voltar</a>
+        </div>
     </div>
 
     <div class="row g-3 mb-4">
@@ -48,7 +68,7 @@
         </div>
     </div>
 
-    <div class="row">
+    <div class="row no-print">
         <div class="col-md-12 mb-4">
             <div class="card shadow-sm p-3">
                 <h5 class="card-title fw-bold text-muted"><i class="bi bi-graph-up"></i> Evolução de Compras (Volume Geral)</h5>
@@ -79,13 +99,61 @@
             </div>
         </div>
     </div>
+
+    <div class="print-only mt-4">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">BALANÇO SEMANAL DE COLETA - COLETÁE</h2>
+            <p class="text-muted">Relatório de Gestão e Movimentação Financeira</p>
+            <p>Gerado em: <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy HH:mm')}"></span></p>
+        </div>
+
+        <table class="table table-bordered border-dark">
+            <thead class="table-dark text-center">
+            <tr><th colspan="2">RESUMO DAS OPERAÇÕES</th></tr>
+            </thead>
+            <tbody>
+            <tr><td><strong>Clientes/Atendimentos no Período:</strong></td><td class="text-center" th:text="${totalAtendimentos}">0</td></tr>
+            <tr><td><strong>Total Investido (Saída de Caixa):</strong></td><td class="text-center">R$ <span th:text="${#numbers.formatDecimal(totalPago, 1, 'POINT', 2, 'COMMA')}">0,00</span></td></tr>
+            <tr><td><strong>Custo Médio por Atendimento:</strong></td><td class="text-center">R$ <span th:text="${#numbers.formatDecimal(custoMedio, 1, 'POINT', 2, 'COMMA')}">0,00</span></td></tr>
+            </tbody>
+        </table>
+
+        <div class="row mt-4">
+            <div class="col-6">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-secondary text-center"><tr><th>Material (Pesáveis KG)</th><th>Quantidade Total</th></tr></thead>
+                    <tbody>
+                    <tr th:each="entry : ${dadosRoscaKg}">
+                        <td th:text="${entry.key}"></td>
+                        <td class="text-center" th:text="${#numbers.formatDecimal(entry.value, 1, 'POINT', 2, 'COMMA') + ' kg'}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-6">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-secondary text-center"><tr><th>Material (Unidades UN)</th><th>Quantidade Total</th></tr></thead>
+                    <tbody>
+                    <tr th:each="entry : ${dadosRoscaUn}">
+                        <td th:text="${entry.key}"></td>
+                        <td class="text-center" th:text="${#numbers.formatInteger(entry.value, 1) + ' un'}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-5 pt-5 text-center">
+            <p>_________________________________________________</p>
+            <p class="fw-bold">Gestão Coletaê Salgueiro-PE</p>
+        </div>
+    </div>
 </div>
 
 <script th:inline="javascript">
     const volumeData = /*[[${volumeDados}]]*/ {};
     const dataKg = /*[[${dadosRoscaKg}]]*/ {};
     const dataUn = /*[[${dadosRoscaUn}]]*/ {};
-
     const cores = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6610f2', '#fd7e14', '#20c997', '#adb5bd'];
 
     // 1. Gráfico de Volume (Linha)
@@ -94,7 +162,7 @@
         data: {
             labels: Object.keys(volumeData),
             datasets: [{
-                label: 'Volume Total',
+                label: 'Peso Coletado (KG)',
                 data: Object.values(volumeData),
                 borderColor: '#0d6efd',
                 backgroundColor: 'rgba(13, 110, 253, 0.1)',
@@ -110,16 +178,9 @@
         type: 'doughnut',
         data: {
             labels: Object.keys(dataKg),
-            datasets: [{
-                data: Object.values(dataKg),
-                backgroundColor: cores
-            }]
+            datasets: [{ data: Object.values(dataKg), backgroundColor: cores }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom' } }
-        }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
     });
 
     // 3. Gráfico UN (Rosca)
@@ -127,16 +188,9 @@
         type: 'doughnut',
         data: {
             labels: Object.keys(dataUn),
-            datasets: [{
-                data: Object.values(dataUn),
-                backgroundColor: cores
-            }]
+            datasets: [{ data: Object.values(dataUn), backgroundColor: cores }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom' } }
-        }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
     });
 </script>
 </body>
