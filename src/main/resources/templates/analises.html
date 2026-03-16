@@ -12,17 +12,26 @@
         .stat-card { color: white; }
         .chart-container { height: 250px; position: relative; }
 
-        /* Estilos para a Impressão do PDF (Balanço Semanal) */
+        /* AJUSTES PARA O PDF (BALANÇO SEMANAL) */
         @media print {
-            .btn, .bi-arrow-left, hr, .chart-container, canvas, .no-print {
+            .no-print, .btn, .bi-arrow-left, hr, .chart-container, canvas {
                 display: none !important;
             }
+            body { background-color: white !important; padding: 0 !important; font-size: 12pt; }
             .container { width: 100% !important; max-width: none !important; margin: 0 !important; }
-            .card { border: 1px solid #ddd !important; box-shadow: none !important; break-inside: avoid; }
-            body { background-color: white !important; padding-top: 0 !important; }
+            .card { border: none !important; box-shadow: none !important; }
+
+            /* Garante que os cards de resumo fiquem visíveis no topo do PDF se desejar */
+            .row { display: flex !important; flex-wrap: nowrap !important; margin-bottom: 20px !important; }
+            .col-md-3 { width: 25% !important; border: 1px solid #eee !important; padding: 10px !important; text-align: center; }
+            .bg-primary, .bg-danger, .bg-success, .bg-warning {
+                color: black !important; background-color: transparent !important;
+            }
+
             .print-only { display: block !important; }
-            .row { display: flex !important; flex-wrap: wrap !important; }
-            .col-md-3 { width: 25% !important; float: left; }
+            .mt-4 { margin-top: 1.5rem !important; }
+            table { width: 100% !important; border-collapse: collapse !important; }
+            th, td { border: 1px solid #333 !important; padding: 8px !important; }
         }
 
         .print-only { display: none; }
@@ -44,25 +53,29 @@
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="card shadow-sm p-3 bg-primary text-white">
-                <h6><i class="bi bi-people"></i> Clientes Atendidos</h6>
+                <h6 class="no-print"><i class="bi bi-people"></i> Clientes Atendidos</h6>
+                <h6 class="print-only fw-bold">Clientes Atendidos</h6>
                 <h3 th:text="${totalAtendimentos}">0</h3>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card shadow-sm p-3 bg-danger text-white">
-                <h6><i class="bi bi-cash-stack"></i> Total Pago (Saída)</h6>
+                <h6 class="no-print"><i class="bi bi-cash-stack"></i> Total Pago (Saída)</h6>
+                <h6 class="print-only fw-bold">Total Pago</h6>
                 <h3>R$ <span th:text="${#numbers.formatDecimal(totalPago, 1, 'POINT', 2, 'COMMA')}">0,00</span></h3>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card shadow-sm p-3 bg-success text-white">
-                <h6><i class="bi bi-box-seam"></i> Volume Total (KG)</h6>
+                <h6 class="no-print"><i class="bi bi-box-seam"></i> Volume Total (KG)</h6>
+                <h6 class="print-only fw-bold">Volume Total (KG)</h6>
                 <h3><span th:text="${#numbers.formatDecimal(totalKg, 1, 'POINT', 2, 'COMMA')}">0,00</span> kg</h3>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card shadow-sm p-3 bg-warning text-dark">
-                <h6><i class="bi bi-layers"></i> Volume Total (UN)</h6>
+                <h6 class="no-print"><i class="bi bi-layers"></i> Volume Total (UN)</h6>
+                <h6 class="print-only fw-bold">Volume Total (UN)</h6>
                 <h3><span th:text="${#numbers.formatInteger(totalUn, 1)}">0</span> un</h3>
             </div>
         </div>
@@ -71,40 +84,30 @@
     <div class="row no-print">
         <div class="col-md-12 mb-4">
             <div class="card shadow-sm p-3">
-                <h5 class="card-title fw-bold text-muted"><i class="bi bi-graph-up"></i> Evolução de Compras (Volume Geral)</h5>
+                <h5 class="card-title fw-bold text-muted">Evolução de Compras</h5>
                 <hr>
-                <div style="height: 300px;">
-                    <canvas id="graficoVolume"></canvas>
-                </div>
+                <div style="height: 300px;"><canvas id="graficoVolume"></canvas></div>
             </div>
         </div>
-
         <div class="col-md-6 mb-4">
             <div class="card shadow-sm p-3">
-                <h5 class="card-title fw-bold text-muted text-center"><i class="bi bi-pie-chart"></i> Mix de Materiais (KG)</h5>
-                <hr>
-                <div class="chart-container">
-                    <canvas id="graficoKg"></canvas>
-                </div>
+                <h5 class="card-title fw-bold text-muted text-center">Mix KG</h5>
+                <div class="chart-container"><canvas id="graficoKg"></canvas></div>
             </div>
         </div>
-
         <div class="col-md-6 mb-4">
             <div class="card shadow-sm p-3">
-                <h5 class="card-title fw-bold text-muted text-center"><i class="bi bi-pie-chart-fill"></i> Mix de Materiais (UN)</h5>
-                <hr>
-                <div class="chart-container">
-                    <canvas id="graficoUn"></canvas>
-                </div>
+                <h5 class="card-title fw-bold text-muted text-center">Mix UN</h5>
+                <div class="chart-container"><canvas id="graficoUn"></canvas></div>
             </div>
         </div>
     </div>
 
-    <div class="print-only mt-4">
-        <div class="text-center mb-4">
-            <h2 class="fw-bold">BALANÇO SEMANAL DE COLETA - COLETÁE</h2>
-            <p class="text-muted">Relatório de Gestão e Movimentação Financeira</p>
-            <p>Gerado em: <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy HH:mm')}"></span></p>
+    <div class="print-only mt-2">
+        <div class="text-center mb-4" style="border-bottom: 2px solid #000; padding-bottom: 10px;">
+            <h2 class="fw-bold m-0">BALANÇO SEMANAL DE COLETA - COLETÁE</h2>
+            <p class="m-0 text-uppercase small fw-bold">Gestão e Movimentação Financeira</p>
+            <p class="m-0 small">Relatório gerado em: <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy HH:mm')}"></span></p>
         </div>
 
         <table class="table table-bordered border-dark">
@@ -112,40 +115,38 @@
             <tr><th colspan="2">RESUMO DAS OPERAÇÕES</th></tr>
             </thead>
             <tbody>
-            <tr><td><strong>Clientes/Atendimentos no Período:</strong></td><td class="text-center" th:text="${totalAtendimentos}">0</td></tr>
-            <tr><td><strong>Total Investido (Saída de Caixa):</strong></td><td class="text-center">R$ <span th:text="${#numbers.formatDecimal(totalPago, 1, 'POINT', 2, 'COMMA')}">0,00</span></td></tr>
             <tr><td><strong>Custo Médio por Atendimento:</strong></td><td class="text-center">R$ <span th:text="${#numbers.formatDecimal(custoMedio, 1, 'POINT', 2, 'COMMA')}">0,00</span></td></tr>
             </tbody>
         </table>
 
-        <div class="row mt-4">
-            <div class="col-6">
+        <div class="row mt-4" style="display: flex !important; flex-wrap: nowrap !important;">
+            <div style="width: 50%; padding-right: 10px;">
                 <table class="table table-sm table-bordered">
                     <thead class="table-secondary text-center"><tr><th>Material (Pesáveis KG)</th><th>Quantidade Total</th></tr></thead>
                     <tbody>
                     <tr th:each="entry : ${dadosRoscaKg}">
                         <td th:text="${entry.key}"></td>
-                        <td class="text-center" th:text="${#numbers.formatDecimal(entry.value, 1, 'POINT', 2, 'COMMA') + ' kg'}"></td>
+                        <td class="text-center fw-bold" th:text="${#numbers.formatDecimal(entry.value, 1, 'POINT', 2, 'COMMA') + ' kg'}"></td>
                     </tr>
                     </tbody>
                 </table>
             </div>
-            <div class="col-6">
+            <div style="width: 50%; padding-left: 10px;">
                 <table class="table table-sm table-bordered">
                     <thead class="table-secondary text-center"><tr><th>Material (Unidades UN)</th><th>Quantidade Total</th></tr></thead>
                     <tbody>
                     <tr th:each="entry : ${dadosRoscaUn}">
                         <td th:text="${entry.key}"></td>
-                        <td class="text-center" th:text="${#numbers.formatInteger(entry.value, 1) + ' un'}"></td>
+                        <td class="text-center fw-bold" th:text="${#numbers.formatInteger(entry.value, 1) + ' un'}"></td>
                     </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <div class="mt-5 pt-5 text-center">
-            <p>_________________________________________________</p>
-            <p class="fw-bold">Gestão Coletaê Salgueiro-PE</p>
+        <div class="mt-5 pt-4 text-center">
+            <p class="mb-0">_________________________________________________</p>
+            <p class="fw-bold small">COORDENAÇÃO COLETAÊ - SALGUEIRO-PE</p>
         </div>
     </div>
 </div>
@@ -156,40 +157,24 @@
     const dataUn = /*[[${dadosRoscaUn}]]*/ {};
     const cores = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6610f2', '#fd7e14', '#20c997', '#adb5bd'];
 
-    // 1. Gráfico de Volume (Linha)
     new Chart(document.getElementById('graficoVolume').getContext('2d'), {
         type: 'line',
         data: {
             labels: Object.keys(volumeData),
-            datasets: [{
-                label: 'Peso Coletado (KG)',
-                data: Object.values(volumeData),
-                borderColor: '#0d6efd',
-                backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                fill: true,
-                tension: 0.4
-            }]
+            datasets: [{ label: 'KG', data: Object.values(volumeData), borderColor: '#0d6efd', fill: true, tension: 0.4 }]
         },
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // 2. Gráfico KG (Rosca)
     new Chart(document.getElementById('graficoKg').getContext('2d'), {
         type: 'doughnut',
-        data: {
-            labels: Object.keys(dataKg),
-            datasets: [{ data: Object.values(dataKg), backgroundColor: cores }]
-        },
+        data: { labels: Object.keys(dataKg), datasets: [{ data: Object.values(dataKg), backgroundColor: cores }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
     });
 
-    // 3. Gráfico UN (Rosca)
     new Chart(document.getElementById('graficoUn').getContext('2d'), {
         type: 'doughnut',
-        data: {
-            labels: Object.keys(dataUn),
-            datasets: [{ data: Object.values(dataUn), backgroundColor: cores }]
-        },
+        data: { labels: Object.keys(dataUn), datasets: [{ data: Object.values(dataUn), backgroundColor: cores }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
     });
 </script>
