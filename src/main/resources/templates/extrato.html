@@ -85,11 +85,11 @@
             <span class="text-muted">CPF: <span th:text="${vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO'}">000.000.000-00</span></span>
         </div>
         <div class="col-6 text-end info-empresa">
-            <p><strong>Razão Social:</strong> <span>COLETAÊ RECICLAGEM LTDA</span></p>
+            <p><strong>Razão Social:</strong> <span>RECICLAGEM LTDA</span></p>
             <p><strong>CNPJ:</strong> <span>00.000.000/0001-00</span></p>
             <p><strong>IE e/ou IM:</strong> <span>ISENTO</span></p>
-            <p><strong>Endereço:</strong> <span>Salgueiro - PE, Centro</span></p>
-            <p><strong>Telefone:</strong> <span>(87) 9 9191-9496</span></p>
+            <p><strong>Endereço:</strong> <span>Salgueiro - PE</span></p>
+            <p><strong>Telefone:</strong> <span>(87) 90000-0000</span></p>
         </div>
     </div>
 
@@ -141,6 +141,10 @@
                     <div class="linha-assinatura">Assinatura do Cliente</div>
                     <span class="small text-muted" th:text="${vendedor.nome}">NOME</span>
                 </div>
+                <div style="max-width: 400px; margin: 0 auto;">
+                    <div class="linha-assinatura">Assinatura do Comprador</div>
+                    <span class="small text-muted" th:text="${vendedor.nome}">NOME</span>
+                </div>
             </div>
         </div>
 
@@ -151,8 +155,8 @@
             </div>
 
             <div class="col-5 text-center">
-                <img src="/img/logo-coletae.png" alt="Coletaê" class="logo-footer" th:src="@{/img/logo-coletae.png}">
-                <div class="mt-2 small text-muted" style="font-size: 10px;">Plataforma Oficial de Coleta e Reciclagem</div>
+                <img src="https://lh3.googleusercontent.com/u/0/d/1v7RtV-9ZfeY_zrxKSfzx3nPM3MqO60Pk" alt="Coletaê" class="logo-central" onerror="this.src='/img/logo-coletae.png'">
+                <div class="mt-2 small text-muted" style="font-size: 10px;">Plataforma Oficial do Coletaê</div>
             </div>
         </div>
 
