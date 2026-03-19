@@ -22,9 +22,10 @@
             font-size: 0.8rem;
         }
 
-        .logo-footer {
-            width: 100px;
-            height: auto;
+        /* AJUSTE DE DIMENSÕES: Logo agora fixada em 85px para igualar ao QR Code */
+        .logo-footer-ajustada {
+            width: 85px;
+            height: 85px;
             object-fit: contain;
         }
 
@@ -32,6 +33,7 @@
             display: inline-block;
         }
 
+        /* QR Code fixado em 85px conforme sua solicitação de simetria */
         #qrcode img {
             width: 85px;
             height: 85px;
@@ -39,7 +41,6 @@
 
         .info-empresa p { margin-bottom: 2px; font-size: 0.9rem; }
 
-        /* MODO CLIENTE: Esconde botões ao acessar via QR Code */
         body.modo-cliente .no-print,
         body.modo-cliente .botoes-topo {
             display: none !important;
@@ -81,15 +82,15 @@
     <div class="row mb-4 mt-5">
         <div class="col-6">
             <h6 class="fw-bold text-uppercase mb-3">Beneficiário:</h6>
-            <span th:text="${vendedor.nome}" class="fs-4 fw-bold text-uppercase">NOME DO CLIENTE</span><br>
-            <span class="text-muted">CPF: <span th:text="${vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO'}">000.000.000-00</span></span>
+            <span th:text="${vendedor.nome}" class="fs-4 fw-bold text-uppercase">ELIZANDRO</span><br>
+            <span class="text-muted">CPF: <span th:text="${vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO'}">102.356.895-85</span></span>
         </div>
         <div class="col-6 text-end info-empresa">
-            <p><strong>Razão Social:</strong> <span>RECICLAGEM LTDA</span></p>
+            <p><strong>Razão Social:</strong> <span>COLETAÊ RECICLAGEM LTDA</span></p>
             <p><strong>CNPJ:</strong> <span>00.000.000/0001-00</span></p>
             <p><strong>IE e/ou IM:</strong> <span>ISENTO</span></p>
-            <p><strong>Endereço:</strong> <span>Salgueiro - PE</span></p>
-            <p><strong>Telefone:</strong> <span>(87) 90000-0000</span></p>
+            <p><strong>Endereço:</strong> <span>Salgueiro - PE, Centro</span></p>
+            <p><strong>Telefone:</strong> <span>(87) 9 9191-9496</span></p>
         </div>
     </div>
 
@@ -101,8 +102,8 @@
     </div>
 
     <table class="table table-bordered border-dark align-middle mt-4">
-        <thead class="table-light text-uppercase">
-        <tr class="text-center">
+        <thead class="table-light text-uppercase text-center">
+        <tr>
             <th class="text-start">Material</th>
             <th>Qtd/Peso</th>
             <th>Preço Un.</th>
@@ -128,7 +129,7 @@
         <tr class="table-light border-dark">
             <td colspan="3" class="text-end fw-bold text-uppercase py-3">Total Líquido:</td>
             <td class="text-end fw-bold fs-4 py-3" th:text="'R$ ' + ${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}">
-                R$ 0,00
+                R$ 175,00
             </td>
         </tr>
         </tfoot>
@@ -139,11 +140,15 @@
             <div class="col-12 text-center">
                 <div style="max-width: 400px; margin: 0 auto;">
                     <div class="linha-assinatura">Assinatura do Cliente</div>
-                    <span class="small text-muted" th:text="${vendedor.nome}">NOME</span>
+                    <span class="small text-muted" th:text="${vendedor.nome}"></span>
                 </div>
+            </div>
+        </div>
+        <div class="row align-items-center mb-5">
+            <div class="col-12 text-center">
                 <div style="max-width: 400px; margin: 0 auto;">
                     <div class="linha-assinatura">Assinatura do Comprador</div>
-                    <span class="small text-muted" th:text="${vendedor.nome}">NOME</span>
+                    <span class="small text-muted"></span>
                 </div>
             </div>
         </div>
@@ -155,8 +160,8 @@
             </div>
 
             <div class="col-5 text-center">
-                <img src="https://lh3.googleusercontent.com/u/0/d/1v7RtV-9ZfeY_zrxKSfzx3nPM3MqO60Pk" alt="Coletaê" class="logo-central" onerror="this.src='/img/logo-coletae.png'">
-                <div class="mt-2 small text-muted" style="font-size: 10px;">Plataforma Oficial do Coletaê</div>
+                <img src="/img/logo-coletae.png" alt="Coletaê" class="logo-footer-ajustada" th:src="@{/img/logo-coletae.png}" onerror="this.src='https://lh3.googleusercontent.com/u/0/d/1v7RtV-9ZfeY_zrxKSfzx3nPM3MqO60Pk'">
+                <div class="mt-2 small text-muted fw-bold" style="font-size: 10px;">PLATAFORMA OFICIAL COLETAÊ</div>
             </div>
         </div>
 
