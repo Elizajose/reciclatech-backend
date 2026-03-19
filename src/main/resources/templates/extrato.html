@@ -41,6 +41,31 @@
 
         .info-empresa p { margin-bottom: 2px; font-size: 0.9rem; }
 
+        /* --- REGRA DE RESPONSIVIDADE (PARA NÃO BUGAR NO CELULAR) --- */
+        @media (max-width: 768px) {
+            body { padding: 10px; background: #f8f9fa; }
+            .folha {
+                padding: 20px;
+                width: 100%;
+                max-width: 100%;
+                min-height: auto;
+                box-shadow: none;
+            }
+            /* Empilha Beneficiário e Empresa um sob o outro no celular */
+            .row.mb-4.mt-5 .col-6 {
+                width: 100% !important;
+                text-align: left !important;
+                margin-bottom: 20px;
+            }
+            .info-empresa { text-align: left !important; border-top: 1px dashed #ccc; padding-top: 15px; }
+
+            /* Ajusta o rodapé para não quebrar feio */
+            .row.justify-content-between .col-5 {
+                width: 48% !important;
+            }
+            .table-responsive { border: none; }
+        }
+
         body.modo-cliente .no-print,
         body.modo-cliente .botoes-topo {
             display: none !important;
@@ -82,15 +107,15 @@
     <div class="row mb-4 mt-5">
         <div class="col-6">
             <h6 class="fw-bold text-uppercase mb-3">Beneficiário:</h6>
-            <span th:text="${vendedor.nome}" class="fs-4 fw-bold text-uppercase">ELIZANDRO</span><br>
-            <span class="text-muted">CPF: <span th:text="${vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO'}">102.356.895-85</span></span>
+            <span th:text="${vendedor.nome}" class="fs-4 fw-bold text-uppercase"></span><br>
+            <span class="text-muted small">CPF: <span th:text="${vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO'}"></span></span>
         </div>
         <div class="col-6 text-end info-empresa">
-            <p><strong>Razão Social:</strong> <span>COLETAÊ RECICLAGEM LTDA</span></p>
+            <p><strong>Razão Social:</strong> <span>Nome da empresa</span></p>
             <p><strong>CNPJ:</strong> <span>00.000.000/0001-00</span></p>
             <p><strong>IE e/ou IM:</strong> <span>ISENTO</span></p>
-            <p><strong>Endereço:</strong> <span>Salgueiro - PE, Centro</span></p>
-            <p><strong>Telefone:</strong> <span>(87) 9 9191-9496</span></p>
+            <p><strong>Endereço:</strong> <span>Salgueiro - PE</span></p>
+            <p><strong>Telefone:</strong> <span>(87) 9 9000-0000</span></p>
         </div>
     </div>
 
@@ -101,39 +126,41 @@
         </div>
     </div>
 
-    <table class="table table-bordered border-dark align-middle mt-4">
-        <thead class="table-light text-uppercase text-center">
-        <tr>
-            <th class="text-start">Material</th>
-            <th>Qtd/Peso</th>
-            <th>Preço Un.</th>
-            <th class="text-end">Total</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="venda : ${vendas}">
-            <td th:text="${venda.material}" class="fw-bold">Material</td>
-            <td class="text-center">
-                <span th:text="${venda.peso}">0.0</span>
-                <span th:text="${mapaUnidades.getOrDefault(venda.material, 'UN')}" class="small text-muted">KG</span>
-            </td>
-            <td class="text-center">
-                R$ <span th:text="${#numbers.formatDecimal(mapaPrecos.get(venda.material), 1, 'POINT', 2, 'COMMA')}">0,00</span>
-            </td>
-            <td class="text-end fw-bold" th:text="'R$ ' + ${#numbers.formatDecimal(venda.precoEstimado, 1, 'POINT', 2, 'COMMA')}">
-                R$ 0,00
-            </td>
-        </tr>
-        </tbody>
-        <tfoot>
-        <tr class="table-light border-dark">
-            <td colspan="3" class="text-end fw-bold text-uppercase py-3">Total Líquido:</td>
-            <td class="text-end fw-bold fs-4 py-3" th:text="'R$ ' + ${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}">
-                R$ 175,00
-            </td>
-        </tr>
-        </tfoot>
-    </table>
+    <div class="table-responsive">
+        <table class="table table-bordered border-dark align-middle mt-4">
+            <thead class="table-light text-uppercase text-center">
+            <tr>
+                <th class="text-start">Material</th>
+                <th>Qtd/Peso</th>
+                <th>Preço Un.</th>
+                <th class="text-end">Total</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="venda : ${vendas}">
+                <td th:text="${venda.material}" class="fw-bold">Material</td>
+                <td class="text-center">
+                    <span th:text="${venda.peso}">0.0</span>
+                    <span th:text="${mapaUnidades.getOrDefault(venda.material, 'UN')}" class="small text-muted">KG</span>
+                </td>
+                <td class="text-center">
+                    R$ <span th:text="${#numbers.formatDecimal(mapaPrecos.get(venda.material), 1, 'POINT', 2, 'COMMA')}">0,00</span>
+                </td>
+                <td class="text-end fw-bold" th:text="'R$ ' + ${#numbers.formatDecimal(venda.precoEstimado, 1, 'POINT', 2, 'COMMA')}">
+                    R$ 0,00
+                </td>
+            </tr>
+            </tbody>
+            <tfoot>
+            <tr class="table-light border-dark">
+                <td colspan="3" class="text-end fw-bold text-uppercase py-3">Total Líquido:</td>
+                <td class="text-end fw-bold fs-4 py-3" th:text="'R$ ' + ${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}">
+                    R$ 0,00
+                </td>
+            </tr>
+            </tfoot>
+        </table>
+    </div>
 
     <div class="mt-5 pt-5">
         <div class="row align-items-center mb-5">
@@ -148,7 +175,7 @@
             <div class="col-12 text-center">
                 <div style="max-width: 400px; margin: 0 auto;">
                     <div class="linha-assinatura">Assinatura do Comprador</div>
-                    <span class="small text-muted"></span>
+                    <span class="small text-muted">Nome da empresa</span>
                 </div>
             </div>
         </div>
