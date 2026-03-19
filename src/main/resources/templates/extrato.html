@@ -11,12 +11,7 @@
 
     <style>
         body { background: #555; padding: 40px; font-family: 'Courier New', monospace; }
-        .folha { background: white; max-width: 800px; margin: 0 auto; padding: 50px; position: relative; border-radius: 4px; min-height: 1000px; }
-
-        /* Espaço de assinatura aumentado para não ficar apertado */
-        .espaco-assinatura {
-            height: 100px;
-        }
+        .folha { background: white; max-width: 850px; margin: 0 auto; padding: 50px; position: relative; border-radius: 4px; min-height: 1000px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
 
         .linha-assinatura {
             border-top: 2px solid #212529;
@@ -24,55 +19,39 @@
             padding-top: 5px;
             font-weight: bold;
             text-transform: uppercase;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
         }
 
-        .logo-central {
+        .logo-footer {
             width: 100px;
-            margin-top: 10px;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
+            height: auto;
+            object-fit: contain;
         }
 
-        /* Centralização do QR Code */
         #qrcode {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 5px;
-            min-height: 80px;
+            display: inline-block;
         }
 
         #qrcode img {
-            width: 80px;
-            height: 80px;
+            width: 85px;
+            height: 85px;
         }
 
-        /* MODO CLIENTE: Esconde botões ao acessar via QR Code (?view=resumo) */
+        .info-empresa p { margin-bottom: 2px; font-size: 0.9rem; }
+
+        /* MODO CLIENTE: Esconde botões ao acessar via QR Code */
         body.modo-cliente .no-print,
         body.modo-cliente .botoes-topo {
             display: none !important;
         }
 
-        body.modo-cliente {
-            background: #f8f9fa;
-            padding: 20px 10px;
-        }
-
-        @media (max-width: 768px) {
-            body { padding: 10px; }
-            .folha { padding: 25px 15px; width: 100%; }
-            .botoes-topo { flex-direction: column; }
-            .btn { width: 100%; margin-bottom: 10px; }
-            /* No mobile, as assinaturas empilham para não quebrar */
-            .col-4 { width: 100% !important; margin-bottom: 30px; }
-        }
+        body.modo-cliente { background: #f8f9fa; padding: 20px 10px; }
 
         @media print {
             body { background: white; padding: 0; }
             .no-print { display: none !important; }
-            .folha { box-shadow: none !important; margin: 0; width: 100%; max-width: 100%; padding: 20px; }
+            .folha { box-shadow: none !important; margin: 0; width: 100%; max-width: 100%; padding: 30px; border: none; }
+            .table-success { background-color: #d1e7dd !important; -webkit-print-color-adjust: exact; }
         }
     </style>
 </head>
@@ -91,43 +70,48 @@
     <button onclick="enviarZap('cliente')" class="btn btn-outline-info text-dark fw-bold">
         <i class="bi bi-person-check"></i> Enviar p/ Cliente
     </button>
-    <a th:if="${session.adminLogado}" href="/admin/coletas" class="btn btn-secondary">Nova Coleta</a>
 </div>
 
-<input type="hidden" id="jsNome" th:value="${vendedor.nome}">
-<input type="hidden" id="jsTelefone" th:value="${vendedor.telefone}">
-<input type="hidden" id="jsTotal" th:value="${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}">
-
-<div class="folha shadow">
-    <div class="text-center border-bottom pb-4 mb-4">
-        <h2 class="fw-bold text-success text-uppercase">Coletaê Salgueiro</h2>
-        <p class="text-muted small">RECIBO DE PAGAMENTO / COMPROVANTE DE VENDA</p>
+<div class="folha">
+    <div class="text-center mb-2">
+        <h1 class="fw-bold text-success text-uppercase m-0" style="letter-spacing: 2px;">Coletaê Salgueiro</h1>
+        <p class="text-muted small border-bottom pb-2">RECIBO DE PAGAMENTO / COMPROVANTE DE VENDA</p>
     </div>
 
-    <div class="row mb-4">
-        <div class="col-8">
-            <strong>BENEFICIÁRIO:</strong><br>
-            <span th:text="${vendedor.nome}" class="fs-5 text-uppercase">NOME</span><br>
-            <small class="text-muted">CPF: <span th:text="${vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO'}"> </span></small>
+    <div class="row mb-4 mt-5">
+        <div class="col-6">
+            <h6 class="fw-bold text-uppercase mb-3">Beneficiário:</h6>
+            <span th:text="${vendedor.nome}" class="fs-4 fw-bold text-uppercase">NOME DO CLIENTE</span><br>
+            <span class="text-muted">CPF: <span th:text="${vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO'}">000.000.000-00</span></span>
         </div>
-        <div class="col-4 text-end">
-            <strong>DATA:</strong><br>
-            <span th:text="${#temporals.format(dataHoje, 'dd/MM/yyyy')}">Data</span>
+        <div class="col-6 text-end info-empresa">
+            <p><strong>Razão Social:</strong> <span>COLETAÊ RECICLAGEM LTDA</span></p>
+            <p><strong>CNPJ:</strong> <span>00.000.000/0001-00</span></p>
+            <p><strong>IE e/ou IM:</strong> <span>ISENTO</span></p>
+            <p><strong>Endereço:</strong> <span>Salgueiro - PE, Centro</span></p>
+            <p><strong>Telefone:</strong> <span>(87) 9 9191-9496</span></p>
         </div>
     </div>
 
-    <table class="table table-bordered border-dark align-middle">
-        <thead class="table-light">
-        <tr>
-            <th>MATERIAL</th>
-            <th class="text-center">QTD/PESO</th>
-            <th class="text-center">PREÇO UN.</th>
-            <th class="text-end">TOTAL</th>
+    <div class="row mb-3">
+        <div class="col-12">
+            <h6 class="fw-bold">DATA:</h6>
+            <span th:text="${#temporals.format(dataHoje, 'dd/MM/yyyy')}" class="fs-5">18/03/2026</span>
+        </div>
+    </div>
+
+    <table class="table table-bordered border-dark align-middle mt-4">
+        <thead class="table-light text-uppercase">
+        <tr class="text-center">
+            <th class="text-start">Material</th>
+            <th>Qtd/Peso</th>
+            <th>Preço Un.</th>
+            <th class="text-end">Total</th>
         </tr>
         </thead>
         <tbody>
         <tr th:each="venda : ${vendas}">
-            <td th:text="${venda.material}">Material</td>
+            <td th:text="${venda.material}" class="fw-bold">Material</td>
             <td class="text-center">
                 <span th:text="${venda.peso}">0.0</span>
                 <span th:text="${mapaUnidades.getOrDefault(venda.material, 'UN')}" class="small text-muted">KG</span>
@@ -135,60 +119,62 @@
             <td class="text-center">
                 R$ <span th:text="${#numbers.formatDecimal(mapaPrecos.get(venda.material), 1, 'POINT', 2, 'COMMA')}">0,00</span>
             </td>
-            <td class="text-end fw-bold"
-                th:text="'R$ ' + ${#numbers.formatDecimal(venda.precoEstimado, 1, 'POINT', 2, 'COMMA')}">
+            <td class="text-end fw-bold" th:text="'R$ ' + ${#numbers.formatDecimal(venda.precoEstimado, 1, 'POINT', 2, 'COMMA')}">
                 R$ 0,00
             </td>
         </tr>
         </tbody>
         <tfoot>
-        <tr class="table-success">
-            <td colspan="3" class="text-end fw-bold text-uppercase">Total Líquido:</td>
-            <td class="text-end fw-bold fs-4"
-                th:text="'R$ ' + ${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}">
+        <tr class="table-light border-dark">
+            <td colspan="3" class="text-end fw-bold text-uppercase py-3">Total Líquido:</td>
+            <td class="text-end fw-bold fs-4 py-3" th:text="'R$ ' + ${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}">
                 R$ 0,00
             </td>
         </tr>
         </tfoot>
     </table>
 
-    <div class="mt-5 pt-4">
-        <div class="row align-items-end">
-            <div class="col-4 text-center">
-                <div class="espaco-assinatura"></div>
-                <div class="linha-assinatura">Assinatura do Cliente</div>
-                <small class="text-muted" style="font-size: 10px;" th:text="${vendedor.nome}">Nome</small>
+    <div class="mt-5 pt-5">
+        <div class="row align-items-center mb-5">
+            <div class="col-12 text-center">
+                <div style="max-width: 400px; margin: 0 auto;">
+                    <div class="linha-assinatura">Assinatura do Cliente</div>
+                    <span class="small text-muted" th:text="${vendedor.nome}">NOME</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-5 pt-4 align-items-center justify-content-between">
+            <div class="col-5 text-center">
+                <div id="qrcode" class="mb-2"></div>
+                <small class="d-block fw-bold text-muted" style="font-size: 10px;">VERIFICAR AUTENTICIDADE</small>
             </div>
 
-            <div class="col-4 text-center">
-                <div id="qrcode"></div>
-                <small class="text-muted" style="font-size: 9px; display: block; font-weight: bold;">VERIFICAR AUTENTICIDADE</small>
-
-                <img src="https://lh3.googleusercontent.com/u/0/d/1v7RtV-9ZfeY_zrxKSfzx3nPM3MqO60Pk" alt="Coletaê" class="logo-central" onerror="this.src='/img/logo-coletae.png'">
-            </div>
-
-            <div class="col-4 text-center">
-                <div class="espaco-assinatura"></div>
-                <div class="linha-assinatura">Assinatura do Comprador</div>
-                <small class="text-muted" style="font-size: 10px;">Responsável em Salgueiro-PE</small>
+            <div class="col-5 text-center">
+                <img src="/img/logo-coletae.png" alt="Coletaê" class="logo-footer" th:src="@{/img/logo-coletae.png}">
+                <div class="mt-2 small text-muted" style="font-size: 10px;">Plataforma Oficial de Coleta e Reciclagem</div>
             </div>
         </div>
 
         <div class="text-center mt-5">
-            <small style="font-size: 9px;" class="text-muted">Documento gerado eletronicamente pela Plataforma Coletaê</small>
+            <small style="font-size: 10px;" class="text-muted">Página 1/1 - Documento processado digitalmente via reciclatech-app.onrender.com</small>
         </div>
     </div>
 </div>
 
+<input type="hidden" id="jsNome" th:value="${vendedor.nome}">
+<input type="hidden" id="jsTelefone" th:value="${vendedor.telefone}">
+<input type="hidden" id="jsTotal" th:value="${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}">
+
 <script>
     function gerarQRCode() {
         const urlBase = window.location.origin + window.location.pathname;
-        const linkResumo = urlBase + "?view=resumo"; // Link especial para o cliente
+        const linkResumo = urlBase + "?view=resumo";
 
         new QRCode(document.getElementById("qrcode"), {
             text: linkResumo,
-            width: 80,
-            height: 80,
+            width: 85,
+            height: 85,
             colorDark : "#000000",
             colorLight : "#ffffff",
             correctLevel : QRCode.CorrectLevel.H
@@ -199,28 +185,19 @@
         let nome = document.getElementById("jsNome").value;
         let total = document.getElementById("jsTotal").value;
         let telefoneCliente = document.getElementById("jsTelefone").value;
-
-        // Enviamos o link resumido para o cliente
         const urlBase = window.location.origin + window.location.pathname;
         let linkRecibo = urlBase + "?view=resumo";
 
-        let msg = `🧾 *RECIBO COLETAÊ SALGUEIRO*\n\nOlá *${nome}*,\nSeu pagamento de *R$ ${total}* foi processado com sucesso.\n\n🔗 *Recibo Digital:* ${linkRecibo}\n\n✅ *Status:* Pago\n📍 *Local:* Salgueiro-PE\n\n_Obrigado por reciclar conosco!_`;
-
+        let msg = `🧾 *RECIBO COLETAÊ SALGUEIRO*\n\nOlá *${nome}*,\nSeu pagamento de *R$ ${total}* foi processado.\n\n🔗 *Recibo Digital:* ${linkRecibo}\n\n✅ *Status:* Pago\n_Obrigado por reciclar conosco!_`;
         let numeroDestino = (destino === 'empresa') ? "5587991919496" : "55" + telefoneCliente;
-
-        let url = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(msg)}`;
-        window.open(url, '_blank');
+        window.open(`https://wa.me/${numeroDestino}?text=${encodeURIComponent(msg)}`, '_blank');
     }
 
     window.onload = function() {
         gerarQRCode();
-
         const params = new URLSearchParams(window.location.search);
-        // Não auto-imprime no modo cliente
         if (params.get('autoPrint') === 'true' && params.get('view') !== 'resumo') {
-            setTimeout(function() {
-                window.print();
-            }, 800);
+            setTimeout(() => { window.print(); }, 800);
         }
     };
 </script>

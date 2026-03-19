@@ -397,71 +397,72 @@ public class TelaController {
             return "redirect:/admin/coletas?erro=pesagem_rapida";
         }
     }
+
+    // --- ROTA DE ANALISES COM TRAVA DE SEGURANÇA ---
     @GetMapping("/admin/analises")
     public String mostrarAnalises(Model model, HttpSession session) {
+        // 1. Verifica login geral
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
 
+        // 2. VERIFICAÇÃO DE SENHA DO GESTOR
+        if (session.getAttribute("gestorAutorizado") == null) {
+            return "redirect:/admin/analises/autenticar";
+        }
+
         try {
-            // 1. Busca dados das três fontes necessárias
             List<Oferta> historico = googleSheetsService.getHistoricoCompleto();
             List<Usuario> usuariosCadastrados = googleSheetsService.listarUsuarios();
             List<Material> materiaisCadastrados = googleSheetsService.listarMateriais();
 
-            // 💰 Agrupamento Financeiro por Material (Para cálculos internos)
+            // Agrupamento Financeiro
             Map<String, Double> financeiroDados = historico.stream()
                     .filter(o -> o.getMaterial() != null)
                     .collect(Collectors.groupingBy(Oferta::getMaterial,
                             Collectors.summingDouble(o -> o.getPrecoEstimado() != null ? o.getPrecoEstimado().doubleValue() : 0.0)));
 
-            // 📈 Volume por Data (Gráfico de Linha principal)
+            // Volume por Data
             Map<String, Double> volumePorDia = historico.stream()
                     .filter(o -> o.getData() != null)
                     .collect(Collectors.groupingBy(Oferta::getData,
                             TreeMap::new,
                             Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
 
-            // --- LÓGICA DE SEPARAÇÃO: KG vs UN ---
             Map<String, String> unidadesMap = materiaisCadastrados.stream()
                     .collect(Collectors.toMap(Material::getNome, Material::getUnidade, (v1, v2) -> v1));
 
             Double totalKg = 0.0;
             Double totalUn = 0.0;
-
             for (Oferta o : historico) {
                 String unidade = unidadesMap.getOrDefault(o.getMaterial(), "KG");
                 Double valor = (o.getPeso() != null) ? o.getPeso() : 0.0;
-
-                if ("UN".equalsIgnoreCase(unidade)) {
-                    totalUn += valor;
-                } else {
-                    totalKg += valor;
-                }
+                if ("UN".equalsIgnoreCase(unidade)) totalUn += valor; else totalKg += valor;
             }
 
-            // --- NOVO: Agrupamentos específicos para os dois gráficos de rosca ---
-
-            // Gráfico 1: Apenas materiais em KG
+            // Gráficos de Rosca
             Map<String, Double> dadosRoscaKg = historico.stream()
                     .filter(o -> !"UN".equalsIgnoreCase(unidadesMap.getOrDefault(o.getMaterial(), "KG")))
-                    .collect(Collectors.groupingBy(Oferta::getMaterial,
-                            Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
+                    .collect(Collectors.groupingBy(Oferta::getMaterial, Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
 
-            // Gráfico 2: Apenas materiais em UN (Pitu, Garrafas, etc)
             Map<String, Double> dadosRoscaUn = historico.stream()
                     .filter(o -> "UN".equalsIgnoreCase(unidadesMap.getOrDefault(o.getMaterial(), "KG")))
-                    .collect(Collectors.groupingBy(Oferta::getMaterial,
-                            Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
+                    .collect(Collectors.groupingBy(Oferta::getMaterial, Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
 
-            // --- CÁLCULOS FINAIS PARA OS CARDS ---
+            // --- LÓGICA DE RANKING (INSIGHTS) ---
+            List<Map.Entry<String, Double>> rankingMaisColetados = dadosRoscaKg.entrySet().stream()
+                    .sorted(Map.Entry.<String, Double>comparingByValue().reversed()).limit(3).collect(Collectors.toList());
+
+            List<Map.Entry<String, Double>> baixaColeta = dadosRoscaKg.entrySet().stream()
+                    .filter(e -> e.getValue() < 5.0).collect(Collectors.toList());
+
             long totalAtendimentosReais = (usuariosCadastrados != null) ? usuariosCadastrados.size() : 0;
             Double totalPagoAosClientes = financeiroDados.values().stream().mapToDouble(Double::doubleValue).sum();
             Double custoMedioPorAtendimento = (totalAtendimentosReais > 0) ? totalPagoAosClientes / totalAtendimentosReais : 0.0;
 
-            // Enviando para o Model (Injeção no Thymeleaf)
             model.addAttribute("volumeDados", volumePorDia);
             model.addAttribute("dadosRoscaKg", dadosRoscaKg);
             model.addAttribute("dadosRoscaUn", dadosRoscaUn);
-
+            model.addAttribute("rankingMaisColetados", rankingMaisColetados);
+            model.addAttribute("baixaColeta", baixaColeta);
             model.addAttribute("totalAtendimentos", totalAtendimentosReais);
             model.addAttribute("totalPago", totalPagoAosClientes);
             model.addAttribute("totalKg", totalKg);
@@ -469,10 +470,23 @@ public class TelaController {
             model.addAttribute("custoMedio", custoMedioPorAtendimento);
 
         } catch (Exception e) {
-            System.err.println("Erro Crítico nas Análises: " + e.getMessage());
             e.printStackTrace();
             return "redirect:/admin/coletas?erro=analises";
         }
         return "analises";
+    }
+
+    // --- ROTAS DA SENHA DE GESTOR ---
+    @GetMapping("/admin/analises/autenticar")
+    public String telaSenhaGestor() { return "autenticar-analises"; }
+
+    @PostMapping("/admin/analises/autenticar")
+    public String processarSenhaGestor(@RequestParam String senhaGestor, HttpSession session, org.springframework.web.servlet.mvc.support.RedirectAttributes ra) {
+        if ("1234".equals(senhaGestor)) { // ALTERE A SENHA AQUI
+            session.setAttribute("gestorAutorizado", true);
+            return "redirect:/admin/analises";
+        }
+        ra.addFlashAttribute("erro", "Senha incorreta!");
+        return "redirect:/admin/analises/autenticar";
     }
 }

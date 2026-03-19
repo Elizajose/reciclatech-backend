@@ -8,175 +8,104 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .card { border-radius: 12px; border: none; transition: transform 0.2s; }
-        .card:hover { transform: translateY(-5px); }
-        .stat-card { color: white; }
         .chart-container { height: 250px; position: relative; }
-
-        /* AJUSTES PARA O PDF (BALANÇO SEMANAL) */
         @media print {
-            .no-print, .btn, .bi-arrow-left, hr, .chart-container, canvas {
-                display: none !important;
-            }
-            body { background-color: white !important; padding: 0 !important; font-size: 12pt; }
+            .no-print, .btn, hr, canvas { display: none !important; }
+            body { background-color: white !important; font-size: 11pt; }
             .container { width: 100% !important; max-width: none !important; margin: 0 !important; }
-            .card { border: none !important; box-shadow: none !important; }
-
-            /* Garante que os cards de resumo fiquem visíveis no topo do PDF se desejar */
-            .row { display: flex !important; flex-wrap: nowrap !important; margin-bottom: 20px !important; }
-            .col-md-3 { width: 25% !important; border: 1px solid #eee !important; padding: 10px !important; text-align: center; }
-            .bg-primary, .bg-danger, .bg-success, .bg-warning {
-                color: black !important; background-color: transparent !important;
-            }
-
+            .row { display: flex !important; flex-wrap: nowrap !important; }
+            .col-md-3 { width: 25% !important; border: 1px solid #eee !important; padding: 10px !important; }
             .print-only { display: block !important; }
-            .mt-4 { margin-top: 1.5rem !important; }
             table { width: 100% !important; border-collapse: collapse !important; }
-            th, td { border: 1px solid #333 !important; padding: 8px !important; }
+            th, td { border: 1px solid #333 !important; padding: 5px !important; }
         }
-
         .print-only { display: none; }
     </style>
 </head>
 <body class="bg-light">
-
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4 no-print">
-        <h2><i class="bi bi-cpu"></i> Inteligência de Negócio - Coletaê</h2>
+        <h2><i class="bi bi-cpu"></i> Inteligência de Negócio</h2>
         <div>
-            <button onclick="window.print()" class="btn btn-success me-2">
-                <i class="bi bi-file-earmark-pdf"></i> Gerar Balanço Semanal
-            </button>
-            <a href="/admin/coletas" class="btn btn-outline-dark"><i class="bi bi-arrow-left"></i> Voltar</a>
+            <button onclick="window.print()" class="btn btn-success me-2"><i class="bi bi-file-earmark-pdf"></i> Balanço Semanal</button>
+            <a href="/admin/coletas" class="btn btn-outline-dark">Voltar</a>
         </div>
     </div>
 
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card shadow-sm p-3 bg-primary text-white">
-                <h6 class="no-print"><i class="bi bi-people"></i> Clientes Atendidos</h6>
-                <h6 class="print-only fw-bold">Clientes Atendidos</h6>
-                <h3 th:text="${totalAtendimentos}">0</h3>
+        <div class="col-md-3"><div class="card shadow-sm p-3 bg-primary text-white text-center"><h6>Clientes</h6><h3 th:text="${totalAtendimentos}">0</h3></div></div>
+        <div class="col-md-3"><div class="card shadow-sm p-3 bg-danger text-white text-center"><h6>Total Pago</h6><h3>R$ <span th:text="${#numbers.formatDecimal(totalPago, 1, 'POINT', 2, 'COMMA')}"></span></h3></div></div>
+        <div class="col-md-3"><div class="card shadow-sm p-3 bg-success text-white text-center"><h6>Volume KG</h6><h3><span th:text="${#numbers.formatDecimal(totalKg, 1, 'POINT', 2, 'COMMA')}"></span> kg</h3></div></div>
+        <div class="col-md-3"><div class="card shadow-sm p-3 bg-warning text-dark text-center"><h6>Volume UN</h6><h3 th:text="${totalUn + ' un'}"></h3></div></div>
+    </div>
+
+    <div class="row mb-4 no-print">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white fw-bold text-success">Mais Comprados (Top 3 KG)</div>
+                <ul class="list-group list-group-flush">
+                    <li th:each="item : ${rankingMaisColetados}" class="list-group-item d-flex justify-content-between align-items-center">
+                        <span th:text="${item.key}"></span>
+                        <span class="badge bg-success" th:text="${#numbers.formatDecimal(item.value, 1, 2) + ' kg'}"></span>
+                    </li>
+                </ul>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm p-3 bg-danger text-white">
-                <h6 class="no-print"><i class="bi bi-cash-stack"></i> Total Pago (Saída)</h6>
-                <h6 class="print-only fw-bold">Total Pago</h6>
-                <h3>R$ <span th:text="${#numbers.formatDecimal(totalPago, 1, 'POINT', 2, 'COMMA')}">0,00</span></h3>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm p-3 bg-success text-white">
-                <h6 class="no-print"><i class="bi bi-box-seam"></i> Volume Total (KG)</h6>
-                <h6 class="print-only fw-bold">Volume Total (KG)</h6>
-                <h3><span th:text="${#numbers.formatDecimal(totalKg, 1, 'POINT', 2, 'COMMA')}">0,00</span> kg</h3>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm p-3 bg-warning text-dark">
-                <h6 class="no-print"><i class="bi bi-layers"></i> Volume Total (UN)</h6>
-                <h6 class="print-only fw-bold">Volume Total (UN)</h6>
-                <h3><span th:text="${#numbers.formatInteger(totalUn, 1)}">0</span> un</h3>
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white fw-bold text-danger">Baixa Coleta (Abaixo de 5kg)</div>
+                <ul class="list-group list-group-flush">
+                    <li th:each="item : ${baixaColeta}" class="list-group-item d-flex justify-content-between align-items-center">
+                        <span th:text="${item.key}" class="text-muted"></span>
+                        <span class="text-danger" th:text="${#numbers.formatDecimal(item.value, 1, 2) + ' kg'}"></span>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
 
     <div class="row no-print">
-        <div class="col-md-12 mb-4">
-            <div class="card shadow-sm p-3">
-                <h5 class="card-title fw-bold text-muted">Evolução de Compras</h5>
-                <hr>
-                <div style="height: 300px;"><canvas id="graficoVolume"></canvas></div>
-            </div>
-        </div>
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm p-3">
-                <h5 class="card-title fw-bold text-muted text-center">Mix KG</h5>
-                <div class="chart-container"><canvas id="graficoKg"></canvas></div>
-            </div>
-        </div>
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm p-3">
-                <h5 class="card-title fw-bold text-muted text-center">Mix UN</h5>
-                <div class="chart-container"><canvas id="graficoUn"></canvas></div>
-            </div>
-        </div>
+        <div class="col-md-12 mb-4"><div class="card shadow-sm p-3"><h5>Evolução de Compras</h5><hr><div style="height: 300px;"><canvas id="graficoVolume"></canvas></div></div></div>
+        <div class="col-md-6 mb-4"><div class="card shadow-sm p-3"><h5 class="text-center">Mix KG</h5><div class="chart-container"><canvas id="graficoKg"></canvas></div></div></div>
+        <div class="col-md-6 mb-4"><div class="card shadow-sm p-3"><h5 class="text-center">Mix UN</h5><div class="chart-container"><canvas id="graficoUn"></canvas></div></div></div>
     </div>
 
     <div class="print-only mt-2">
         <div class="text-center mb-4" style="border-bottom: 2px solid #000; padding-bottom: 10px;">
             <h2 class="fw-bold m-0">BALANÇO SEMANAL DE COLETA - COLETÁE</h2>
-            <p class="m-0 text-uppercase small fw-bold">Gestão e Movimentação Financeira</p>
             <p class="m-0 small">Relatório gerado em: <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy HH:mm')}"></span></p>
         </div>
-
         <table class="table table-bordered border-dark">
-            <thead class="table-dark text-center">
-            <tr><th colspan="2">RESUMO DAS OPERAÇÕES</th></tr>
-            </thead>
+            <thead class="table-dark text-center"><tr><th colspan="2">RESUMO DAS OPERAÇÕES</th></tr></thead>
             <tbody>
-            <tr><td><strong>Custo Médio por Atendimento:</strong></td><td class="text-center">R$ <span th:text="${#numbers.formatDecimal(custoMedio, 1, 'POINT', 2, 'COMMA')}">0,00</span></td></tr>
+            <tr><td><strong>Clientes no Período:</strong></td><td class="text-center" th:text="${totalAtendimentos}"></td></tr>
+            <tr><td><strong>Custo Médio por Atendimento:</strong></td><td class="text-center">R$ <span th:text="${#numbers.formatDecimal(custoMedio, 1, 'POINT', 2, 'COMMA')}"></span></td></tr>
             </tbody>
         </table>
-
-        <div class="row mt-4" style="display: flex !important; flex-wrap: nowrap !important;">
-            <div style="width: 50%; padding-right: 10px;">
+        <div class="row mt-4">
+            <div style="width: 50%; padding-right: 5px;">
                 <table class="table table-sm table-bordered">
-                    <thead class="table-secondary text-center"><tr><th>Material (Pesáveis KG)</th><th>Quantidade Total</th></tr></thead>
-                    <tbody>
-                    <tr th:each="entry : ${dadosRoscaKg}">
-                        <td th:text="${entry.key}"></td>
-                        <td class="text-center fw-bold" th:text="${#numbers.formatDecimal(entry.value, 1, 'POINT', 2, 'COMMA') + ' kg'}"></td>
-                    </tr>
-                    </tbody>
+                    <thead class="table-secondary text-center"><tr><th>Material (KG)</th><th>Total</th></tr></thead>
+                    <tbody><tr th:each="entry : ${dadosRoscaKg}"><td th:text="${entry.key}"></td><td class="text-center" th:text="${#numbers.formatDecimal(entry.value, 1, 'POINT', 2, 'COMMA') + ' kg'}"></td></tr></tbody>
                 </table>
             </div>
-            <div style="width: 50%; padding-left: 10px;">
+            <div style="width: 50%; padding-left: 5px;">
                 <table class="table table-sm table-bordered">
-                    <thead class="table-secondary text-center"><tr><th>Material (Unidades UN)</th><th>Quantidade Total</th></tr></thead>
-                    <tbody>
-                    <tr th:each="entry : ${dadosRoscaUn}">
-                        <td th:text="${entry.key}"></td>
-                        <td class="text-center fw-bold" th:text="${#numbers.formatInteger(entry.value, 1) + ' un'}"></td>
-                    </tr>
-                    </tbody>
+                    <thead class="table-secondary text-center"><tr><th>Material (UN)</th><th>Total</th></tr></thead>
+                    <tbody><tr th:each="entry : ${dadosRoscaUn}"><td th:text="${entry.key}"></td><td class="text-center" th:text="${entry.value + ' un'}"></td></tr></tbody>
                 </table>
             </div>
-        </div>
-
-        <div class="mt-5 pt-4 text-center">
-            <p class="mb-0">_________________________________________________</p>
-            <p class="fw-bold small">COORDENAÇÃO COLETAÊ - SALGUEIRO-PE</p>
         </div>
     </div>
 </div>
-
 <script th:inline="javascript">
     const volumeData = /*[[${volumeDados}]]*/ {};
     const dataKg = /*[[${dadosRoscaKg}]]*/ {};
     const dataUn = /*[[${dadosRoscaUn}]]*/ {};
     const cores = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6610f2', '#fd7e14', '#20c997', '#adb5bd'];
-
-    new Chart(document.getElementById('graficoVolume').getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: Object.keys(volumeData),
-            datasets: [{ label: 'KG', data: Object.values(volumeData), borderColor: '#0d6efd', fill: true, tension: 0.4 }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
-
-    new Chart(document.getElementById('graficoKg').getContext('2d'), {
-        type: 'doughnut',
-        data: { labels: Object.keys(dataKg), datasets: [{ data: Object.values(dataKg), backgroundColor: cores }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
-    });
-
-    new Chart(document.getElementById('graficoUn').getContext('2d'), {
-        type: 'doughnut',
-        data: { labels: Object.keys(dataUn), datasets: [{ data: Object.values(dataUn), backgroundColor: cores }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
-    });
+    new Chart(document.getElementById('graficoVolume').getContext('2d'), { type: 'line', data: { labels: Object.keys(volumeData), datasets: [{ label: 'KG', data: Object.values(volumeData), borderColor: '#0d6efd', fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false } });
+    new Chart(document.getElementById('graficoKg').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(dataKg), datasets: [{ data: Object.values(dataKg), backgroundColor: cores }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
+    new Chart(document.getElementById('graficoUn').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(dataUn), datasets: [{ data: Object.values(dataUn), backgroundColor: cores }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
 </script>
 </body>
 </html>
