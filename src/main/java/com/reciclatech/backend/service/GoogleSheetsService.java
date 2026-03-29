@@ -122,14 +122,18 @@ public class GoogleSheetsService {
         List<List<Object>> values = response.getValues();
         if (values == null || values.isEmpty()) return Collections.emptyList();
 
-        return values.stream().map(row -> {
-            Material m = new Material();
-            m.setId(Long.parseLong(row.get(0).toString()));
-            m.setNome(row.get(1).toString());
-            m.setPrecoPorKg(new BigDecimal(row.get(2).toString().replace(",", ".")));
-            m.setUnidade(row.size() > 3 ? row.get(3).toString() : "KG");
-            return m;
-        }).collect(Collectors.toList());
+        return values.stream()
+                // 👇 AQUI: Ignora linhas nulas, vazias ou que não tenham ID
+                .filter(row -> row != null && !row.isEmpty() && row.size() >= 3 && !row.get(0).toString().trim().isEmpty())
+                .map(row -> {
+                    Material m = new Material();
+                    m.setId(Long.parseLong(row.get(0).toString()));
+                    m.setNome(row.get(1).toString());
+                    m.setPrecoPorKg(new BigDecimal(row.get(2).toString().replace(",", ".")));
+                    m.setUnidade(row.size() > 3 ? row.get(3).toString() : "KG");
+                    return m;
+                })
+                .collect(Collectors.toList());
     }
 
     public void atualizarPrecoMaterial(Long id, BigDecimal novoPreco) throws IOException {
