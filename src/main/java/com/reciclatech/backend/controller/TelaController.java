@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.time.ZoneId;
 
 @Controller
 public class TelaController {
@@ -35,15 +36,14 @@ public class TelaController {
     @GetMapping("/")
     public String home(Model model) {
         try {
+            // Mantemos apenas o essencial para a vitrine do site
             model.addAttribute("materiais", googleSheetsService.listarMateriais());
             model.addAttribute("topMateriais", googleSheetsService.buscarRankingMateriais());
 
-            Double total = googleSheetsService.calcularTotalReciclado();
-            model.addAttribute("totalReciclado", total != null ? total : 0.0);
+            // Removemos a linha do 'totalReciclado' para economizar processamento
         } catch (Exception e) {
             model.addAttribute("materiais", new ArrayList<>());
             model.addAttribute("topMateriais", new ArrayList<>());
-            model.addAttribute("totalReciclado", 0.0);
         }
         return "index";
     }
@@ -279,7 +279,8 @@ public class TelaController {
                         "ENTREGA NO LOCAL",
                         precoUn.toString().replace(".", ","),
                         total.toString().replace(".", ","),
-                        LocalDate.now().toString(),
+                        LocalDate.now(ZoneId.of("America/Recife")).toString(),
+                        //LocalDate.now().toString(),
                         idVendedor,
                         "VENDIDO",
                         cpfFinal != null && !cpfFinal.trim().isEmpty() ? cpfFinal : "NÃO INFORMADO"
@@ -327,7 +328,8 @@ public class TelaController {
             model.addAttribute("vendedor", usuario);
             model.addAttribute("vendas", vendasReais); // Agora a lista NÃO está mais vazia!
             model.addAttribute("total", totalGeral);
-            model.addAttribute("dataHoje", java.time.LocalDate.now());
+            model.addAttribute("dataHoje", LocalDate.now(ZoneId.of("America/Recife")));
+           // model.addAttribute("dataHoje", java.time.LocalDate.now());
 
         } catch (Exception e) {
             return "redirect:/?erro=extrato";
