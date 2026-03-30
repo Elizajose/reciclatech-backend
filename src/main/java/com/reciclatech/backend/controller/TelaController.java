@@ -454,7 +454,7 @@ public class TelaController {
                     .sorted(Map.Entry.<String, Double>comparingByValue().reversed()).limit(3).collect(Collectors.toList());
 
             List<Map.Entry<String, Double>> baixaColeta = dadosRoscaKg.entrySet().stream()
-                    .filter(e -> e.getValue() < 5.0).collect(Collectors.toList());
+                    .filter(e -> e.getValue() < 50.0).collect(Collectors.toList());
 
             long totalAtendimentosReais = (usuariosCadastrados != null) ? usuariosCadastrados.size() : 0;
             Double totalPagoAosClientes = financeiroDados.values().stream().mapToDouble(Double::doubleValue).sum();
