@@ -410,6 +410,7 @@ public class TelaController {
         if (session.getAttribute("gestorAutorizado") == null) {
             return "redirect:/admin/analises/autenticar";
         }
+        session.removeAttribute("gestorAutorizado");
 
         // 3. BLOQUEIO DE CACHE (Impede o navegador de usar a seta "Voltar" sem pedir senha)
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate"); // HTTP 1.1
