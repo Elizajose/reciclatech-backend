@@ -483,7 +483,15 @@ public class TelaController {
         return "analises";
     }
 
-    // --- ROTAS DA SENHA DE GESTOR ---
+// --- ROTAS DA SENHA DE GESTOR ---
+
+    // 1. Rota que MOSTRA a tela do formulário (Foi essa que você adicionou)
+    @GetMapping("/admin/analises/autenticar")
+    public String telaSenhaGestor() {
+        return "autenticar-analises";
+    }
+
+    // 2. Rota que PROCESSA a senha digitada
     @PostMapping("/admin/analises/autenticar")
     public String processarSenhaGestor(@RequestParam String senhaGestor, HttpSession session, org.springframework.web.servlet.mvc.support.RedirectAttributes ra) {
         if ("1234".equals(senhaGestor)) { // ALTERE A SENHA AQUI
@@ -492,6 +500,13 @@ public class TelaController {
         }
         ra.addFlashAttribute("erro", "Senha incorreta!");
         return "redirect:/admin/analises/autenticar";
+    }
+
+    // 3. Rota para REMOVER a autorização ao sair da página (Para o botão Voltar)
+    @GetMapping("/admin/analises/sair")
+    public String sairDaAnalise(HttpSession session) {
+        session.removeAttribute("gestorAutorizado");
+        return "redirect:/admin/coletas";
     }
 
 }
