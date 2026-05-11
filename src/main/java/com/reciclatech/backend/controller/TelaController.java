@@ -402,7 +402,7 @@ public class TelaController {
 
     // --- ROTA DE ANALISES COM TRAVA DE SEGURANÇA ---
     @GetMapping("/admin/analises")
-    public String mostrarAnalises(Model model, HttpSession session) {
+    public String mostrarAnalises(Model model, HttpSession session, HttpServletResponse response) {
         // 1. Verifica login geral
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
 
@@ -410,6 +410,11 @@ public class TelaController {
         if (session.getAttribute("gestorAutorizado") == null) {
             return "redirect:/admin/analises/autenticar";
         }
+
+        // 3. BLOQUEIO DE CACHE (Impede o navegador de usar a seta "Voltar" sem pedir senha)
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate"); // HTTP 1.1
+        response.setHeader("Pragma", "no-cache"); // HTTP 1.0
+        response.setHeader("Expires", "0"); // Proxies
 
         try {
             List<Oferta> historico = googleSheetsService.getHistoricoCompleto();
@@ -479,19 +484,14 @@ public class TelaController {
     }
 
     // --- ROTAS DA SENHA DE GESTOR ---
-    @GetMapping("/admin/analises")
-    public String telaAnalises(HttpSession session, HttpServletResponse response) {
-
-        if (session.getAttribute("gestorAutorizado") == null) {
-            return "redirect:/admin/analises/autenticar";
+    @PostMapping("/admin/analises/autenticar")
+    public String processarSenhaGestor(@RequestParam String senhaGestor, HttpSession session, org.springframework.web.servlet.mvc.support.RedirectAttributes ra) {
+        if ("1234".equals(senhaGestor)) { // ALTERE A SENHA AQUI
+            session.setAttribute("gestorAutorizado", true);
+            return "redirect:/admin/analises";
         }
-
-
-        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate"); // HTTP 1.1
-        response.setHeader("Pragma", "no-cache"); // HTTP 1.0
-        response.setHeader("Expires", "0"); // Proxies
-
-
-        return "analises";
+        ra.addFlashAttribute("erro", "Senha incorreta!");
+        return "redirect:/admin/analises/autenticar";
     }
+
 }
