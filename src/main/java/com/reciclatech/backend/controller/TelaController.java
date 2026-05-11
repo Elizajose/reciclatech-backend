@@ -479,16 +479,19 @@ public class TelaController {
     }
 
     // --- ROTAS DA SENHA DE GESTOR ---
-    @GetMapping("/admin/analises/autenticar")
-    public String telaSenhaGestor() { return "autenticar-analises"; }
+    @GetMapping("/admin/analises")
+    public String telaAnalises(HttpSession session, HttpServletResponse response) {
 
-    @PostMapping("/admin/analises/autenticar")
-    public String processarSenhaGestor(@RequestParam String senhaGestor, HttpSession session, org.springframework.web.servlet.mvc.support.RedirectAttributes ra) {
-        if ("1234".equals(senhaGestor)) { // ALTERE A SENHA AQUI
-            session.setAttribute("gestorAutorizado", true);
-            return "redirect:/admin/analises";
+        if (session.getAttribute("gestorAutorizado") == null) {
+            return "redirect:/admin/analises/autenticar";
         }
-        ra.addFlashAttribute("erro", "Senha incorreta!");
-        return "redirect:/admin/analises/autenticar";
+
+
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate"); // HTTP 1.1
+        response.setHeader("Pragma", "no-cache"); // HTTP 1.0
+        response.setHeader("Expires", "0"); // Proxies
+
+
+        return "analises";
     }
 }
