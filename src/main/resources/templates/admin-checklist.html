@@ -7,6 +7,8 @@
     <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Ícones do Bootstrap para os botões de adicionar e apagar -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 </head>
 <body class="bg-light pb-5">
 
@@ -23,23 +25,49 @@
                 <input type="hidden" name="idVendedor" th:value="${vendedor.id}">
 
                 <h6 class="border-bottom pb-3 mb-4 fw-bold text-secondary text-center text-uppercase">
-                    Insira os pesos (KG/UN)
+                    Insira os pesos parciais e some (KG/UN)
                 </h6>
 
                 <div th:each="mat : ${todosMateriais}" class="row mb-4 align-items-center border-bottom pb-3">
-                    <div class="col-7">
+                    <!-- Coluna de Informações do Material (Ajustada para col-6 para dar espaço) -->
+                    <div class="col-6">
                         <span class="fw-bold d-block fs-5" th:text="${mat.nome}">Cobre</span>
                         <small class="text-success fw-bold" th:text="'Base: R$ ' + ${mat.precoPorKg}">Preço</small>
                         <small class="text-muted" th:text="'/' + ${mat.unidade}">/KG</small>
                     </div>
-                    <div class="col-5">
-                        <div class="input-group input-group-lg">
+
+                    <!-- Coluna de Inputs (Pesagem parcial + Total) -->
+                    <div class="col-6">
+
+                        <!-- 1. Campo para pesar os lotes parciais -->
+                        <div class="input-group input-group-sm mb-2 shadow-sm">
+                            <input type="number" step="0.01"
+                                   th:id="'parcial_' + ${mat.id}"
+                                   class="form-control text-center bg-light"
+                                   placeholder="Pesar lote..."
+                                   inputmode="decimal">
+                            <button class="btn btn-primary fw-bold" type="button" th:onclick="'adicionarAoTotal(' + ${mat.id} + ')'" title="Adicionar peso">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+
+                        <!-- 2. Campo do Total Acumulado (É este que vai pro Backend) -->
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light text-secondary" style="font-size: 0.75rem;">Total</span>
+
+                            <!-- Note o "readonly". O operador não digita aqui, o JS que preenche -->
                             <input type="number" step="0.01"
                                    th:name="'qtd_' + ${mat.id}"
-                                   class="form-control text-center fw-bold text-primary"
+                                   th:id="'total_' + ${mat.id}"
+                                   class="form-control text-center fw-bold text-success bg-white"
                                    placeholder="0"
-                                   inputmode="decimal">
-                            <span class="input-group-text small" style="font-size: 0.8rem;" th:text="${mat.unidade}">KG</span>
+                                   readonly>
+
+                            <span class="input-group-text small" style="font-size: 0.75rem;" th:text="${mat.unidade}">KG</span>
+
+                            <button class="btn btn-outline-danger" type="button" th:onclick="'zerarTotal(' + ${mat.id} + ')'" title="Zerar balança">
+                                <i class="bi bi-trash"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -54,6 +82,37 @@
         </div>
     </div>
 </div>
+
+<!-- Lógica em JavaScript para acumular os pesos -->
+<script>
+    function adicionarAoTotal(id) {
+        // Pega os campos baseados no ID do material
+        let inputParcial = document.getElementById('parcial_' + id);
+        let inputTotal = document.getElementById('total_' + id);
+
+        // Converte os valores para números decimais (trata ponto ou vírgula)
+        let valorParcial = parseFloat(inputParcial.value.replace(',', '.'));
+        let valorTotal = parseFloat(inputTotal.value) || 0;
+
+        // Só soma se o operador digitou um número válido e maior que zero
+        if (!isNaN(valorParcial) && valorParcial > 0) {
+            let novoTotal = valorTotal + valorParcial;
+
+            // Atualiza o campo total com 2 casas decimais
+            inputTotal.value = novoTotal.toFixed(2);
+
+            // Limpa o campo do lote para a próxima pesagem e foca o cursor nele
+            inputParcial.value = '';
+            inputParcial.focus();
+        }
+    }
+
+    function zerarTotal(id) {
+        // Caso o operador se perca nas contas, ele pode zerar tudo clicando na lixeira
+        document.getElementById('total_' + id).value = '';
+        document.getElementById('parcial_' + id).value = '';
+    }
+</script>
 
 </body>
 </html>
