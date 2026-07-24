@@ -21,4 +21,11 @@
     </form>
 </div>
 </body>
+<script>
+    // Lê a memória do navegador e aplica o tema na página atual
+    document.addEventListener('DOMContentLoaded', () => {
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-bs-theme', currentTheme);
+    });
+</script>
 </html>

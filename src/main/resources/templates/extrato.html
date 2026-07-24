@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="[http://www.thymeleaf.org](http://www.thymeleaf.org)" data-bs-theme="light">
 <head>
     <title>Recibo Oficial - Coletaê</title>
     <meta charset="UTF-8">
@@ -243,6 +243,13 @@
             setTimeout(() => { window.print(); }, 800);
         }
     };
+</script>
+<script>
+    // Lê a memória do navegador e aplica o tema na página atual
+    document.addEventListener('DOMContentLoaded', () => {
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-bs-theme', currentTheme);
+    });
 </script>
 </body>
 </html>
