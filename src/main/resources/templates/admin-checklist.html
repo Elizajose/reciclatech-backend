@@ -7,7 +7,6 @@
     <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Ícones do Bootstrap para os botões de adicionar e apagar -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 </head>
 <body class="bg-light pb-5">
@@ -21,26 +20,21 @@
         </div>
 
         <div class="card-body bg-white p-4">
-            <!-- Adicionado o onsubmit aqui -->
             <form action="/admin/revisar-coleta" method="post" onsubmit="return validarAntesDeEnviar()">
-                <input type="hidden" name="idVendedor" th:value="${vendedor.id}">
+                <input type="hidden" name="idVendedor" id="idVendedor" th:value="${vendedor.id}">
 
                 <h6 class="border-bottom pb-3 mb-4 fw-bold text-secondary text-center text-uppercase">
                     Insira os pesos parciais e some (KG/UN)
                 </h6>
 
                 <div th:each="mat : ${todosMateriais}" class="row mb-4 align-items-center border-bottom pb-3">
-                    <!-- Coluna de Informações do Material -->
                     <div class="col-6">
                         <span class="fw-bold d-block fs-5" th:text="${mat.nome}">Cobre</span>
                         <small class="text-success fw-bold" th:text="'Base: R$ ' + ${mat.precoPorKg}">Preço</small>
                         <small class="text-muted" th:text="'/' + ${mat.unidade}">/KG</small>
                     </div>
 
-                    <!-- Coluna de Inputs (Pesagem parcial + Total) -->
                     <div class="col-6">
-
-                        <!-- 1. Campo para pesar os lotes parciais -->
                         <div class="input-group input-group-sm mb-2 shadow-sm">
                             <input type="number" step="0.01"
                                    th:id="'parcial_' + ${mat.id}"
@@ -52,7 +46,6 @@
                             </button>
                         </div>
 
-                        <!-- 2. Campo do Total Acumulado -->
                         <div class="input-group input-group-sm">
                             <span class="input-group-text bg-light text-secondary" style="font-size: 0.75rem;">Total</span>
 
@@ -76,7 +69,8 @@
                     <button type="submit" class="btn btn-success btn-lg fw-bold p-3 shadow-sm">
                         AVANÇAR PARA REVISÃO >>
                     </button>
-                    <a href="/admin/coletas" class="btn btn-outline-secondary py-3">Cancelar</a>
+                    <!-- Adicionado onclick para limpar o rascunho caso o operador cancele a coleta -->
+                    <a href="/admin/coletas" class="btn btn-outline-secondary py-3" onclick="limparRascunho()">Cancelar</a>
                 </div>
             </form>
         </div>
@@ -84,6 +78,32 @@
 </div>
 
 <script>
+    // --- 1. LÓGICA DE RECUPERAÇÃO DE DADOS (Quando a página carrega) ---
+    document.addEventListener("DOMContentLoaded", function() {
+        let idVendedor = document.getElementById('idVendedor').value;
+        let rascunhoString = sessionStorage.getItem('rascunho_pesagem_' + idVendedor);
+
+        if (rascunhoString) {
+            let rascunho = JSON.parse(rascunhoString);
+            let agora = new Date().getTime();
+
+            // Verifica se o rascunho tem menos de 2 horas (7200000 milissegundos)
+            if (agora - rascunho.timestamp < 7200000) {
+                // Restaura os pesos nos campos de Total
+                for (let idInput in rascunho.pesos) {
+                    let campoTotal = document.getElementById(idInput);
+                    if (campoTotal) {
+                        campoTotal.value = rascunho.pesos[idInput];
+                    }
+                }
+            } else {
+                // Se for um rascunho velho (de ontem, por exemplo), joga fora
+                sessionStorage.removeItem('rascunho_pesagem_' + idVendedor);
+            }
+        }
+    });
+
+    // --- 2. LÓGICA DA BALANÇA ---
     function adicionarAoTotal(id) {
         let inputParcial = document.getElementById('parcial_' + id);
         let inputTotal = document.getElementById('total_' + id);
@@ -104,25 +124,42 @@
         document.getElementById('parcial_' + id).value = '';
     }
 
-    // NOVA FUNÇÃO: Roda automaticamente ao clicar no botão de Avançar
+    // --- 3. LÓGICA ANTES DE AVANÇAR (Varredura + Salvar Rascunho) ---
     function validarAntesDeEnviar() {
-        // Pega todos os inputs que começam com "parcial_"
+        let idVendedor = document.getElementById('idVendedor').value;
         let inputsParciais = document.querySelectorAll('input[id^="parcial_"]');
 
+        // Varre se alguém esqueceu de clicar no "+"
         inputsParciais.forEach(function(input) {
             let valor = parseFloat(input.value.replace(',', '.'));
-
-            // Se o campo tiver algum valor válido esquecido nele...
             if (!isNaN(valor) && valor > 0) {
-                // Extrai o ID numérico do final do id do input
                 let idMaterial = input.id.split('_')[1];
-                // Chama a função de adicionar para jogar o valor pro campo Total
                 adicionarAoTotal(idMaterial);
             }
         });
 
-        // Retorna true para permitir que o formulário continue e mude de tela
+        // Cria e salva o rascunho dos campos totais para caso o operador volte a página
+        let rascunho = {
+            timestamp: new Date().getTime(),
+            pesos: {}
+        };
+
+        let inputsTotais = document.querySelectorAll('input[id^="total_"]');
+        inputsTotais.forEach(function(input) {
+            if (input.value && parseFloat(input.value) > 0) {
+                rascunho.pesos[input.id] = input.value;
+            }
+        });
+
+        sessionStorage.setItem('rascunho_pesagem_' + idVendedor, JSON.stringify(rascunho));
+
         return true;
+    }
+
+    // --- 4. LÓGICA DE CANCELAMENTO ---
+    function limparRascunho() {
+        let idVendedor = document.getElementById('idVendedor').value;
+        sessionStorage.removeItem('rascunho_pesagem_' + idVendedor);
     }
 </script>
 
