@@ -21,7 +21,8 @@
         </div>
 
         <div class="card-body bg-white p-4">
-            <form action="/admin/revisar-coleta" method="post">
+            <!-- Adicionado o onsubmit aqui -->
+            <form action="/admin/revisar-coleta" method="post" onsubmit="return validarAntesDeEnviar()">
                 <input type="hidden" name="idVendedor" th:value="${vendedor.id}">
 
                 <h6 class="border-bottom pb-3 mb-4 fw-bold text-secondary text-center text-uppercase">
@@ -29,7 +30,7 @@
                 </h6>
 
                 <div th:each="mat : ${todosMateriais}" class="row mb-4 align-items-center border-bottom pb-3">
-                    <!-- Coluna de Informações do Material (Ajustada para col-6 para dar espaço) -->
+                    <!-- Coluna de Informações do Material -->
                     <div class="col-6">
                         <span class="fw-bold d-block fs-5" th:text="${mat.nome}">Cobre</span>
                         <small class="text-success fw-bold" th:text="'Base: R$ ' + ${mat.precoPorKg}">Preço</small>
@@ -51,11 +52,10 @@
                             </button>
                         </div>
 
-                        <!-- 2. Campo do Total Acumulado (É este que vai pro Backend) -->
+                        <!-- 2. Campo do Total Acumulado -->
                         <div class="input-group input-group-sm">
                             <span class="input-group-text bg-light text-secondary" style="font-size: 0.75rem;">Total</span>
 
-                            <!-- Note o "readonly". O operador não digita aqui, o JS que preenche -->
                             <input type="number" step="0.01"
                                    th:name="'qtd_' + ${mat.id}"
                                    th:id="'total_' + ${mat.id}"
@@ -83,34 +83,46 @@
     </div>
 </div>
 
-<!-- Lógica em JavaScript para acumular os pesos -->
 <script>
     function adicionarAoTotal(id) {
-        // Pega os campos baseados no ID do material
         let inputParcial = document.getElementById('parcial_' + id);
         let inputTotal = document.getElementById('total_' + id);
 
-        // Converte os valores para números decimais (trata ponto ou vírgula)
         let valorParcial = parseFloat(inputParcial.value.replace(',', '.'));
         let valorTotal = parseFloat(inputTotal.value) || 0;
 
-        // Só soma se o operador digitou um número válido e maior que zero
         if (!isNaN(valorParcial) && valorParcial > 0) {
             let novoTotal = valorTotal + valorParcial;
-
-            // Atualiza o campo total com 2 casas decimais
             inputTotal.value = novoTotal.toFixed(2);
-
-            // Limpa o campo do lote para a próxima pesagem e foca o cursor nele
             inputParcial.value = '';
             inputParcial.focus();
         }
     }
 
     function zerarTotal(id) {
-        // Caso o operador se perca nas contas, ele pode zerar tudo clicando na lixeira
         document.getElementById('total_' + id).value = '';
         document.getElementById('parcial_' + id).value = '';
+    }
+
+    // NOVA FUNÇÃO: Roda automaticamente ao clicar no botão de Avançar
+    function validarAntesDeEnviar() {
+        // Pega todos os inputs que começam com "parcial_"
+        let inputsParciais = document.querySelectorAll('input[id^="parcial_"]');
+
+        inputsParciais.forEach(function(input) {
+            let valor = parseFloat(input.value.replace(',', '.'));
+
+            // Se o campo tiver algum valor válido esquecido nele...
+            if (!isNaN(valor) && valor > 0) {
+                // Extrai o ID numérico do final do id do input
+                let idMaterial = input.id.split('_')[1];
+                // Chama a função de adicionar para jogar o valor pro campo Total
+                adicionarAoTotal(idMaterial);
+            }
+        });
+
+        // Retorna true para permitir que o formulário continue e mude de tela
+        return true;
     }
 </script>
 
