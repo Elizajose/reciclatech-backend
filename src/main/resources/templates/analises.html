@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="[http://www.thymeleaf.org](http://www.thymeleaf.org)" data-bs-theme="light">
+<html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
 <head>
     <title>Coletaê Análises</title>
     <meta charset="UTF-8">
@@ -17,15 +17,14 @@
             body { background-color: white !important; font-size: 11pt; }
             .container { width: 100% !important; max-width: none !important; margin: 0 !important; }
             .row { display: flex !important; flex-wrap: nowrap !important; }
-            .col-md-3 { width: 25% !important; border: 1px solid #eee !important; padding: 10px !important; }
+            .col-md-4 { width: 33% !important; border: 1px solid #eee !important; padding: 10px !important; }
             .print-only { display: block !important; }
             table { width: 100% !important; border-collapse: collapse !important; }
             th, td { border: 1px solid #333 !important; padding: 5px !important; }
 
-            /* 👇 A CORREÇÃO ENTRA AQUI 👇 */
-            /* Força a cor preta em todos os textos e remove o cinza do text-white/text-muted */
+            /* Força a cor preta em todos os textos na impressão */
             .card, .card h6, .card h3, .card span, .card-header,
-            .text-white, .text-muted, .text-success, .text-danger {
+            .text-white, .text-muted, .text-success, .text-danger, .text-primary {
                 color: #000 !important;
             }
         }
@@ -34,6 +33,7 @@
 </head>
 <body class="bg-body-tertiary">
 <div class="container mt-4">
+    <!-- CABEÇALHO -->
     <div class="d-flex justify-content-between align-items-center mb-4 no-print">
         <h2><i class="bi bi-cpu"></i> Inteligência de Negócio</h2>
         <div>
@@ -42,83 +42,127 @@
         </div>
     </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-md-3"><div class="card shadow-sm p-3 bg-primary text-white text-center"><h6>Clientes</h6><h3 th:text="${totalAtendimentos}">0</h3></div></div>
-        <div class="col-md-3"><div class="card shadow-sm p-3 bg-danger text-white text-center"><h6>Total Pago</h6><h3>R$ <span th:text="${#numbers.formatDecimal(totalPago, 1, 'POINT', 2, 'COMMA')}"></span></h3></div></div>
-        <div class="col-md-3"><div class="card shadow-sm p-3 bg-success text-white text-center"><h6>Volume KG</h6><h3><span th:text="${#numbers.formatDecimal(totalKg, 1, 'POINT', 2, 'COMMA')}"></span> kg</h3></div></div>
-        <div class="col-md-3"><div class="card shadow-sm p-3 bg-warning text-dark text-center"><h6>Volume UN</h6><h3 th:text="${totalUn + ' un'}"></h3></div></div>
+    <!-- CAIXA DO DIA (NOVO) -->
+    <h5 class="fw-bold mb-3 no-print"><i class="bi bi-cash-coin"></i> Caixa de Hoje (Entradas e Saídas)</h5>
+    <div class="row g-3 mb-4 no-print">
+        <div class="col-md-4">
+            <div class="card shadow-sm p-3 bg-danger text-white text-center">
+                <h6>COMPRAS (Saiu do Caixa)</h6>
+                <h3>R$ <span th:text="${caixaSaidaHoje != null ? #numbers.formatDecimal(caixaSaidaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm p-3 bg-primary text-white text-center">
+                <h6>VENDAS (Entrou no Caixa)</h6>
+                <h3>R$ <span th:text="${caixaEntradaHoje != null ? #numbers.formatDecimal(caixaEntradaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm p-3 text-white text-center" th:classappend="${lucroDoDia != null && lucroDoDia >= 0} ? 'bg-success' : 'bg-secondary'">
+                <h6>SALDO DO DIA</h6>
+                <h3>R$ <span th:text="${lucroDoDia != null ? #numbers.formatDecimal(lucroDoDia, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
+            </div>
+        </div>
     </div>
 
+    <!-- ESTOQUE REAL NO PÁTIO (NOVO) -->
+    <h5 class="fw-bold mb-3 mt-4 no-print"><i class="bi bi-box-seam"></i> Estoque Real no Pátio (KG)</h5>
     <div class="row mb-4 no-print">
-        <div class="col-md-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white fw-bold text-success">Mais Comprados (Top 3 KG)</div>
-                <ul class="list-group list-group-flush">
-                    <li th:each="item : ${rankingMaisColetados}" class="list-group-item d-flex justify-content-between align-items-center">
-                        <span th:text="${item.key}"></span>
-                        <span class="badge bg-success" th:text="${#numbers.formatDecimal(item.value, 1, 2) + ' kg'}"></span>
-                    </li>
-                </ul>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white fw-bold text-danger">Baixa Coleta (Abaixo de 50kg)</div>
-                <ul class="list-group list-group-flush">
-                    <li th:each="item : ${baixaColeta}" class="list-group-item d-flex justify-content-between align-items-center">
-                        <span th:text="${item.key}" class="text-muted"></span>
-                        <span class="text-danger" th:text="${#numbers.formatDecimal(item.value, 1, 2) + ' kg'}"></span>
-                    </li>
-                </ul>
+        <div class="col-md-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-3">
+                        <div th:each="item : ${estoqueReal}" class="border rounded p-3 text-center" style="min-width: 150px; background-color: #f8f9fa;">
+                            <h6 class="text-muted mb-1 fw-bold text-uppercase" th:text="${item.key}"></h6>
+                            <h4 class="text-dark m-0" th:text="${#numbers.formatDecimal(item.value, 1, 'POINT', 1, 'COMMA')} + ' kg'"></h4>
+                        </div>
+                        <div th:if="${estoqueReal == null || #maps.isEmpty(estoqueReal)}" class="text-muted fst-italic p-2">
+                            Seu pátio está vazio ou não há registros no momento.
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- GRÁFICOS (MANTIDOS E PROTEGIDOS) -->
     <div class="row no-print">
-        <div class="col-md-12 mb-4"><div class="card shadow-sm p-3"><h5>Evolução de Compras</h5><hr><div style="height: 300px;"><canvas id="graficoVolume"></canvas></div></div></div>
-        <div class="col-md-6 mb-4"><div class="card shadow-sm p-3"><h5 class="text-center">Mix KG</h5><div class="chart-container"><canvas id="graficoKg"></canvas></div></div></div>
-        <div class="col-md-6 mb-4"><div class="card shadow-sm p-3"><h5 class="text-center">Mix UN</h5><div class="chart-container"><canvas id="graficoUn"></canvas></div></div></div>
+        <div class="col-md-12 mb-4" th:if="${volumeDados != null}">
+            <div class="card shadow-sm p-3">
+                <h5>Evolução de Compras</h5><hr>
+                <div style="height: 300px;"><canvas id="graficoVolume"></canvas></div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4" th:if="${dadosRoscaKg != null}">
+            <div class="card shadow-sm p-3">
+                <h5 class="text-center">Proporção do Estoque (KG)</h5>
+                <div class="chart-container"><canvas id="graficoKg"></canvas></div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4" th:if="${dadosRoscaUn != null}">
+            <div class="card shadow-sm p-3">
+                <h5 class="text-center">Mix UN</h5>
+                <div class="chart-container"><canvas id="graficoUn"></canvas></div>
+            </div>
+        </div>
     </div>
 
+    <!-- ÁREA DE IMPRESSÃO -->
     <div class="print-only mt-2">
         <div class="text-center mb-4" style="border-bottom: 2px solid #000; padding-bottom: 10px;">
-            <h2 class="fw-bold m-0">BALANÇO SEMANAL DE COLETA - COLETÂE</h2>
+            <h2 class="fw-bold m-0">BALANÇO FINANCEIRO E ESTOQUE - COLETÂE</h2>
             <p class="m-0 small">Relatório gerado em: <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy HH:mm')}"></span></p>
         </div>
-        <table class="table table-bordered border-dark">
-            <thead class="table-dark text-center"><tr><th colspan="2">RESUMO DAS OPERAÇÕES</th></tr></thead>
+
+        <table class="table table-bordered border-dark mt-3">
+            <thead class="table-dark text-center"><tr><th colspan="3">FECHAMENTO DO CAIXA DE HOJE</th></tr></thead>
             <tbody>
-            <tr><td><strong>Clientes no Período:</strong></td><td class="text-center" th:text="${totalAtendimentos}"></td></tr>
-            <tr><td><strong>Custo Médio por Atendimento:</strong></td><td class="text-center">R$ <span th:text="${#numbers.formatDecimal(custoMedio, 1, 'POINT', 2, 'COMMA')}"></span></td></tr>
+            <tr class="text-center">
+                <td><strong>Entradas (Vendas):</strong><br>R$ <span th:text="${caixaEntradaHoje != null ? #numbers.formatDecimal(caixaEntradaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></td>
+                <td><strong>Saídas (Compras):</strong><br>R$ <span th:text="${caixaSaidaHoje != null ? #numbers.formatDecimal(caixaSaidaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></td>
+                <td><strong>Saldo:</strong><br>R$ <span th:text="${lucroDoDia != null ? #numbers.formatDecimal(lucroDoDia, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></td>
+            </tr>
             </tbody>
         </table>
+
         <div class="row mt-4">
-            <div style="width: 50%; padding-right: 5px;">
+            <div style="width: 100%;">
                 <table class="table table-sm table-bordered">
-                    <thead class="table-secondary text-center"><tr><th>Material (KG)</th><th>Total</th></tr></thead>
-                    <tbody><tr th:each="entry : ${dadosRoscaKg}"><td th:text="${entry.key}"></td><td class="text-center" th:text="${#numbers.formatDecimal(entry.value, 1, 'POINT', 2, 'COMMA') + ' kg'}"></td></tr></tbody>
-                </table>
-            </div>
-            <div style="width: 50%; padding-left: 5px;">
-                <table class="table table-sm table-bordered">
-                    <thead class="table-secondary text-center"><tr><th>Material (UN)</th><th>Total</th></tr></thead>
-                    <tbody><tr th:each="entry : ${dadosRoscaUn}"><td th:text="${entry.key}"></td><td class="text-center" th:text="${entry.value + ' un'}"></td></tr></tbody>
+                    <thead class="table-secondary text-center"><tr><th>ESTOQUE FÍSICO NO PÁTIO (Material)</th><th>Peso Total</th></tr></thead>
+                    <tbody>
+                    <tr th:each="entry : ${estoqueReal}">
+                        <td th:text="${entry.key}"></td>
+                        <td class="text-center" th:text="${#numbers.formatDecimal(entry.value, 1, 'POINT', 2, 'COMMA') + ' kg'}"></td>
+                    </tr>
+                    </tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
+
 <script th:inline="javascript">
-    const volumeData = /*[[${volumeDados}]]*/ {};
-    const dataKg = /*[[${dadosRoscaKg}]]*/ {};
-    const dataUn = /*[[${dadosRoscaUn}]]*/ {};
     const cores = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6610f2', '#fd7e14', '#20c997', '#adb5bd'];
-    new Chart(document.getElementById('graficoVolume').getContext('2d'), { type: 'line', data: { labels: Object.keys(volumeData), datasets: [{ label: 'KG', data: Object.values(volumeData), borderColor: '#0d6efd', fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false } });
-    new Chart(document.getElementById('graficoKg').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(dataKg), datasets: [{ data: Object.values(dataKg), backgroundColor: cores }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
-    new Chart(document.getElementById('graficoUn').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(dataUn), datasets: [{ data: Object.values(dataUn), backgroundColor: cores }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
+
+    // Gráfico de Volume (Apenas se existir)
+    const volumeData = /*[[${volumeDados}]]*/ null;
+    if(volumeData && Object.keys(volumeData).length > 0) {
+        new Chart(document.getElementById('graficoVolume').getContext('2d'), { type: 'line', data: { labels: Object.keys(volumeData), datasets: [{ label: 'KG', data: Object.values(volumeData), borderColor: '#0d6efd', fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false } });
+    }
+
+    // Gráfico do Estoque (Antigo Mix KG)
+    const dataKg = /*[[${dadosRoscaKg}]]*/ null;
+    if(dataKg && Object.keys(dataKg).length > 0) {
+        new Chart(document.getElementById('graficoKg').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(dataKg), datasets: [{ data: Object.values(dataKg), backgroundColor: cores }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
+    }
+
+    // Gráfico UN (Apenas se existir)
+    const dataUn = /*[[${dadosRoscaUn}]]*/ null;
+    if(dataUn && Object.keys(dataUn).length > 0) {
+        new Chart(document.getElementById('graficoUn').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(dataUn), datasets: [{ data: Object.values(dataUn), backgroundColor: cores }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
+    }
 </script>
 <script>
-    // Lê a memória do navegador e aplica o tema na página atual
     document.addEventListener('DOMContentLoaded', () => {
         const currentTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-bs-theme', currentTheme);

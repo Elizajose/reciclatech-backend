@@ -403,79 +403,62 @@ public class TelaController {
     // --- ROTA DE ANALISES COM TRAVA DE SEGURANÇA ---
     @GetMapping("/admin/analises")
     public String mostrarAnalises(Model model, HttpSession session, HttpServletResponse response) {
-        // 1. Verifica login geral
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
-
-        // 2. VERIFICAÇÃO DE SENHA DO GESTOR
-        if (session.getAttribute("gestorAutorizado") == null) {
-            return "redirect:/admin/analises/autenticar";
-        }
+        if (session.getAttribute("gestorAutorizado") == null) return "redirect:/admin/analises/autenticar";
         session.removeAttribute("gestorAutorizado");
 
-        // 3. BLOQUEIO DE CACHE (Impede o navegador de usar a seta "Voltar" sem pedir senha)
-        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate"); // HTTP 1.1
-        response.setHeader("Pragma", "no-cache"); // HTTP 1.0
-        response.setHeader("Expires", "0"); // Proxies
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setHeader("Expires", "0");
 
         try {
             List<Oferta> historico = googleSheetsService.getHistoricoCompleto();
-            List<Usuario> usuariosCadastrados = googleSheetsService.listarUsuarios();
-            List<Material> materiaisCadastrados = googleSheetsService.listarMateriais();
+            String dataHoje = LocalDate.now(ZoneId.of("America/Recife")).toString();
 
-            // Agrupamento Financeiro
-            Map<String, Double> financeiroDados = historico.stream()
-                    .filter(o -> o.getMaterial() != null)
-                    .collect(Collectors.groupingBy(Oferta::getMaterial,
-                            Collectors.summingDouble(o -> o.getPrecoEstimado() != null ? o.getPrecoEstimado().doubleValue() : 0.0)));
+            // 1. VARIÁVEIS PARA O CAIXA DE HOJE
+            Double caixaEntradaHoje = 0.0; // Dinheiro que a indústria pagou hoje
+            Double caixaSaidaHoje = 0.0;   // Dinheiro pago aos catadores hoje
 
-            // Volume por Data
-            Map<String, Double> volumePorDia = historico.stream()
-                    .filter(o -> o.getData() != null)
-                    .collect(Collectors.groupingBy(Oferta::getData,
-                            TreeMap::new,
-                            Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
+            // 2. VARIÁVEIS PARA O ESTOQUE REAL
+            Map<String, Double> estoqueRealKg = new HashMap<>();
 
-            Map<String, String> unidadesMap = materiaisCadastrados.stream()
-                    .collect(Collectors.toMap(Material::getNome, Material::getUnidade, (v1, v2) -> v1));
-
-            Double totalKg = 0.0;
-            Double totalUn = 0.0;
             for (Oferta o : historico) {
-                String unidade = unidadesMap.getOrDefault(o.getMaterial(), "KG");
-                Double valor = (o.getPeso() != null) ? o.getPeso() : 0.0;
-                if ("UN".equalsIgnoreCase(unidade)) totalUn += valor; else totalKg += valor;
+                if (o.getMaterial() == null || o.getPeso() == null) continue;
+
+                String material = o.getMaterial();
+                Double peso = o.getPeso();
+                Double valor = (o.getPrecoEstimado() != null) ? o.getPrecoEstimado().doubleValue() : 0.0;
+                boolean isHoje = dataHoje.equals(o.getData());
+
+                // Trata nulos no status caso existam registros antigos
+                String status = (o.getStatus() != null) ? o.getStatus().toString().toUpperCase() : "VENDIDO";
+
+                // LÓGICA DE ESTOQUE E CAIXA
+                if (status.equals("SAIDA_INDUSTRIA")) {
+                    // É VENDA DO ARMAZÉM: Diminui do estoque e soma na Entrada de Caixa
+                    estoqueRealKg.put(material, estoqueRealKg.getOrDefault(material, 0.0) - peso);
+                    if (isHoje) caixaEntradaHoje += valor;
+                } else {
+                    // É COMPRA DE CATADOR: Aumenta o estoque e soma na Saída de Caixa
+                    estoqueRealKg.put(material, estoqueRealKg.getOrDefault(material, 0.0) + peso);
+                    if (isHoje) caixaSaidaHoje += valor;
+                }
             }
 
-            // Gráficos de Rosca
-            Map<String, Double> dadosRoscaKg = historico.stream()
-                    .filter(o -> !"UN".equalsIgnoreCase(unidadesMap.getOrDefault(o.getMaterial(), "KG")))
-                    .collect(Collectors.groupingBy(Oferta::getMaterial, Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
+            // Remove do mapa de estoque valores negativos ou zerados para não poluir o dashboard
+            estoqueRealKg.entrySet().removeIf(entry -> entry.getValue() <= 0);
 
-            Map<String, Double> dadosRoscaUn = historico.stream()
-                    .filter(o -> "UN".equalsIgnoreCase(unidadesMap.getOrDefault(o.getMaterial(), "KG")))
-                    .collect(Collectors.groupingBy(Oferta::getMaterial, Collectors.summingDouble(o -> o.getPeso() != null ? o.getPeso() : 0.0)));
+            Double lucroDoDia = caixaEntradaHoje - caixaSaidaHoje;
 
-            // --- LÓGICA DE RANKING (INSIGHTS) ---
-            List<Map.Entry<String, Double>> rankingMaisColetados = dadosRoscaKg.entrySet().stream()
-                    .sorted(Map.Entry.<String, Double>comparingByValue().reversed()).limit(3).collect(Collectors.toList());
+            // Envia para o HTML
+            model.addAttribute("caixaEntradaHoje", caixaEntradaHoje);
+            model.addAttribute("caixaSaidaHoje", caixaSaidaHoje);
+            model.addAttribute("lucroDoDia", lucroDoDia);
+            model.addAttribute("estoqueReal", estoqueRealKg);
 
-            List<Map.Entry<String, Double>> baixaColeta = dadosRoscaKg.entrySet().stream()
-                    .filter(e -> e.getValue() < 50.0).collect(Collectors.toList());
-
-            long totalAtendimentosReais = (usuariosCadastrados != null) ? usuariosCadastrados.size() : 0;
-            Double totalPagoAosClientes = financeiroDados.values().stream().mapToDouble(Double::doubleValue).sum();
-            Double custoMedioPorAtendimento = (totalAtendimentosReais > 0) ? totalPagoAosClientes / totalAtendimentosReais : 0.0;
-
-            model.addAttribute("volumeDados", volumePorDia);
-            model.addAttribute("dadosRoscaKg", dadosRoscaKg);
-            model.addAttribute("dadosRoscaUn", dadosRoscaUn);
-            model.addAttribute("rankingMaisColetados", rankingMaisColetados);
-            model.addAttribute("baixaColeta", baixaColeta);
-            model.addAttribute("totalAtendimentos", totalAtendimentosReais);
-            model.addAttribute("totalPago", totalPagoAosClientes);
-            model.addAttribute("totalKg", totalKg);
-            model.addAttribute("totalUn", totalUn);
-            model.addAttribute("custoMedio", custoMedioPorAtendimento);
+            // Variáveis antigas mantidas para não quebrar os gráficos de baixo
+            model.addAttribute("totalAtendimentos", googleSheetsService.listarUsuarios().size());
+            model.addAttribute("dadosRoscaKg", estoqueRealKg); // O gráfico agora vai mostrar o estoque atual!
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -508,6 +491,68 @@ public class TelaController {
     public String sairDaAnalise(HttpSession session) {
         session.removeAttribute("gestorAutorizado");
         return "redirect:/admin/coletas";
+    }
+
+    // --- TELA DE SAÍDA (VENDA PARA INDÚSTRIA) ---
+
+    @GetMapping("/admin/saida")
+    public String telaSaida(Model model, HttpSession session, HttpServletResponse response) {
+        if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+
+        // Bloqueio de cache
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0);
+
+        try {
+            model.addAttribute("materiais", googleSheetsService.listarMateriais());
+        } catch (Exception e) {
+            model.addAttribute("materiais", new ArrayList<>());
+        }
+        return "admin-saida";
+    }
+
+    @PostMapping("/admin/registrar-saida")
+    public String registrarSaida(@RequestParam String nomeIndustria,
+                                 @RequestParam Long idMaterial,
+                                 @RequestParam Double pesoSaida,
+                                 @RequestParam Double precoVenda,
+                                 HttpSession session) {
+        if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+
+        try {
+            List<Material> todosMateriais = googleSheetsService.listarMateriais();
+            Material mat = todosMateriais.stream()
+                    .filter(m -> m.getId().equals(idMaterial))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Material não encontrado"));
+
+            BigDecimal precoUn = BigDecimal.valueOf(precoVenda);
+            BigDecimal total = precoUn.multiply(BigDecimal.valueOf(pesoSaida));
+
+            // Registra na planilha com o status "SAIDA_INDUSTRIA"
+            List<Object> row = Arrays.asList(
+                    System.currentTimeMillis(), // ID
+                    mat.getNome(), // Material
+                    pesoSaida.toString().replace(".", ","), // Peso
+                    "VENDA INDÚSTRIA", // Tipo
+                    precoUn.toString().replace(".", ","), // Preço
+                    total.toString().replace(".", ","), // Total
+                    LocalDate.now(ZoneId.of("America/Recife")).toString(), // Data
+                    nomeIndustria.toUpperCase(), // Cliente (Indústria)
+                    "SAIDA_INDUSTRIA", // STATUS VITAL PARA O ESTOQUE
+                    "CNPJ/NÃO INFORMADO" // CPF/CNPJ
+            );
+
+            List<List<Object>> lote = new ArrayList<>();
+            lote.add(row);
+            googleSheetsService.registrarVendasEmLote(lote);
+
+            return "redirect:/admin/analises?sucesso=saida";
+        } catch (Exception e) {
+            System.err.println("Erro ao registrar saída: " + e.getMessage());
+            return "redirect:/admin/saida?erro=true";
+        }
     }
 
 }

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Registrar Saída - Coletaê</title>
+    <meta charset="UTF-8">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card { border-radius: 15px; border: none; }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="fw-bold text-primary"><i class="bi bi-truck"></i> Registrar Saída (Venda)</h3>
+                <a href="/admin/coletas" class="btn btn-outline-dark btn-sm">Voltar</a>
+            </div>
+
+            <div class="card shadow-sm p-4">
+                <form action="/admin/registrar-saida" method="post">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nome da Indústria / Comprador</label>
+                        <input type="text" name="nomeIndustria" class="form-control" required placeholder="Ex: Indústria de Papel XPTO">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Material</label>
+                        <select name="idMaterial" class="form-select" required>
+                            <option value="">Selecione o material...</option>
+                            <option th:each="m : ${materiais}" th:value="${m.id}" th:text="${m.nome}"></option>
+                        </select>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-6">
+                            <label class="form-label fw-bold">Peso Total (KG)</label>
+                            <input type="number" step="0.01" name="pesoSaida" id="pesoSaida" class="form-control" required placeholder="0.00" oninput="calcularTotal()">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">Preço de Venda (R$)</label>
+                            <input type="number" step="0.01" name="precoVenda" id="precoVenda" class="form-control" required placeholder="0.00" oninput="calcularTotal()">
+                        </div>
+                    </div>
+
+                    <div class="alert alert-success text-center mb-4">
+                        <h5 class="m-0">Total a Receber: <strong id="totalReceber">R$ 0,00</strong></h5>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 fw-bold py-2"><i class="bi bi-check-circle"></i> Confirmar Saída</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function calcularTotal() {
+        let peso = parseFloat(document.getElementById('pesoSaida').value) || 0;
+        let preco = parseFloat(document.getElementById('precoVenda').value) || 0;
+        let total = peso * preco;
+        document.getElementById('totalReceber').innerText = "R$ " + total.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+</script>
+</body>
+</html>
