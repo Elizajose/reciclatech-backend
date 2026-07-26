@@ -515,29 +515,30 @@ public class TelaController {
 
     @PostMapping("/admin/registrar-saida-lote")
     public String registrarSaidaLote(@RequestParam String nomeIndustria,
+                                     @RequestParam(required = false) String cnpjIndustria,
                                      @RequestParam Map<String, String> params,
                                      HttpSession session) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
 
         try {
-            // 1. Cria um "Usuário" para a Indústria para podermos gerar o recibo!
             Long idGerado = System.currentTimeMillis();
+            String cnpjFinal = (cnpjIndustria != null && !cnpjIndustria.trim().isEmpty()) ? cnpjIndustria : "NÃO INFORMADO";
+
             Usuario novaIndustria = new Usuario();
             novaIndustria.setId(idGerado);
             novaIndustria.setNome(nomeIndustria.toUpperCase() + " (SAÍDA)");
-            novaIndustria.setTelefone(idGerado.toString()); // Usamos o ID no lugar do telefone para o extrato encontrar
-            novaIndustria.setEndereco("Carga de Venda");
+            novaIndustria.setTelefone(idGerado.toString());
+
+            // 👇 A MÁGICA: Salvamos o CNPJ no campo Endereço! 👇
+            novaIndustria.setEndereco(cnpjFinal);
             novaIndustria.setTipo(Usuario.TipoUsuario.CATADOR);
 
-            // Salva a indústria na planilha
             googleSheetsService.salvarSolicitacaoInicial(novaIndustria, novaIndustria.getEndereco());
 
-            // 2. Processar os itens vendidos no lote
             List<Material> todosMateriais = googleSheetsService.listarMateriais();
             List<List<Object>> loteDeVendas = new ArrayList<>();
 
             for (Material mat : todosMateriais) {
-                // Procura os campos peso e preco de cada material gerados no HTML
                 String pesoStr = params.get("peso_" + mat.getId());
                 String precoStr = params.get("preco_" + mat.getId());
 
@@ -557,9 +558,9 @@ public class TelaController {
                                 precoUn.toString().replace(".", ","),
                                 total.toString().replace(".", ","),
                                 LocalDate.now(ZoneId.of("America/Recife")).toString(),
-                                idGerado.toString(), // Amarra a venda a esta indústria específica
-                                "SAIDA_INDUSTRIA", // Status que zera o estoque no dashboard
-                                "NÃO INFORMADO"
+                                idGerado.toString(),
+                                "SAIDA_INDUSTRIA",
+                                cnpjFinal
                         );
                         loteDeVendas.add(row);
                     }
@@ -570,13 +571,9 @@ public class TelaController {
                 return "redirect:/admin/saida?erro=vazio";
             }
 
-            // Registra todas as saídas no Google Sheets de uma vez
             googleSheetsService.registrarVendasEmLote(loteDeVendas);
-
-            // Tira o status de "pendente" da indústria na planilha
             googleSheetsService.marcarSolicitacaoComoConcluida(idGerado.toString());
 
-            // 3. Redireciona para gerar o Recibo da venda!
             return "redirect:/extrato/" + idGerado;
 
         } catch (Exception e) {

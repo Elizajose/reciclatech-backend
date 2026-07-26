@@ -109,11 +109,14 @@
                 <span class="fs-5 text-uppercase fw-bold" th:text="${vendedor.nome.replace('(SAÍDA)', '')}"></span>
             </div>
             <div class="col-4">
-                <strong>CPF/CNPJ:</strong><br> <span th:text="${vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO'}"></span>
+                <strong>CPF/CNPJ:</strong><br>
+                <!-- 👇 Se for SAÍDA, ele exibe o CNPJ que escondemos no Endereço! 👇 -->
+                <span th:text="${isSaida ? vendedor.endereco : (vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO')}"></span>
             </div>
             <div class="col-12 mt-3">
                 <strong>ENDEREÇO / OBSERVAÇÃO DA CARGA:</strong><br>
-                <span th:text="${vendedor.endereco}"></span>
+                <!-- 👇 Se for SAÍDA, põe um texto fixo, senão mostra o endereço do catador 👇 -->
+                <span th:text="${isSaida ? 'Carga registrada e expedida.' : vendedor.endereco}"></span>
             </div>
         </div>
     </div>
