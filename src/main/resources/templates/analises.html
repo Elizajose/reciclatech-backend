@@ -17,7 +17,7 @@
             body { background-color: white !important; font-size: 11pt; }
             .container { width: 100% !important; max-width: none !important; margin: 0 !important; }
             .row { display: flex !important; flex-wrap: nowrap !important; }
-            .col-md-4 { width: 33% !important; border: 1px solid #eee !important; padding: 10px !important; }
+            .col-md-4, .col-md-6 { width: 50% !important; border: 1px solid #eee !important; padding: 10px !important; }
             .print-only { display: block !important; }
             table { width: 100% !important; border-collapse: collapse !important; }
             th, td { border: 1px solid #333 !important; padding: 5px !important; }
@@ -37,12 +37,17 @@
     <div class="d-flex justify-content-between align-items-center mb-4 no-print">
         <h2><i class="bi bi-cpu"></i> Inteligência de Negócio</h2>
         <div>
+            <!-- BOTÃO PARA DAR BAIXA NO ESTOQUE -->
+            <a href="/admin/saida" class="btn btn-primary me-2 fw-bold shadow-sm">
+                <i class="bi bi-truck"></i> Registrar Venda (Saída)
+            </a>
+
             <button onclick="window.print()" class="btn btn-success me-2"><i class="bi bi-file-earmark-pdf"></i> Balanço Semanal</button>
             <a href="/admin/coletas" class="btn btn-outline-dark">Voltar</a>
         </div>
     </div>
 
-    <!-- CAIXA DO DIA (NOVO) -->
+    <!-- CAIXA DO DIA -->
     <h5 class="fw-bold mb-3 no-print"><i class="bi bi-cash-coin"></i> Caixa de Hoje (Entradas e Saídas)</h5>
     <div class="row g-3 mb-4 no-print">
         <div class="col-md-4">
@@ -65,7 +70,7 @@
         </div>
     </div>
 
-    <!-- ESTOQUE REAL NO PÁTIO (NOVO) -->
+    <!-- ESTOQUE REAL NO PÁTIO -->
     <h5 class="fw-bold mb-3 mt-4 no-print"><i class="bi bi-box-seam"></i> Estoque Real no Pátio (KG)</h5>
     <div class="row mb-4 no-print">
         <div class="col-md-12">
@@ -85,29 +90,71 @@
         </div>
     </div>
 
-    <!-- GRÁFICOS (MANTIDOS E PROTEGIDOS) -->
-    <div class="row no-print">
-        <div class="col-md-12 mb-4" th:if="${volumeDados != null}">
-            <div class="card shadow-sm p-3">
-                <h5>Evolução de Compras</h5><hr>
+    <!-- GRÁFICOS E INSIGHTS -->
+    <h5 class="fw-bold mb-3 mt-4 no-print"><i class="bi bi-graph-up-arrow"></i> Desempenho e Gráficos</h5>
+
+    <!-- Linha 1: Gráfico de Volume e Quantidade de Clientes -->
+    <div class="row no-print mb-4">
+        <div class="col-md-8" th:if="${volumeDados != null}">
+            <div class="card shadow-sm p-3 h-100">
+                <h5 class="fw-bold text-secondary">Evolução de Compras</h5><hr>
                 <div style="height: 300px;"><canvas id="graficoVolume"></canvas></div>
             </div>
         </div>
-        <div class="col-md-6 mb-4" th:if="${dadosRoscaKg != null}">
-            <div class="card shadow-sm p-3">
-                <h5 class="text-center">Proporção do Estoque (KG)</h5>
-                <div class="chart-container"><canvas id="graficoKg"></canvas></div>
-            </div>
-        </div>
-        <div class="col-md-6 mb-4" th:if="${dadosRoscaUn != null}">
-            <div class="card shadow-sm p-3">
-                <h5 class="text-center">Mix UN</h5>
-                <div class="chart-container"><canvas id="graficoUn"></canvas></div>
+        <div class="col-md-4">
+            <div class="card shadow-sm p-4 bg-dark text-white text-center h-100 d-flex justify-content-center align-items-center">
+                <h5 class="fw-bold text-warning mb-3"><i class="bi bi-people-fill fs-1 d-block mb-2"></i> Clientes Atendidos</h5>
+                <h1 class="display-3 fw-bold m-0" th:text="${totalAtendimentos}">0</h1>
+                <p class="mb-0 mt-2 opacity-75 small">Total de clientes registrados</p>
             </div>
         </div>
     </div>
 
-    <!-- ÁREA DE IMPRESSÃO -->
+    <!-- Linha 2: Proporção de Estoque e Listas de Mais/Menos Comprados -->
+    <div class="row no-print mb-4">
+        <!-- Gráfico Rosca -->
+        <div class="col-md-4" th:if="${dadosRoscaKg != null}">
+            <div class="card shadow-sm p-3 h-100">
+                <h5 class="text-center fw-bold text-secondary">Proporção do Estoque (KG)</h5>
+                <hr>
+                <div class="chart-container"><canvas id="graficoKg"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Lista Top 3 Mais Comprados -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white fw-bold text-success border-bottom-0 pt-3">
+                    <i class="bi bi-arrow-up-circle-fill"></i> Mais Comprados (Top 3)
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li th:each="item : ${rankingMaisColetados}" class="list-group-item d-flex justify-content-between align-items-center">
+                        <span th:text="${item.key}" class="fw-bold text-muted small"></span>
+                        <span class="badge bg-success rounded-pill" th:text="${#numbers.formatDecimal(item.value, 1, 2) + ' kg'}"></span>
+                    </li>
+                    <li th:if="${rankingMaisColetados == null || rankingMaisColetados.isEmpty()}" class="list-group-item text-muted fst-italic small">Sem dados suficientes</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Lista Baixa Coleta -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white fw-bold text-danger border-bottom-0 pt-3">
+                    <i class="bi bi-arrow-down-circle-fill"></i> Baixa Coleta (< 50kg)
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li th:each="item : ${baixaColeta}" class="list-group-item d-flex justify-content-between align-items-center">
+                        <span th:text="${item.key}" class="fw-bold text-muted small"></span>
+                        <span class="badge bg-danger rounded-pill" th:text="${#numbers.formatDecimal(item.value, 1, 2) + ' kg'}"></span>
+                    </li>
+                    <li th:if="${baixaColeta == null || baixaColeta.isEmpty()}" class="list-group-item text-muted fst-italic small">Nenhum material em baixa</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- ÁREA DE IMPRESSÃO (Oculta na tela) -->
     <div class="print-only mt-2">
         <div class="text-center mb-4" style="border-bottom: 2px solid #000; padding-bottom: 10px;">
             <h2 class="fw-bold m-0">BALANÇO FINANCEIRO E ESTOQUE - COLETÂE</h2>
@@ -154,12 +201,6 @@
     const dataKg = /*[[${dadosRoscaKg}]]*/ null;
     if(dataKg && Object.keys(dataKg).length > 0) {
         new Chart(document.getElementById('graficoKg').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(dataKg), datasets: [{ data: Object.values(dataKg), backgroundColor: cores }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
-    }
-
-    // Gráfico UN (Apenas se existir)
-    const dataUn = /*[[${dadosRoscaUn}]]*/ null;
-    if(dataUn && Object.keys(dataUn).length > 0) {
-        new Chart(document.getElementById('graficoUn').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(dataUn), datasets: [{ data: Object.values(dataUn), backgroundColor: cores }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
     }
 </script>
 <script>
