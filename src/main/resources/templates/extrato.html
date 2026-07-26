@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="[http://www.thymeleaf.org](http://www.thymeleaf.org)" data-bs-theme="light">
+<html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
 <head>
-    <title>Recibo Oficial - Coletaê</title>
+    <title>Documento Oficial - Coletaê</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
@@ -11,82 +11,71 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
-        body { background: #555; padding: 40px; font-family: 'Courier New', monospace; }
-        .folha { background: white; max-width: 850px; margin: 0 auto; padding: 50px; position: relative; border-radius: 4px; min-height: 1000px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        /* Mesclando o visual de Nota Fiscal com as suas configurações de fundo */
+        body { font-family: 'Courier New', Courier, monospace; background-color: #555; padding: 40px; }
+
+        .folha {
+            background: white;
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 40px;
+            position: relative;
+            border-radius: 4px;
+            min-height: 1000px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .header-box { border: 2px solid #212529; padding: 20px; margin-bottom: 20px; text-align: center; }
+        .info-box { border: 1px solid #212529; padding: 15px; margin-bottom: 20px; }
+
+        .table-custom { border: 1px solid #212529; margin-bottom: 20px; width: 100%; }
+        .table-custom th { border: 1px solid #212529; padding: 10px; background-color: #f8f9fa; text-align: center; }
+        .table-custom td { border: 1px solid #212529; padding: 10px; vertical-align: middle; }
+
+        .total-box { border: 2px solid #212529; padding: 15px; font-size: 1.3rem; font-weight: bold; text-align: right; background-color: #f8f9fa; }
 
         .linha-assinatura {
-            border-top: 2px solid #212529;
-            margin-top: 10px;
+            border-top: 1px solid #212529;
+            width: 90%;
+            margin: 0 auto;
+            text-align: center;
             padding-top: 5px;
+            font-size: 0.9rem;
             font-weight: bold;
-            text-transform: uppercase;
-            font-size: 0.8rem;
         }
 
-        /* AJUSTE DE DIMENSÕES: Logo agora fixada em 85px para igualar ao QR Code */
-        .logo-footer-ajustada {
-            width: 85px;
-            height: 85px;
-            object-fit: contain;
-        }
+        .logo-footer-ajustada { width: 85px; height: 85px; object-fit: contain; }
+        #qrcode { display: inline-block; }
+        #qrcode img { width: 85px; height: 85px; }
 
-        #qrcode {
-            display: inline-block;
-        }
-
-        /* QR Code fixado em 85px conforme sua solicitação de simetria */
-        #qrcode img {
-            width: 85px;
-            height: 85px;
-        }
-
-        .info-empresa p { margin-bottom: 2px; font-size: 0.9rem; }
-
-        /* --- REGRA DE RESPONSIVIDADE (PARA NÃO BUGAR NO CELULAR) --- */
+        /* REGRA DE RESPONSIVIDADE (PARA NÃO BUGAR NO CELULAR) */
         @media (max-width: 768px) {
             body { padding: 10px; background: #f8f9fa; }
-            .folha {
-                padding: 20px;
-                width: 100%;
-                max-width: 100%;
-                min-height: auto;
-                box-shadow: none;
-            }
-            /* Empilha Beneficiário e Empresa um sob o outro no celular */
-            .row.mb-4.mt-5 .col-6 {
-                width: 100% !important;
-                text-align: left !important;
-                margin-bottom: 20px;
-            }
-            .info-empresa { text-align: left !important; border-top: 1px dashed #ccc; padding-top: 15px; }
-
-            /* Ajusta o rodapé para não quebrar feio */
-            .row.justify-content-between .col-5 {
-                width: 48% !important;
-            }
-            .table-responsive { border: none; }
+            .folha { padding: 20px; width: 100%; max-width: 100%; min-height: auto; box-shadow: none; }
+            .row.assinaturas .col-6 { width: 100% !important; margin-bottom: 30px; }
+            .info-box .col-8, .info-box .col-4 { width: 100% !important; margin-bottom: 10px; }
         }
 
         body.modo-cliente .no-print,
         body.modo-cliente .botoes-topo {
             display: none !important;
         }
-
         body.modo-cliente { background: #f8f9fa; padding: 20px 10px; }
 
         @media print {
             body { background: white; padding: 0; }
             .no-print { display: none !important; }
             .folha { box-shadow: none !important; margin: 0; width: 100%; max-width: 100%; padding: 30px; border: none; }
-            .table-success { background-color: #d1e7dd !important; -webkit-print-color-adjust: exact; }
         }
     </style>
 </head>
-<body th:classappend="${param.view != null && param.view[0] == 'resumo'} ? 'modo-cliente' : ''">
+<body th:classappend="${param.view != null && param.view[0] == 'resumo'} ? 'modo-cliente' : ''"
+      th:with="isSaida=${vendedor.nome != null && vendedor.nome.contains('(SAÍDA)')}">
 
-<div class="text-center mb-4 no-print d-flex flex-wrap justify-content-center gap-2 botoes-topo">
-    <a th:if="${session.adminLogado}" href="/meus-extratos" class="btn btn-outline-secondary fw-bold">
-        <i class="bi bi-arrow-left"></i> Voltar p/ Extratos
+<!-- Botões do seu sistema (WhatsApp, Voltar, Imprimir) -->
+<div class="text-center mb-4 no-print d-flex flex-wrap justify-content-center gap-2 botoes-topo mt-2">
+    <a th:href="${isSaida} ? '/admin/analises' : '/meus-extratos'" class="btn btn-outline-light fw-bold">
+        <i class="bi bi-arrow-left"></i> Voltar
     </a>
     <button onclick="window.print()" class="btn btn-success">
         <i class="bi bi-printer"></i> Imprimir / PDF
@@ -94,118 +83,117 @@
     <button onclick="enviarZap('empresa')" class="btn btn-primary">
         <i class="bi bi-whatsapp"></i> Enviar p/ Empresa
     </button>
-    <button onclick="enviarZap('cliente')" class="btn btn-outline-info text-dark fw-bold">
+    <button onclick="enviarZap('cliente')" class="btn btn-info text-dark fw-bold">
         <i class="bi bi-person-check"></i> Enviar p/ Cliente
     </button>
 </div>
 
-<div class="folha">
-    <div class="text-center mb-2">
-        <h1 class="fw-bold text-success text-uppercase m-0" style="letter-spacing: 2px;">Coletaê Salgueiro</h1>
-        <p class="text-muted small border-bottom pb-2">RECIBO DE PAGAMENTO / COMPROVANTE DE VENDA</p>
+<!-- Alerta de salvamento do Google Sheets -->
+<div th:if="${vendas == null || vendas.isEmpty()}" class="alert alert-warning text-center mx-auto no-print" style="max-width: 850px;">
+    <i class="bi bi-arrow-clockwise"></i> Se a tabela abaixo estiver vazia, o banco de dados ainda está processando. <strong>Aperte F5 para atualizar a página.</strong>
+</div>
+
+<div class="folha text-dark">
+    <!-- CABEÇALHO DO DOCUMENTO -->
+    <div class="header-box">
+        <h2 class="fw-bold m-0" style="letter-spacing: 2px;">COLETAÊ SALGUEIRO</h2>
+        <h4 class="fw-bold mt-2 text-muted" th:text="${isSaida ? 'ROMANEIO DE EXPEDIÇÃO (NOTA DE SAÍDA)' : 'RECIBO DE PAGAMENTO / ENTRADA DE MATERIAL'}"></h4>
+        <p class="m-0 mt-2 fw-bold">DATA DE EMISSÃO: <span th:text="${#temporals.format(dataHoje, 'dd/MM/yyyy')}"></span></p>
     </div>
 
-    <div class="row mb-4 mt-5">
-        <div class="col-6">
-            <h6 class="fw-bold text-uppercase mb-3">Beneficiário:</h6>
-            <span th:text="${vendedor.nome}" class="fs-4 fw-bold text-uppercase"></span><br>
-            <span class="text-muted small">CPF: <span th:text="${vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO'}"></span></span>
-        </div>
-        <div class="col-6 text-end info-empresa">
-            <p><strong>Razão Social:</strong> <span>Nome da empresa</span></p>
-            <p><strong>CNPJ:</strong> <span>00.000.000/0001-00</span></p>
-            <p><strong>IE e/ou IM:</strong> <span>ISENTO</span></p>
-            <p><strong>Endereço:</strong> <span>Salgueiro - PE</span></p>
-            <p><strong>Telefone:</strong> <span>(87) 9 9000-0000</span></p>
+    <!-- DADOS DA INDÚSTRIA / CLIENTE -->
+    <div class="info-box">
+        <div class="row">
+            <div class="col-8">
+                <strong><span th:text="${isSaida ? 'DESTINATÁRIO / COMPRADOR:' : 'FORNECEDOR / CATADOR:'}"></span></strong><br>
+                <span class="fs-5 text-uppercase fw-bold" th:text="${vendedor.nome.replace('(SAÍDA)', '')}"></span>
+            </div>
+            <div class="col-4">
+                <strong>CPF/CNPJ:</strong><br> <span th:text="${vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO'}"></span>
+            </div>
+            <div class="col-12 mt-3">
+                <strong>ENDEREÇO / OBSERVAÇÃO DA CARGA:</strong><br>
+                <span th:text="${vendedor.endereco}"></span>
+            </div>
         </div>
     </div>
 
-    <div class="row mb-3">
-        <div class="col-12">
-            <h6 class="fw-bold">DATA:</h6>
-            <span th:text="${#temporals.format(dataHoje, 'dd/MM/yyyy')}" class="fs-5">18/03/2026</span>
+    <!-- TABELA DOS MATERIAIS VENDIDOS -->
+    <table class="table-custom">
+        <thead>
+        <tr>
+            <th width="40%">MATERIAL</th>
+            <th width="20%">PESO/QTD</th>
+            <th width="20%">PREÇO UN.</th>
+            <th width="20%">SUBTOTAL</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="v : ${vendas}" class="text-center fw-bold">
+            <td class="text-start text-uppercase" th:text="${v.material}"></td>
+            <td>
+                <span th:text="${#numbers.formatDecimal(v.peso, 1, 'POINT', 2, 'COMMA')}"></span>
+                <span th:text="${mapaUnidades != null ? mapaUnidades.getOrDefault(v.material, 'KG') : 'KG'}" class="small text-muted"></span>
+            </td>
+            <td th:text="'R$ ' + ${#numbers.formatDecimal(v.precoEstimado.doubleValue() / (v.peso > 0 ? v.peso : 1), 1, 'POINT', 2, 'COMMA')}"></td>
+            <td th:text="'R$ ' + ${#numbers.formatDecimal(v.precoEstimado, 1, 'POINT', 2, 'COMMA')}"></td>
+        </tr>
+        <tr th:if="${vendas == null || vendas.isEmpty()}">
+            <td colspan="4" class="text-center fst-italic text-danger py-4">
+                Os itens estão sendo registrados. Atualize a página (F5).
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!-- TOTAL DA CARGA -->
+    <div class="total-box">
+        <span th:text="${isSaida ? 'VALOR TOTAL DA CARGA:' : 'TOTAL LÍQUIDO A PAGAR:'}"></span>
+        <span class="text-success ms-2" th:text="'R$ ' + ${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</span>
+    </div>
+
+    <!-- ÁREA DE ASSINATURAS ADAPTÁVEL -->
+    <div class="row assinaturas mt-5 pt-4">
+        <div class="col-6 mb-4">
+            <div class="linha-assinatura">
+                <span th:text="${isSaida ? 'RESPONSÁVEL PELA EXPEDIÇÃO (COLETAÊ)' : 'ASSINATURA DO COMPRADOR (COLETAÊ)'}"></span><br>
+                <span class="small text-muted fw-normal">Nome da Empresa</span>
+            </div>
+        </div>
+        <div class="col-6 mb-4">
+            <div class="linha-assinatura">
+                <span th:text="${isSaida ? 'MOTORISTA / CONFERENTE (CLIENTE)' : 'ASSINATURA DO FORNECEDOR (CATADOR)'}"></span><br>
+                <span class="small text-muted fw-normal text-uppercase" th:text="${vendedor.nome.replace('(SAÍDA)', '')}"></span>
+            </div>
         </div>
     </div>
 
-    <div class="table-responsive">
-        <table class="table table-bordered border-dark align-middle mt-4">
-            <thead class="table-light text-uppercase text-center">
-            <tr>
-                <th class="text-start">Material</th>
-                <th>Qtd/Peso</th>
-                <th>Preço Un.</th>
-                <th class="text-end">Total</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="venda : ${vendas}">
-                <td th:text="${venda.material}" class="fw-bold">Material</td>
-                <td class="text-center">
-                    <span th:text="${venda.peso}">0.0</span>
-                    <span th:text="${mapaUnidades.getOrDefault(venda.material, 'UN')}" class="small text-muted">KG</span>
-                </td>
-                <td class="text-center">
-                    R$ <span th:text="${#numbers.formatDecimal(mapaPrecos.get(venda.material), 1, 'POINT', 2, 'COMMA')}">0,00</span>
-                </td>
-                <td class="text-end fw-bold" th:text="'R$ ' + ${#numbers.formatDecimal(venda.precoEstimado, 1, 'POINT', 2, 'COMMA')}">
-                    R$ 0,00
-                </td>
-            </tr>
-            </tbody>
-            <tfoot>
-            <tr class="table-light border-dark">
-                <td colspan="3" class="text-end fw-bold text-uppercase py-3">Total Líquido:</td>
-                <td class="text-end fw-bold fs-4 py-3" th:text="'R$ ' + ${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}">
-                    R$ 0,00
-                </td>
-            </tr>
-            </tfoot>
-        </table>
+    <!-- RODAPÉ COM QR CODE E LOGO (Seu código original mantido) -->
+    <div class="row mt-4 pt-4 align-items-center justify-content-between border-top">
+        <div class="col-5 text-center">
+            <div id="qrcode" class="mb-2"></div>
+            <small class="d-block fw-bold text-muted" style="font-size: 10px;">VERIFICAR AUTENTICIDADE</small>
+        </div>
+
+        <div class="col-5 text-center">
+            <img src="/img/logo-coletae.png" alt="Coletaê" class="logo-footer-ajustada" th:src="@{/img/logo.png}" onerror="this.src='https://lh3.googleusercontent.com/u/0/d/1v7RtV-9ZfeY_zrxKSfzx3nPM3MqO60Pk'">
+            <div class="mt-2 small text-muted fw-bold" style="font-size: 10px;">PLATAFORMA OFICIAL COLETAÊ</div>
+        </div>
     </div>
 
-    <div class="mt-5 pt-5">
-        <div class="row align-items-center mb-5">
-            <div class="col-12 text-center">
-                <div style="max-width: 400px; margin: 0 auto;">
-                    <div class="linha-assinatura">Assinatura do Cliente</div>
-                    <span class="small text-muted" th:text="${vendedor.nome}"></span>
-                </div>
-            </div>
-        </div>
-        <div class="row align-items-center mb-5">
-            <div class="col-12 text-center">
-                <div style="max-width: 400px; margin: 0 auto;">
-                    <div class="linha-assinatura">Assinatura do Comprador</div>
-                    <span class="small text-muted">Nome da empresa</span>
-                </div>
-            </div>
-        </div>
+    <div class="text-center mt-4 px-4">
+        <p class="text-muted" style="font-size: 11px; line-height: 1.4; max-width: 600px; margin: 0 auto;">
+            <strong>OBSERVAÇÃO:</strong> <span th:text="${isSaida ? 'Este romaneio possui validade apenas para controle interno de estoque, expedição e transporte da carga até o destinatário, não substituindo documento fiscal.' : 'Este documento serve como comprovante de entrega e recebimento de materiais recicláveis para fins de controle e emissão de nota fiscal de entrada, conforme legislação vigente.'}"></span>
+        </p>
+    </div>
 
-        <div class="row mt-5 pt-4 align-items-center justify-content-between">
-            <div class="col-5 text-center">
-                <div id="qrcode" class="mb-2"></div>
-                <small class="d-block fw-bold text-muted" style="font-size: 10px;">VERIFICAR AUTENTICIDADE</small>
-            </div>
-
-            <div class="col-5 text-center">
-                <img src="/img/logo-coletae.png" alt="Coletaê" class="logo-footer-ajustada" th:src="@{/img/logo-coletae.png}" onerror="this.src='https://lh3.googleusercontent.com/u/0/d/1v7RtV-9ZfeY_zrxKSfzx3nPM3MqO60Pk'">
-                <div class="mt-2 small text-muted fw-bold" style="font-size: 10px;">PLATAFORMA OFICIAL COLETAÊ</div>
-            </div>
-        </div>
-
-        <div class="text-center mt-5 px-4">
-            <p class="text-muted" style="font-size: 11px; line-height: 1.4; max-width: 600px; margin: 0 auto;">
-                <strong>OBSERVAÇÃO:</strong> Este documento serve como comprovante de entrega e recebimento de materiais recicláveis para fins de controle e emissão de nota fiscal de entrada, conforme legislação vigente.
-            </p>
-        </div>
-
-        <div class="text-center mt-3">
-            <small style="font-size: 10px;" class="text-muted">Documento processado digitalmente coletaê.net.br</small>
-        </div>
+    <div class="text-center mt-3">
+        <small style="font-size: 10px;" class="text-muted">Documento processado digitalmente - coletaê.net.br</small>
     </div>
 </div>
 
-<input type="hidden" id="jsNome" th:value="${vendedor.nome}">
+<!-- Inputs Ocultos para o WhatsApp funcionar -->
+<input type="hidden" id="jsNome" th:value="${vendedor.nome.replace('(SAÍDA)', '')}">
 <input type="hidden" id="jsTelefone" th:value="${vendedor.telefone}">
 <input type="hidden" id="jsTotal" th:value="${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}">
 
@@ -231,7 +219,7 @@
         const urlBase = window.location.origin + window.location.pathname;
         let linkRecibo = urlBase + "?view=resumo";
 
-        let msg = `🧾 *RECIBO COLETAÊ SALGUEIRO*\n\nOlá *${nome}*,\nSeu pagamento de *R$ ${total}* foi processado.\n\n🔗 *Recibo Digital:* ${linkRecibo}\n\n✅ *Status:* Pago\n_Obrigado por reciclar conosco!_`;
+        let msg = `🧾 *DOCUMENTO COLETAÊ SALGUEIRO*\n\nOlá *${nome}*,\nO registro no valor de *R$ ${total}* foi processado.\n\n🔗 *Documento Digital:* ${linkRecibo}\n\n_Obrigado por usar a nossa plataforma!_`;
         let numeroDestino = (destino === 'empresa') ? "5587991919496" : "55" + telefoneCliente;
         window.open(`https://wa.me/${numeroDestino}?text=${encodeURIComponent(msg)}`, '_blank');
     }
@@ -245,7 +233,6 @@
     };
 </script>
 <script>
-    // Lê a memória do navegador e aplica o tema na página atual
     document.addEventListener('DOMContentLoaded', () => {
         const currentTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-bs-theme', currentTheme);
