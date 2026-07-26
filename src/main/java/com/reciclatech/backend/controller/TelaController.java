@@ -495,11 +495,12 @@ public class TelaController {
 
     // --- TELA DE SAÍDA (VENDA PARA INDÚSTRIA) ---
 
+    // --- TELA DE SAÍDA (VENDA PARA INDÚSTRIA EM LOTE) ---
+
     @GetMapping("/admin/saida")
     public String telaSaida(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
 
-        // Bloqueio de cache
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         response.setHeader("Pragma", "no-cache");
         response.setDateHeader("Expires", 0);
@@ -512,45 +513,74 @@ public class TelaController {
         return "admin-saida";
     }
 
-    @PostMapping("/admin/registrar-saida")
-    public String registrarSaida(@RequestParam String nomeIndustria,
-                                 @RequestParam Long idMaterial,
-                                 @RequestParam Double pesoSaida,
-                                 @RequestParam Double precoVenda,
-                                 HttpSession session) {
+    @PostMapping("/admin/registrar-saida-lote")
+    public String registrarSaidaLote(@RequestParam String nomeIndustria,
+                                     @RequestParam Map<String, String> params,
+                                     HttpSession session) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
 
         try {
+            // 1. Cria um "Usuário" para a Indústria para podermos gerar o recibo!
+            Long idGerado = System.currentTimeMillis();
+            Usuario novaIndustria = new Usuario();
+            novaIndustria.setId(idGerado);
+            novaIndustria.setNome(nomeIndustria.toUpperCase() + " (SAÍDA)");
+            novaIndustria.setTelefone(idGerado.toString()); // Usamos o ID no lugar do telefone para o extrato encontrar
+            novaIndustria.setEndereco("Carga de Venda");
+            novaIndustria.setTipo(Usuario.TipoUsuario.CATADOR);
+
+            // Salva a indústria na planilha
+            googleSheetsService.salvarSolicitacaoInicial(novaIndustria, novaIndustria.getEndereco());
+
+            // 2. Processar os itens vendidos no lote
             List<Material> todosMateriais = googleSheetsService.listarMateriais();
-            Material mat = todosMateriais.stream()
-                    .filter(m -> m.getId().equals(idMaterial))
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Material não encontrado"));
+            List<List<Object>> loteDeVendas = new ArrayList<>();
 
-            BigDecimal precoUn = BigDecimal.valueOf(precoVenda);
-            BigDecimal total = precoUn.multiply(BigDecimal.valueOf(pesoSaida));
+            for (Material mat : todosMateriais) {
+                // Procura os campos peso e preco de cada material gerados no HTML
+                String pesoStr = params.get("peso_" + mat.getId());
+                String precoStr = params.get("preco_" + mat.getId());
 
-            // Registra na planilha com o status "SAIDA_INDUSTRIA"
-            List<Object> row = Arrays.asList(
-                    System.currentTimeMillis(), // ID
-                    mat.getNome(), // Material
-                    pesoSaida.toString().replace(".", ","), // Peso
-                    "VENDA INDÚSTRIA", // Tipo
-                    precoUn.toString().replace(".", ","), // Preço
-                    total.toString().replace(".", ","), // Total
-                    LocalDate.now(ZoneId.of("America/Recife")).toString(), // Data
-                    nomeIndustria.toUpperCase(), // Cliente (Indústria)
-                    "SAIDA_INDUSTRIA", // STATUS VITAL PARA O ESTOQUE
-                    "CNPJ/NÃO INFORMADO" // CPF/CNPJ
-            );
+                if (pesoStr != null && !pesoStr.isEmpty() && precoStr != null && !precoStr.isEmpty()) {
+                    Double pesoSaida = Double.parseDouble(pesoStr.replace(",", "."));
+                    Double precoVenda = Double.parseDouble(precoStr.replace(",", "."));
 
-            List<List<Object>> lote = new ArrayList<>();
-            lote.add(row);
-            googleSheetsService.registrarVendasEmLote(lote);
+                    if (pesoSaida > 0 && precoVenda > 0) {
+                        BigDecimal precoUn = BigDecimal.valueOf(precoVenda);
+                        BigDecimal total = precoUn.multiply(BigDecimal.valueOf(pesoSaida));
 
-            return "redirect:/admin/analises?sucesso=saida";
+                        List<Object> row = Arrays.asList(
+                                System.currentTimeMillis() + mat.getId(),
+                                mat.getNome(),
+                                pesoSaida.toString().replace(".", ","),
+                                "VENDA INDÚSTRIA",
+                                precoUn.toString().replace(".", ","),
+                                total.toString().replace(".", ","),
+                                LocalDate.now(ZoneId.of("America/Recife")).toString(),
+                                idGerado.toString(), // Amarra a venda a esta indústria específica
+                                "SAIDA_INDUSTRIA", // Status que zera o estoque no dashboard
+                                "NÃO INFORMADO"
+                        );
+                        loteDeVendas.add(row);
+                    }
+                }
+            }
+
+            if (loteDeVendas.isEmpty()) {
+                return "redirect:/admin/saida?erro=vazio";
+            }
+
+            // Registra todas as saídas no Google Sheets de uma vez
+            googleSheetsService.registrarVendasEmLote(loteDeVendas);
+
+            // Tira o status de "pendente" da indústria na planilha
+            googleSheetsService.marcarSolicitacaoComoConcluida(idGerado.toString());
+
+            // 3. Redireciona para gerar o Recibo da venda!
+            return "redirect:/extrato/" + idGerado;
+
         } catch (Exception e) {
-            System.err.println("Erro ao registrar saída: " + e.getMessage());
+            System.err.println("Erro ao registrar saída em lote: " + e.getMessage());
             return "redirect:/admin/saida?erro=true";
         }
     }

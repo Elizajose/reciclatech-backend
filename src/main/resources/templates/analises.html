@@ -10,7 +10,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .card { border-radius: 12px; border: none; transition: transform 0.2s; }
-        .chart-container { height: 250px; position: relative; }
+        /* Aumentado de 250px para 350px para caber a legenda sem cortar */
+        .chart-container { height: 350px; position: relative; }
 
         @media print {
             .no-print, .btn, hr, canvas { display: none !important; }
@@ -43,7 +44,8 @@
             </a>
 
             <button onclick="window.print()" class="btn btn-success me-2"><i class="bi bi-file-earmark-pdf"></i> Balanço Semanal</button>
-            <a href="/admin/coletas" class="btn btn-outline-dark">Voltar</a>
+            <!-- Botão Voltar ajustado para btn-secondary para ficar visível em ambos os temas -->
+            <a href="/admin/coletas" class="btn btn-secondary shadow-sm">Voltar</a>
         </div>
     </div>
 
@@ -77,11 +79,12 @@
             <div class="card shadow-sm border-0">
                 <div class="card-body">
                     <div class="d-flex flex-wrap gap-3">
-                        <div th:each="item : ${estoqueReal}" class="border rounded p-3 text-center" style="min-width: 150px; background-color: #f8f9fa;">
-                            <h6 class="text-muted mb-1 fw-bold text-uppercase" th:text="${item.key}"></h6>
-                            <h4 class="text-dark m-0" th:text="${#numbers.formatDecimal(item.value, 1, 'POINT', 1, 'COMMA')} + ' kg'"></h4>
+                        <!-- Ajuste de classes no bg-body, text-body-secondary e text-body-emphasis para adaptar ao Dark/Light -->
+                        <div th:each="item : ${estoqueReal}" class="border rounded p-3 text-center bg-body shadow-sm" style="min-width: 150px;">
+                            <h6 class="text-body-secondary mb-1 fw-bold text-uppercase" th:text="${item.key}"></h6>
+                            <h4 class="text-body-emphasis m-0" th:text="${#numbers.formatDecimal(item.value, 1, 'POINT', 1, 'COMMA')} + ' kg'"></h4>
                         </div>
-                        <div th:if="${estoqueReal == null || #maps.isEmpty(estoqueReal)}" class="text-muted fst-italic p-2">
+                        <div th:if="${estoqueReal == null || #maps.isEmpty(estoqueReal)}" class="text-body-secondary fst-italic p-2">
                             Seu pátio está vazio ou não há registros no momento.
                         </div>
                     </div>
@@ -97,7 +100,7 @@
     <div class="row no-print mb-4">
         <div class="col-md-8" th:if="${volumeDados != null}">
             <div class="card shadow-sm p-3 h-100">
-                <h5 class="fw-bold text-secondary">Evolução de Compras</h5><hr>
+                <h5 class="fw-bold text-body-secondary">Evolução de Compras</h5><hr>
                 <div style="height: 300px;"><canvas id="graficoVolume"></canvas></div>
             </div>
         </div>
@@ -115,7 +118,7 @@
         <!-- Gráfico Rosca -->
         <div class="col-md-4" th:if="${dadosRoscaKg != null}">
             <div class="card shadow-sm p-3 h-100">
-                <h5 class="text-center fw-bold text-secondary">Proporção do Estoque (KG)</h5>
+                <h5 class="text-center fw-bold text-body-secondary">Proporção do Estoque (KG)</h5>
                 <hr>
                 <div class="chart-container"><canvas id="graficoKg"></canvas></div>
             </div>
@@ -124,15 +127,15 @@
         <!-- Lista Top 3 Mais Comprados -->
         <div class="col-md-4">
             <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white fw-bold text-success border-bottom-0 pt-3">
+                <div class="card-header bg-body fw-bold text-success border-bottom-0 pt-3">
                     <i class="bi bi-arrow-up-circle-fill"></i> Mais Comprados (Top 3)
                 </div>
                 <ul class="list-group list-group-flush">
-                    <li th:each="item : ${rankingMaisColetados}" class="list-group-item d-flex justify-content-between align-items-center">
-                        <span th:text="${item.key}" class="fw-bold text-muted small"></span>
+                    <li th:each="item : ${rankingMaisColetados}" class="list-group-item d-flex justify-content-between align-items-center bg-body">
+                        <span th:text="${item.key}" class="fw-bold text-body-secondary small"></span>
                         <span class="badge bg-success rounded-pill" th:text="${#numbers.formatDecimal(item.value, 1, 2) + ' kg'}"></span>
                     </li>
-                    <li th:if="${rankingMaisColetados == null || rankingMaisColetados.isEmpty()}" class="list-group-item text-muted fst-italic small">Sem dados suficientes</li>
+                    <li th:if="${rankingMaisColetados == null || rankingMaisColetados.isEmpty()}" class="list-group-item bg-body text-body-secondary fst-italic small">Sem dados suficientes</li>
                 </ul>
             </div>
         </div>
@@ -140,15 +143,15 @@
         <!-- Lista Baixa Coleta -->
         <div class="col-md-4">
             <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white fw-bold text-danger border-bottom-0 pt-3">
+                <div class="card-header bg-body fw-bold text-danger border-bottom-0 pt-3">
                     <i class="bi bi-arrow-down-circle-fill"></i> Baixa Coleta (< 50kg)
                 </div>
                 <ul class="list-group list-group-flush">
-                    <li th:each="item : ${baixaColeta}" class="list-group-item d-flex justify-content-between align-items-center">
-                        <span th:text="${item.key}" class="fw-bold text-muted small"></span>
+                    <li th:each="item : ${baixaColeta}" class="list-group-item d-flex justify-content-between align-items-center bg-body">
+                        <span th:text="${item.key}" class="fw-bold text-body-secondary small"></span>
                         <span class="badge bg-danger rounded-pill" th:text="${#numbers.formatDecimal(item.value, 1, 2) + ' kg'}"></span>
                     </li>
-                    <li th:if="${baixaColeta == null || baixaColeta.isEmpty()}" class="list-group-item text-muted fst-italic small">Nenhum material em baixa</li>
+                    <li th:if="${baixaColeta == null || baixaColeta.isEmpty()}" class="list-group-item bg-body text-body-secondary fst-italic small">Nenhum material em baixa</li>
                 </ul>
             </div>
         </div>
@@ -189,24 +192,34 @@
 </div>
 
 <script th:inline="javascript">
-    const cores = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6610f2', '#fd7e14', '#20c997', '#adb5bd'];
-
-    // Gráfico de Volume (Apenas se existir)
-    const volumeData = /*[[${volumeDados}]]*/ null;
-    if(volumeData && Object.keys(volumeData).length > 0) {
-        new Chart(document.getElementById('graficoVolume').getContext('2d'), { type: 'line', data: { labels: Object.keys(volumeData), datasets: [{ label: 'KG', data: Object.values(volumeData), borderColor: '#0d6efd', fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false } });
-    }
-
-    // Gráfico do Estoque (Antigo Mix KG)
-    const dataKg = /*[[${dadosRoscaKg}]]*/ null;
-    if(dataKg && Object.keys(dataKg).length > 0) {
-        new Chart(document.getElementById('graficoKg').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(dataKg), datasets: [{ data: Object.values(dataKg), backgroundColor: cores }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
-    }
-</script>
-<script>
+    // Mudei o script para rodar DENTRO do carregamento da página para ler o tema primeiro!
     document.addEventListener('DOMContentLoaded', () => {
         const currentTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-bs-theme', currentTheme);
+
+        // Adapta a cor das letras do gráfico de acordo com o tema (Claro = Preto, Escuro = Branco/Cinza claro)
+        Chart.defaults.color = currentTheme === 'dark' ? '#dee2e6' : '#212529';
+        Chart.defaults.borderColor = currentTheme === 'dark' ? '#495057' : '#e9ecef';
+
+        const cores = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6610f2', '#fd7e14', '#20c997', '#adb5bd'];
+
+        const volumeData = /*[[${volumeDados}]]*/ null;
+        if(volumeData && Object.keys(volumeData).length > 0) {
+            new Chart(document.getElementById('graficoVolume').getContext('2d'), {
+                type: 'line',
+                data: { labels: Object.keys(volumeData), datasets: [{ label: 'KG', data: Object.values(volumeData), borderColor: '#0d6efd', fill: true, tension: 0.4 }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        const dataKg = /*[[${dadosRoscaKg}]]*/ null;
+        if(dataKg && Object.keys(dataKg).length > 0) {
+            new Chart(document.getElementById('graficoKg').getContext('2d'), {
+                type: 'doughnut',
+                data: { labels: Object.keys(dataKg), datasets: [{ data: Object.values(dataKg), backgroundColor: cores }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+        }
     });
 </script>
 </body>
