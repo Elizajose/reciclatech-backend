@@ -212,7 +212,9 @@ public class GoogleSheetsService {
         if (values == null || values.isEmpty()) return Collections.emptyList();
 
         return values.stream()
-                .filter(row -> row.size() > 8 && telefone.equals(row.get(7).toString()) && "VENDIDO".equals(row.get(8).toString()))
+                .filter(row -> row.size() > 8 &&
+                        telefone.equals(row.get(7).toString()) &&
+                        ("VENDIDO".equals(row.get(8).toString()) || "SAIDA_INDUSTRIA".equals(row.get(8).toString())))
                 .map(row -> {
                     Oferta o = new Oferta();
                     o.setMaterial(row.get(1).toString());
