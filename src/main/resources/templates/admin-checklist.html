@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
 <head>
     <title>Checklist de Pesagem</title>
     <meta charset="UTF-8">
@@ -8,76 +8,107 @@
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        /* CSS para garantir que a lista role e o rodapé fique travado */
+        .card-pesagem { max-height: 90vh; display: flex; flex-direction: column; }
+        .area-scroll { overflow-y: auto; flex-grow: 1; padding-right: 5px; }
+        /* Barra de rolagem mais fina e elegante */
+        .area-scroll::-webkit-scrollbar { width: 6px; }
+        .area-scroll::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.2); border-radius: 10px; }
+        [data-bs-theme="dark"] .area-scroll::-webkit-scrollbar-thumb { background-color: rgba(255,255,255,0.2); }
+    </style>
 </head>
-<body class="bg-light pb-5">
+<body class="bg-body-tertiary pb-4 pt-3">
 
-<div class="container mt-3" style="max-width: 600px;">
+<div class="container" style="max-width: 650px;">
 
-    <div class="card shadow mb-4 border-0">
-        <div class="card-header bg-success text-white py-3">
-            <h5 class="m-0 fw-bold"><i class="bi bi-scale"></i> 1. Pesagem</h5>
-            <small th:text="${vendedor.nome}" class="text-white-50">Nome do Cliente</small>
+    <div class="card shadow mb-4 border-0 card-pesagem bg-body">
+
+        <!-- Cabeçalho Fixo -->
+        <div class="card-header bg-success text-white py-3 flex-shrink-0">
+            <h5 class="m-0 fw-bold"><i class="bi bi-scale fs-4 me-2"></i> 1. Pesagem na Balança</h5>
+            <small th:text="${vendedor.nome}" class="text-white-50 text-uppercase fw-bold">Nome do Cliente</small>
         </div>
 
-        <div class="card-body bg-white p-4">
-            <form action="/admin/revisar-coleta" method="post" onsubmit="return validarAntesDeEnviar()">
-                <input type="hidden" name="idVendedor" id="idVendedor" th:value="${vendedor.id}">
+        <!-- Formulário Ocupando o Restante -->
+        <form action="/admin/revisar-coleta" method="post" onsubmit="return validarAntesDeEnviar()" class="d-flex flex-column flex-grow-1 overflow-hidden">
+            <input type="hidden" name="idVendedor" id="idVendedor" th:value="${vendedor.id}">
 
-                <h6 class="border-bottom pb-3 mb-4 fw-bold text-secondary text-center text-uppercase">
-                    Insira os pesos parciais e some (KG/UN)
+            <!-- Faixa de Instrução -->
+            <div class="bg-body-tertiary p-3 border-bottom text-center flex-shrink-0">
+                <h6 class="fw-bold text-body-secondary text-uppercase m-0">
+                    <i class="bi bi-calculator me-1"></i> Insira os pesos parciais e some
                 </h6>
+            </div>
 
-                <div th:each="mat : ${todosMateriais}" class="row mb-4 align-items-center border-bottom pb-3">
-                    <div class="col-6">
-                        <span class="fw-bold d-block fs-5" th:text="${mat.nome}">Cobre</span>
+            <!-- ÁREA DE SCROLL INTERNO (A MÁGICA ACONTECE AQUI) -->
+            <div class="card-body bg-body p-3 area-scroll">
+                <div th:each="mat : ${todosMateriais}" class="row mb-4 align-items-center border-bottom pb-3 mx-1">
+
+                    <!-- Lado Esquerdo: Nome e Preço -->
+                    <div class="col-12 col-sm-5 mb-3 mb-sm-0 text-center text-sm-start">
+                        <span class="fw-bold d-block fs-5 text-body-emphasis" th:text="${mat.nome}">Cobre</span>
                         <small class="text-success fw-bold" th:text="'Base: R$ ' + ${mat.precoPorKg}">Preço</small>
-                        <small class="text-muted" th:text="'/' + ${mat.unidade}">/KG</small>
+                        <small class="text-body-secondary fw-bold" th:text="'/' + ${mat.unidade}">/KG</small>
                     </div>
 
-                    <div class="col-6">
+                    <!-- Lado Direito: Inputs da Balança -->
+                    <div class="col-12 col-sm-7">
+                        <!-- Parcial -->
                         <div class="input-group input-group-sm mb-2 shadow-sm">
                             <input type="number" step="0.01"
                                    th:id="'parcial_' + ${mat.id}"
-                                   class="form-control text-center bg-light"
+                                   class="form-control text-center bg-body-tertiary fw-bold"
                                    placeholder="Pesar lote..."
                                    inputmode="decimal">
-                            <button class="btn btn-primary fw-bold" type="button" th:onclick="'adicionarAoTotal(' + ${mat.id} + ')'" title="Adicionar peso">
-                                <i class="bi bi-plus-lg"></i>
+                            <button class="btn btn-primary fw-bold px-3" type="button" th:onclick="'adicionarAoTotal(' + ${mat.id} + ')'" title="Adicionar peso">
+                                <i class="bi bi-plus-lg"></i> Adicionar
                             </button>
                         </div>
 
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-light text-secondary" style="font-size: 0.75rem;">Total</span>
+                        <!-- Totalizador -->
+                        <div class="input-group input-group-sm shadow-sm">
+                            <span class="input-group-text bg-body-tertiary text-body-secondary fw-bold" style="font-size: 0.75rem;">Total</span>
 
                             <input type="number" step="0.01"
                                    th:name="'qtd_' + ${mat.id}"
                                    th:id="'total_' + ${mat.id}"
-                                   class="form-control text-center fw-bold text-success bg-white"
+                                   class="form-control text-center fw-bold text-success bg-body fs-6"
                                    placeholder="0"
                                    readonly>
 
-                            <span class="input-group-text small" style="font-size: 0.75rem;" th:text="${mat.unidade}">KG</span>
+                            <span class="input-group-text small fw-bold bg-body-tertiary text-body-secondary" style="font-size: 0.75rem;" th:text="${mat.unidade}">KG</span>
 
-                            <button class="btn btn-outline-danger" type="button" th:onclick="'zerarTotal(' + ${mat.id} + ')'" title="Zerar balança">
-                                <i class="bi bi-trash"></i>
+                            <button class="btn btn-outline-danger px-3" type="button" th:onclick="'zerarTotal(' + ${mat.id} + ')'" title="Zerar balança do item">
+                                <i class="bi bi-trash3-fill"></i>
                             </button>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="d-grid gap-2 mt-5">
+            <!-- RODAPÉ FIXO (BOTÕES) -->
+            <div class="card-footer bg-body-tertiary border-top p-3 flex-shrink-0">
+                <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-success btn-lg fw-bold p-3 shadow-sm">
-                        AVANÇAR PARA REVISÃO >>
+                        AVANÇAR PARA REVISÃO <i class="bi bi-arrow-right-circle ms-1"></i>
                     </button>
-                    <!-- Adicionado onclick para limpar o rascunho caso o operador cancele a coleta -->
-                    <a href="/admin/coletas" class="btn btn-outline-secondary py-3" onclick="limparRascunho()">Cancelar</a>
+                    <a href="/admin/coletas" class="btn btn-outline-secondary py-2 fw-bold" onclick="limparRascunho()">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar Coleta
+                    </a>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 </div>
 
 <script>
+    // --- 0. ATIVAR DARK MODE AUTOMATICAMENTE ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-bs-theme', currentTheme);
+    });
+
     // --- 1. LÓGICA DE RECUPERAÇÃO DE DADOS (Quando a página carrega) ---
     document.addEventListener("DOMContentLoaded", function() {
         let idVendedor = document.getElementById('idVendedor').value;
@@ -87,9 +118,7 @@
             let rascunho = JSON.parse(rascunhoString);
             let agora = new Date().getTime();
 
-            // Verifica se o rascunho tem menos de 2 horas (7200000 milissegundos)
             if (agora - rascunho.timestamp < 7200000) {
-                // Restaura os pesos nos campos de Total
                 for (let idInput in rascunho.pesos) {
                     let campoTotal = document.getElementById(idInput);
                     if (campoTotal) {
@@ -97,7 +126,6 @@
                     }
                 }
             } else {
-                // Se for um rascunho velho (de ontem, por exemplo), joga fora
                 sessionStorage.removeItem('rascunho_pesagem_' + idVendedor);
             }
         }
@@ -129,7 +157,6 @@
         let idVendedor = document.getElementById('idVendedor').value;
         let inputsParciais = document.querySelectorAll('input[id^="parcial_"]');
 
-        // Varre se alguém esqueceu de clicar no "+"
         inputsParciais.forEach(function(input) {
             let valor = parseFloat(input.value.replace(',', '.'));
             if (!isNaN(valor) && valor > 0) {
@@ -138,7 +165,6 @@
             }
         });
 
-        // Cria e salva o rascunho dos campos totais para caso o operador volte a página
         let rascunho = {
             timestamp: new Date().getTime(),
             pesos: {}
@@ -152,7 +178,6 @@
         });
 
         sessionStorage.setItem('rascunho_pesagem_' + idVendedor, JSON.stringify(rascunho));
-
         return true;
     }
 

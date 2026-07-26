@@ -1,33 +1,115 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Acesso Restrito</title>
+    <title>Acesso Restrito - Coletaê</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light d-flex align-items-center justify-content-center p-3" style="min-height: 100vh;">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
-<div class="card shadow border-0 p-4 w-100" style="max-width: 400px;">
-    <div class="text-center mb-4">
-        <h3 class="fw-bold text-success">Área do Gestor</h3>
-        <p class="text-muted">Informe sua senha de acesso</p>
+    <style>
+        /* Fundo com gradiente suave da paleta Coletaê */
+        body {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+        }
+
+        /* Card arredondado com efeito suave */
+        .login-card {
+            border-radius: 20px;
+            background-color: rgba(255, 255, 255, 0.98);
+        }
+
+        /* Círculo do ícone flutuando para fora do card */
+        .icon-circle {
+            width: 80px;
+            height: 80px;
+            background-color: #198754; /* Verde Bootstrap (Success) */
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin: -40px auto 20px auto;
+            box-shadow: 0 4px 15px rgba(25, 135, 84, 0.4);
+        }
+
+        .input-group-text, .form-control {
+            border-color: #dee2e6;
+        }
+        .form-control:focus {
+            box-shadow: none;
+            border-color: #198754;
+        }
+    </style>
+</head>
+<body class="d-flex align-items-center justify-content-center p-3" style="min-height: 100vh;">
+
+<div class="card shadow-lg border-0 p-4 w-100 login-card mt-4" style="max-width: 400px;">
+
+    <!-- Ícone de Perfil/Segurança -->
+    <div class="icon-circle">
+        <i class="bi bi-person-bounding-box"></i>
     </div>
 
-    <div th:if="${param.erro}" class="alert alert-danger text-center p-2 small">
-        Senha incorreta. Tente novamente.
+    <div class="text-center mb-4 mt-1">
+        <h3 class="fw-bold text-success m-0">Área do Gestor</h3>
+        <p class="text-muted small mt-1">Insira sua senha de acesso ao painel</p>
+    </div>
+
+    <!-- Alerta de Erro mais elegante -->
+    <div th:if="${param.erro}" class="alert alert-danger text-center p-2 small fw-bold d-flex align-items-center justify-content-center gap-2">
+        <i class="bi bi-exclamation-triangle-fill"></i> Senha incorreta. Tente novamente.
     </div>
 
     <form action="/login-admin" method="post">
-        <div class="mb-3">
-            <input type="password" name="senha" class="form-control form-control-lg text-center" placeholder="Senha" required autofocus>
+
+        <!-- Campo de Senha com Ícones -->
+        <div class="mb-4">
+            <div class="input-group input-group-lg shadow-sm">
+                <span class="input-group-text bg-white border-end-0 text-success"><i class="bi bi-key-fill"></i></span>
+                <input type="password" name="senha" id="senhaInput" class="form-control border-start-0 border-end-0 px-0" placeholder="Sua senha..." required autofocus>
+                <button class="btn btn-outline-secondary bg-white border-start-0 text-muted" type="button" id="togglePassword">
+                    <i class="bi bi-eye-fill" id="eyeIcon"></i>
+                </button>
+            </div>
         </div>
-        <button type="submit" class="btn btn-success w-100 btn-lg">Entrar</button>
-        <a href="/" class="btn btn-link text-muted w-100 mt-2 text-decoration-none">Voltar</a>
+
+        <button type="submit" class="btn btn-success w-100 btn-lg fw-bold shadow-sm mb-3">
+            Entrar <i class="bi bi-box-arrow-in-right ms-1"></i>
+        </button>
+
+        <div class="text-center">
+            <a href="/" class="text-muted text-decoration-none small">
+                <i class="bi bi-arrow-left"></i> Voltar para o Início
+            </a>
+        </div>
     </form>
 </div>
+
+<!-- Script para a funcionalidade de mostrar/ocultar senha -->
+<script>
+    const togglePassword = document.getElementById('togglePassword');
+    const password = document.getElementById('senhaInput');
+    const eyeIcon = document.getElementById('eyeIcon');
+
+    togglePassword.addEventListener('click', function () {
+        // Alterna o tipo do input entre 'password' e 'text'
+        const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+        password.setAttribute('type', type);
+
+        // Alterna o ícone do olho
+        if(type === 'text') {
+            eyeIcon.classList.remove('bi-eye-fill');
+            eyeIcon.classList.add('bi-eye-slash-fill');
+        } else {
+            eyeIcon.classList.remove('bi-eye-slash-fill');
+            eyeIcon.classList.add('bi-eye-fill');
+        }
+    });
+</script>
 
 </body>
 </html>

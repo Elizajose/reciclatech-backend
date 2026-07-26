@@ -506,9 +506,12 @@ public class GoogleSheetsService {
     }
 
     // Metodo auxiliar para não repetir código
+    // Metodo auxiliar para não repetir código
     private List<Oferta> converterLinhasParaOfertas(List<List<Object>> values) {
         return values.stream()
-                .filter(row -> row.size() > 8 && "VENDIDO".equals(row.get(8).toString()))
+                // 1. O FILTRO: Agora ele deixa passar tanto as Entradas quanto as Saídas
+                .filter(row -> row.size() > 8 &&
+                        ("VENDIDO".equals(row.get(8).toString()) || "SAIDA_INDUSTRIA".equals(row.get(8).toString())))
                 .map(row -> {
                     Oferta o = new Oferta();
                     o.setMaterial(row.get(1).toString());
@@ -516,9 +519,18 @@ public class GoogleSheetsService {
                     o.setPrecoEstimado(new BigDecimal(row.get(5).toString().replace(",", ".")));
                     o.setData(row.size() > 6 ? row.get(6).toString() : "Sem Data");
 
-                    // Agora o setIdUsuario existe no Model Oferta!
                     if (row.size() > 7 && row.get(7) != null) {
                         o.setIdUsuario(row.get(7).toString());
+                    }
+
+                    // 2. A ETIQUETA: Salva o status no objeto para o Dashboard saber que tem que subtrair do pátio!
+                    if (row.size() > 8 && row.get(8) != null) {
+                        String statusPlanilha = row.get(8).toString();
+                        try {
+                            o.setStatus(Oferta.StatusOferta.valueOf(statusPlanilha));
+                        } catch (Exception e) {
+                            // Se o Enum der erro, ignora silenciosamente para não quebrar a tela
+                        }
                     }
 
                     return o;
