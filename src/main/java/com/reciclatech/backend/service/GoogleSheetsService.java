@@ -571,5 +571,40 @@ public class GoogleSheetsService {
                 }).collect(Collectors.toList());
     }
 
+    // ID DA PLANILHA MESTRE
+    private final String MASTER_SHEET_ID = "1IRyZeg2ZZ8icCO-v_TsAvy01AqUTwbawYbuf_E0gZ4o";
+
+    public Map<String, String> autenticarSaaS(String login, String senha) throws IOException {
+        com.google.api.services.sheets.v4.model.ValueRange response = sheetsService.spreadsheets().values()
+                .get(MASTER_SHEET_ID, "Acessos!A2:G")
+                .execute();
+
+        List<List<Object>> values = response.getValues();
+        if (values == null || values.isEmpty()) return null;
+
+        for (List<Object> row : values) {
+            if (row.size() >= 5) {
+                String sheetLogin = row.get(0).toString().trim();
+                String sheetSenha = row.get(1).toString().trim();
+                String status = row.get(3).toString().trim();
+
+                if (sheetLogin.equals(login) && sheetSenha.equals(senha)) {
+                    if (!"ATIVO".equalsIgnoreCase(status)) {
+                        throw new RuntimeException("Conta suspensa"); // Bloqueia inadimplentes
+                    }
+
+                    // Se estiver tudo certo, guarda os dados desse cliente
+                    Map<String, String> dadosSessao = new HashMap<>();
+                    dadosSessao.put("perfil", row.get(2).toString());
+                    dadosSessao.put("idPlanilha", row.get(4).toString());
+                    if (row.size() >= 6) dadosSessao.put("nomeArmazem", row.get(5).toString());
+                    if (row.size() >= 7) dadosSessao.put("cnpj", row.get(6).toString());
+                    return dadosSessao;
+                }
+            }
+        }
+        return null; // Login ou senha errados
+    }
+
 
 }

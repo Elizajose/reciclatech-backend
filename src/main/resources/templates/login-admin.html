@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Acesso Restrito - Coletaê</title>
+    <title>Acesso Restrito - Coletaê SaaS</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
@@ -51,26 +51,38 @@
 
     <!-- Ícone de Perfil/Segurança -->
     <div class="icon-circle">
-        <i class="bi bi-person-bounding-box"></i>
+        <i class="bi bi-buildings-fill"></i>
     </div>
 
     <div class="text-center mb-4 mt-1">
-        <h3 class="fw-bold text-success m-0">Área do Gestor</h3>
-        <p class="text-muted small mt-1">Insira sua senha de acesso ao painel</p>
+        <h3 class="fw-bold text-success m-0">Área do Parceiro</h3>
+        <p class="text-muted small mt-1">Insira suas credenciais de acesso</p>
     </div>
 
-    <!-- Alerta de Erro mais elegante -->
-    <div th:if="${param.erro}" class="alert alert-danger text-center p-2 small fw-bold d-flex align-items-center justify-content-center gap-2">
-        <i class="bi bi-exclamation-triangle-fill"></i> Senha incorreta. Tente novamente.
+    <!-- Alertas Dinâmicos -->
+    <div th:if="${param.erro != null and param.erro[0] == 'true'}" class="alert alert-danger text-center p-2 small fw-bold d-flex align-items-center justify-content-center gap-2">
+        <i class="bi bi-exclamation-triangle-fill"></i> Usuário ou senha incorretos.
+    </div>
+
+    <div th:if="${param.erro != null and param.erro[0] == 'suspenso'}" class="alert alert-warning text-center p-2 small fw-bold d-flex align-items-center justify-content-center gap-2">
+        <i class="bi bi-lock-fill"></i> Conta suspensa. Contate o suporte.
     </div>
 
     <form action="/login-admin" method="post">
+
+        <!-- Campo de Login (Usuário) -->
+        <div class="mb-3">
+            <div class="input-group input-group-lg shadow-sm">
+                <span class="input-group-text bg-white border-end-0 text-success"><i class="bi bi-person-fill"></i></span>
+                <input type="text" name="login" class="form-control border-start-0 px-0" placeholder="Seu usuário..." required autofocus>
+            </div>
+        </div>
 
         <!-- Campo de Senha com Ícones -->
         <div class="mb-4">
             <div class="input-group input-group-lg shadow-sm">
                 <span class="input-group-text bg-white border-end-0 text-success"><i class="bi bi-key-fill"></i></span>
-                <input type="password" name="senha" id="senhaInput" class="form-control border-start-0 border-end-0 px-0" placeholder="Sua senha..." required autofocus>
+                <input type="password" name="senha" id="senhaInput" class="form-control border-start-0 border-end-0 px-0" placeholder="Sua senha..." required>
                 <button class="btn btn-outline-secondary bg-white border-start-0 text-muted" type="button" id="togglePassword">
                     <i class="bi bi-eye-fill" id="eyeIcon"></i>
                 </button>
@@ -83,7 +95,7 @@
 
         <div class="text-center">
             <a href="/" class="text-muted text-decoration-none small">
-                <i class="bi bi-arrow-left"></i> Voltar para o Início
+                <i class="bi bi-arrow-left"></i> Voltar para o Site
             </a>
         </div>
     </form>
@@ -96,11 +108,9 @@
     const eyeIcon = document.getElementById('eyeIcon');
 
     togglePassword.addEventListener('click', function () {
-        // Alterna o tipo do input entre 'password' e 'text'
         const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
         password.setAttribute('type', type);
 
-        // Alterna o ícone do olho
         if(type === 'text') {
             eyeIcon.classList.remove('bi-eye-fill');
             eyeIcon.classList.add('bi-eye-slash-fill');

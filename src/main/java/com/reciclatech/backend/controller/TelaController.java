@@ -109,14 +109,29 @@ public class TelaController {
     @GetMapping("/login") public String telaLogin() { return "login-admin"; }
 
     @PostMapping("/login-admin")
-    public String login(@RequestParam String senha, HttpSession session) {
-        String senhaSecreta = System.getenv("SENHA_ADMIN");
-        if (senhaSecreta == null) senhaSecreta = "admin123";
+    public String login(@RequestParam String login, @RequestParam String senha, HttpSession session) {
+        try {
+            // Vai na Planilha Mestre tentar achar esse usuário
+            Map<String, String> dadosUser = googleSheetsService.autenticarSaaS(login, senha);
 
-        if (senhaSecreta.equals(senha)) {
-            session.setAttribute("adminLogado", true);
-            return "redirect:/admin/coletas";
+            if (dadosUser != null) {
+                // SUCESSO! Salva todas as informações desse armazém na Sessão (Memória do Navegador)
+                session.setAttribute("adminLogado", true);
+                session.setAttribute("perfilUser", dadosUser.get("perfil"));
+                session.setAttribute("idPlanilhaAtiva", dadosUser.get("idPlanilha"));
+                session.setAttribute("nomeArmazem", dadosUser.getOrDefault("nomeArmazem", "Armazém Parceiro"));
+                session.setAttribute("cnpjArmazem", dadosUser.getOrDefault("cnpj", ""));
+
+                return "redirect:/admin/coletas"; // Manda pro painel!
+            }
+        } catch (RuntimeException e) {
+            // Cai aqui se a conta estiver SUSPENSA na planilha
+            return "redirect:/login?erro=suspenso";
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+
+        // Se errar a senha ou o usuário
         return "redirect:/login?erro=true";
     }
 
