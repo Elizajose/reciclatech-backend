@@ -64,8 +64,6 @@
             </button>
             <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
                 <li><h6 class="dropdown-header">Configurações</h6></li>
-                <li><a class="dropdown-item fw-bold text-success" href="/admin/precos"><i class="bi bi-tags-fill me-2"></i> Tabela de Preços</a></li>
-                <li><hr class="dropdown-divider"></li>
                 <li>
                     <!-- BOTÃO DARK MODE DENTRO DO MENU -->
                     <button class="dropdown-item d-flex justify-content-between align-items-center" id="themeToggleBtn">
@@ -81,12 +79,12 @@
 
 <div class="container px-md-4" style="max-width: 1000px;">
 
-    <!-- MÓDULOS DO SISTEMA (GRID) -->
-    <div class="row g-3 mb-4">
-        <!-- Card 1: Análises -->
-        <div class="col-6 col-md-3">
+    <!-- MÓDULOS DO SISTEMA (GRID COM 3 CARDS) -->
+    <div class="row g-3 mb-4 justify-content-center">
+        <!-- Card 1: Análises / Financeiro -->
+        <div class="col-12 col-sm-4">
             <a href="/admin/analises" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none">
-                <div class="card-body text-center p-3">
+                <div class="card-body text-center p-3 d-flex flex-column justify-content-center">
                     <div class="icon-box bg-info bg-opacity-10 text-info mx-auto mb-2"><i class="bi bi-bar-chart-fill"></i></div>
                     <h6 class="fw-bold m-0">Financeiro</h6>
                     <small class="text-body-secondary d-none d-sm-block">Lucros e Estoque</small>
@@ -95,9 +93,9 @@
         </div>
 
         <!-- Card 2: Extratos/Recibos -->
-        <div class="col-6 col-md-3">
+        <div class="col-12 col-sm-4">
             <a href="/meus-extratos" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none">
-                <div class="card-body text-center p-3">
+                <div class="card-body text-center p-3 d-flex flex-column justify-content-center">
                     <div class="icon-box bg-secondary bg-opacity-10 text-secondary mx-auto mb-2"><i class="bi bi-receipt"></i></div>
                     <h6 class="fw-bold m-0">Recibos</h6>
                     <small class="text-body-secondary d-none d-sm-block">Histórico de Entradas</small>
@@ -105,29 +103,15 @@
             </a>
         </div>
 
-        <!-- Card 3: Saída para Indústria -->
-        <div class="col-6 col-md-3">
-            <a href="/admin/saida" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none border-start border-warning border-4">
-                <div class="card-body text-center p-3">
-                    <div class="icon-box bg-warning bg-opacity-10 text-warning mx-auto mb-2"><i class="bi bi-truck"></i></div>
-                    <h6 class="fw-bold m-0">Expedição</h6>
-                    <small class="text-body-secondary d-none d-sm-block">Vender Carga</small>
+        <!-- Card 3: Tabela de Preços Padronizada -->
+        <div class="col-12 col-sm-4">
+            <a href="/admin/precos" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none border-start border-success border-4">
+                <div class="card-body text-center p-3 d-flex flex-column justify-content-center">
+                    <div class="icon-box bg-success bg-opacity-10 text-success mx-auto mb-2"><i class="bi bi-tags-fill"></i></div>
+                    <h6 class="fw-bold m-0">Tabela de Preços</h6>
+                    <small class="text-body-secondary d-none d-sm-block">Atualizar Valores</small>
                 </div>
             </a>
-        </div>
-
-        <!-- Card 4: Preços e Exportação -->
-        <div class="col-6 col-md-3">
-            <div class="card shadow-sm border-0 h-100 bg-body">
-                <div class="card-body p-2 d-flex flex-column justify-content-center align-items-center">
-                    <h6 class="fw-bold mb-2 text-center w-100 border-bottom pb-1" style="font-size: 0.85rem;">Tabela de Preços</h6>
-                    <div class="d-flex gap-1 w-100">
-                        <button class="btn btn-sm btn-outline-danger w-50" title="Exportar PDF"><i class="bi bi-file-pdf"></i></button>
-                        <button class="btn btn-sm btn-outline-success w-50" title="Exportar Excel"><i class="bi bi-file-excel"></i></button>
-                    </div>
-                    <a href="/admin/precos" class="btn btn-sm btn-light w-100 mt-1 fw-bold" style="font-size: 0.75rem;">Editar Preços</a>
-                </div>
-            </div>
         </div>
     </div>
 

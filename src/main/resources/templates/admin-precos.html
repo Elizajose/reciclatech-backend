@@ -63,15 +63,38 @@
         </div>
     </div>
 
-    <!-- LISTA DE MATERIAIS COM BUSCA E SCROLL -->
+    <!-- LISTA DE MATERIAIS COM BUSCA, EXPORTAÇÃO E SCROLL -->
     <div class="card shadow-sm border-0 mb-5 bg-body">
         <div class="card-header bg-body border-bottom-0 pt-4 pb-0 d-flex justify-content-between align-items-center flex-wrap gap-3">
             <h5 class="fw-bold m-0 text-body-emphasis">Materiais Cadastrados</h5>
 
-            <!-- Barra de Pesquisa -->
-            <div class="input-group" style="max-width: 350px;">
-                <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
-                <input type="text" id="campoBusca" class="form-control border-start-0 ps-0" placeholder="Buscar material rapidamente..." onkeyup="filtrarTabela()">
+            <!-- Agrupamento de Ações: Exportar e Buscar -->
+            <div class="d-flex align-items-center flex-wrap gap-2">
+
+                <!-- Botão Dropdown Exportar -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2 shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-download"></i> Exportar
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                        <li>
+                            <a class="dropdown-item text-danger fw-bold d-flex align-items-center" href="#" onclick="alert('Funcionalidade de exportar para PDF será liberada em breve!')">
+                                <i class="bi bi-file-earmark-pdf-fill me-2 fs-5"></i> Salvar em PDF
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item text-success fw-bold d-flex align-items-center" href="#" onclick="alert('Funcionalidade de exportar para Excel será liberada em breve!')">
+                                <i class="bi bi-file-earmark-excel-fill me-2 fs-5"></i> Salvar em Excel
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Barra de Pesquisa -->
+                <div class="input-group shadow-sm" style="max-width: 300px;">
+                    <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="campoBusca" class="form-control border-start-0 ps-0" placeholder="Buscar material rapidamente..." onkeyup="filtrarTabela()">
+                </div>
             </div>
         </div>
 
