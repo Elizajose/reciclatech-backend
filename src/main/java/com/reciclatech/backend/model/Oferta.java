@@ -32,8 +32,9 @@ public class Oferta {
 
     private LocalDate dataCriacao = LocalDate.now();
 
+    // 👇 A CORREÇÃO ESTÁ AQUI: Adicionamos todos os status que a planilha usa! 👇
     public enum StatusOferta {
-        DISPONIVEL, VENDIDO
+        DISPONIVEL, EM_ATENDIMENTO, FINALIZADO, VENDIDO, SAIDA_INDUSTRIA
     }
 
     public Oferta() {}
