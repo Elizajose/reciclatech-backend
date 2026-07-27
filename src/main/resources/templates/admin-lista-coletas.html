@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light"> <!-- Adicionado data-bs-theme -->
+<html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
 <head>
-    <title>Área do Gestor - Coletaê Salgueiro</title>
+    <title>Painel de Controle - Coletaê</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -10,140 +10,198 @@
     <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <meta http-equiv="refresh" content="30">
 
     <style>
-        /* Estabilização dos botões do menu para evitar perda de foco/sumiço */
-        .btn-nav {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px; /* Espaço fixo entre ícone e texto */
+        /* Estilos para os Cards do Menu */
+        .module-card {
             transition: all 0.2s ease-in-out;
-            font-weight: 600;
-            white-space: nowrap; /* Impede que o texto quebre ou desapareça */
-            vertical-align: middle;
+            border-radius: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            display: block;
+        }
+        .module-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important;
+        }
+        .icon-box {
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-size: 1.5rem;
         }
 
-        .btn-nav:hover {
-            transform: translateY(-2px); /* Efeito de elevação suave */
-            filter: brightness(1.1);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        /* Ajuste do dropdown no modo escuro */
+        [data-bs-theme="dark"] .dropdown-menu {
+            background-color: #2b3035;
+            border-color: #495057;
         }
-
-        .btn-nav i {
-            font-size: 1.1rem;
-            line-height: 1;
-        }
-
-        /* Ajuste para Navbar em dispositivos móveis */
-        @media (max-width: 576px) {
-            .navbar-brand { font-size: 1.1rem; }
-            .btn-nav { padding: 0.5rem 0.7rem; font-size: 0.85rem; }
-        }
+        [data-bs-theme="dark"] .dropdown-item { color: #dee2e6; }
+        [data-bs-theme="dark"] .dropdown-item:hover { background-color: #343a40; color: #fff; }
     </style>
 </head>
-<body class="bg-body-tertiary"> <!-- Mudou de bg-light para bg-body-tertiary para adaptar ao tema -->
+<body class="bg-body-tertiary pb-5">
 
-<nav class="navbar navbar-dark bg-dark shadow-sm mb-4">
-    <div class="container">
-        <span class="navbar-brand mb-0 h1 fw-bold">
-            <i class="bi bi-truck text-warning"></i> Área do Gestor
-        </span>
+<!-- NAVBAR MODERNA COM MENU DE PERFIL -->
+<nav class="navbar navbar-expand navbar-dark bg-success shadow-sm mb-4">
+    <div class="container-fluid px-md-5">
+        <a class="navbar-brand mb-0 h1 fw-bold d-flex align-items-center gap-2" href="#">
+            <i class="bi bi-recycle fs-3"></i>
+            <span class="d-none d-sm-inline">Painel do Gestor</span>
+            <span class="d-inline d-sm-none">Gestor</span>
+        </a>
 
-        <div class="d-flex gap-2 flex-wrap">
-            <a href="/admin/analises" class="btn btn-outline-info btn-nav border-info">
-                <i class="bi bi-bar-chart-line-fill"></i> Análises
-            </a>
-
-            <a href="/admin/precos" class="btn btn-warning btn-nav text-dark">
-                <i class="bi bi-currency-dollar"></i> Preços
-            </a>
-
-            <a href="/meus-extratos" class="btn btn-outline-light btn-nav">
-                <i class="bi bi-file-earmark-text"></i> Extratos
-            </a>
-
-            <!-- NOVO BOTÃO DE DARK MODE -->
-            <button id="themeToggleBtn" class="btn btn-secondary btn-nav" title="Alternar Modo Escuro">
-                <i id="themeIcon" class="bi bi-moon-fill"></i>
+        <!-- Menu do Usuário -->
+        <div class="dropdown">
+            <button class="btn btn-success dropdown-toggle d-flex align-items-center gap-2 border-0 bg-transparent shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-person-circle fs-4"></i>
+                <span class="fw-bold d-none d-sm-inline">Meu Perfil</span>
             </button>
-
-            <a href="/sair" class="btn btn-danger btn-nav">
-                <i class="bi bi-box-arrow-right"></i> Sair
-            </a>
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                <li><h6 class="dropdown-header">Configurações</h6></li>
+                <li><a class="dropdown-item fw-bold text-success" href="/admin/precos"><i class="bi bi-tags-fill me-2"></i> Tabela de Preços</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <!-- BOTÃO DARK MODE DENTRO DO MENU -->
+                    <button class="dropdown-item d-flex justify-content-between align-items-center" id="themeToggleBtn">
+                        Modo Escuro <i id="themeIcon" class="bi bi-moon-fill text-secondary"></i>
+                    </button>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger fw-bold" href="/sair"><i class="bi bi-box-arrow-right me-2"></i> Sair do Sistema</a></li>
+            </ul>
         </div>
     </div>
 </nav>
 
-<div class="container mt-4 mb-5" style="max-width: 800px;">
-    <!-- Removido bg-white para o card poder escurecer no dark mode -->
-    <div class="card shadow-sm border-0 border-start border-4 border-warning bg-body">
+<div class="container px-md-4" style="max-width: 1000px;">
+
+    <!-- MÓDULOS DO SISTEMA (GRID) -->
+    <div class="row g-3 mb-4">
+        <!-- Card 1: Análises -->
+        <div class="col-6 col-md-3">
+            <a href="/admin/analises" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none">
+                <div class="card-body text-center p-3">
+                    <div class="icon-box bg-info bg-opacity-10 text-info mx-auto mb-2"><i class="bi bi-bar-chart-fill"></i></div>
+                    <h6 class="fw-bold m-0">Financeiro</h6>
+                    <small class="text-body-secondary d-none d-sm-block">Lucros e Estoque</small>
+                </div>
+            </a>
+        </div>
+
+        <!-- Card 2: Extratos/Recibos -->
+        <div class="col-6 col-md-3">
+            <a href="/meus-extratos" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none">
+                <div class="card-body text-center p-3">
+                    <div class="icon-box bg-secondary bg-opacity-10 text-secondary mx-auto mb-2"><i class="bi bi-receipt"></i></div>
+                    <h6 class="fw-bold m-0">Recibos</h6>
+                    <small class="text-body-secondary d-none d-sm-block">Histórico de Entradas</small>
+                </div>
+            </a>
+        </div>
+
+        <!-- Card 3: Saída para Indústria -->
+        <div class="col-6 col-md-3">
+            <a href="/admin/saida" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none border-start border-warning border-4">
+                <div class="card-body text-center p-3">
+                    <div class="icon-box bg-warning bg-opacity-10 text-warning mx-auto mb-2"><i class="bi bi-truck"></i></div>
+                    <h6 class="fw-bold m-0">Expedição</h6>
+                    <small class="text-body-secondary d-none d-sm-block">Vender Carga</small>
+                </div>
+            </a>
+        </div>
+
+        <!-- Card 4: Preços e Exportação -->
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm border-0 h-100 bg-body">
+                <div class="card-body p-2 d-flex flex-column justify-content-center align-items-center">
+                    <h6 class="fw-bold mb-2 text-center w-100 border-bottom pb-1" style="font-size: 0.85rem;">Tabela de Preços</h6>
+                    <div class="d-flex gap-1 w-100">
+                        <button class="btn btn-sm btn-outline-danger w-50" title="Exportar PDF"><i class="bi bi-file-pdf"></i></button>
+                        <button class="btn btn-sm btn-outline-success w-50" title="Exportar Excel"><i class="bi bi-file-excel"></i></button>
+                    </div>
+                    <a href="/admin/precos" class="btn btn-sm btn-light w-100 mt-1 fw-bold" style="font-size: 0.75rem;">Editar Preços</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ATENDIMENTO RÁPIDO DE BALCÃO -->
+    <div class="card shadow-sm border-0 border-start border-4 border-primary bg-body mb-4">
         <div class="card-body p-4">
-            <!-- Removido text-dark para adaptar a cor da fonte -->
-            <h5 class="fw-bold mb-2">
-                <i class="bi bi-lightning-charge-fill text-warning"></i> Coleta Rápida
-            </h5>
-            <p class="small text-muted mb-3">Atendimento expresso. Informe o nome do cliente para começar.</p>
+            <div class="d-flex align-items-center mb-3">
+                <div class="bg-primary bg-opacity-10 p-2 rounded me-3 text-primary">
+                    <i class="bi bi-shop fs-4"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-0">Atendimento de Balcão</h5>
+                    <p class="small text-body-secondary m-0">Nova compra direta no galpão. Digite o nome do cliente.</p>
+                </div>
+            </div>
 
             <form action="/admin/pesagem-rapida" method="post" class="d-flex flex-column flex-sm-row gap-2">
-                <!-- Alterado bg-light do input para adaptar ao tema -->
-                <input type="text" name="nome" class="form-control form-control-lg flex-grow-1 bg-body-tertiary text-body" required placeholder="Ex: João da Silva">
-                <button type="submit" class="btn btn-success btn-lg fw-bold px-4 text-nowrap">
-                    Avançar <i class="bi bi-arrow-right"></i>
+                <input type="text" name="nome" class="form-control form-control-lg flex-grow-1 bg-body-tertiary text-body border-0 shadow-sm" required placeholder="Ex: João da Silva">
+                <button type="submit" class="btn btn-primary btn-lg fw-bold px-4 text-nowrap shadow-sm">
+                    Iniciar Pesagem <i class="bi bi-arrow-right-circle ms-1"></i>
                 </button>
             </form>
         </div>
     </div>
-</div>
 
-<div class="container" style="max-width: 800px;">
-
-    <h5 class="text-muted mb-3 border-bottom pb-2">
-        <i class="bi bi-geo-alt-fill text-danger"></i> Clientes Aguardando Pelo Site
+    <!-- LISTA DE AGENDAMENTOS DO SITE -->
+    <h5 class="text-body-secondary mb-3 mt-5 d-flex align-items-center gap-2">
+        <i class="bi bi-geo-alt-fill text-danger"></i> Agendamentos de Coleta
     </h5>
 
     <div class="d-grid gap-3">
 
-        <div th:each="u : ${usuarios}" class="card shadow-sm border-0 border-start border-4 border-success bg-body">
-            <div class="card-body d-flex justify-content-between align-items-center">
+        <div th:each="u : ${usuarios}" class="card shadow-sm border-0 bg-body">
+            <div class="card-body p-3 p-sm-4 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+
                 <div>
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success mb-2">AGUARDANDO</span>
                     <h5 class="card-title fw-bold m-0" th:text="${u.nome}">Nome do Cliente</h5>
 
-                    <p class="card-text text-muted small mb-1">
-                        <i class="bi bi-whatsapp text-success"></i>
-                        <span th:text="${u.telefone}"></span>
-                    </p>
-
-                    <p class="text-muted small m-0">
-                        <i class="bi bi-geo-alt"></i>
-                        <span th:if="${not #lists.isEmpty(u.ofertas)}" th:text="${u.ofertas[0].endereco}">Endereço</span>
-                    </p>
+                    <div class="d-flex flex-column flex-sm-row gap-sm-3 mt-2">
+                        <p class="card-text text-body-secondary small mb-1 mb-sm-0">
+                            <i class="bi bi-whatsapp text-success me-1"></i>
+                            <span th:text="${u.telefone}"></span>
+                        </p>
+                        <p class="text-body-secondary small m-0">
+                            <i class="bi bi-geo-alt me-1"></i>
+                            <span th:if="${not #lists.isEmpty(u.ofertas)}" th:text="${u.ofertas[0].endereco}">Endereço</span>
+                        </p>
+                    </div>
                 </div>
 
                 <div class="d-flex gap-2">
-                    <a th:href="@{'/admin/cancelar/' + ${u.telefone}}" class="btn btn-outline-danger d-flex align-items-center" onclick="return confirm('Tem certeza que deseja cancelar e remover este atendimento da lista?');" title="Cancelar Coleta">
+                    <a th:href="@{'/admin/cancelar/' + ${u.telefone}}" class="btn btn-outline-danger d-flex align-items-center px-3" onclick="return confirm('Tem certeza que deseja cancelar esta coleta?');" title="Cancelar Coleta">
                         <i class="bi bi-trash3-fill"></i>
                     </a>
 
-                    <a th:if="${u.statusPlanilha == 'DISPONIVEL'}" th:href="@{'/admin/atender/' + ${u.id}}" class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2">
-                        ATENDER <i class="bi bi-chevron-right"></i>
+                    <a th:if="${u.statusPlanilha == 'DISPONIVEL'}" th:href="@{'/admin/atender/' + ${u.id}}" class="btn btn-success fw-bold px-4 d-flex align-items-center gap-2 shadow-sm">
+                        ATENDER <i class="bi bi-check-circle"></i>
                     </a>
 
-                    <button th:if="${u.statusPlanilha == 'EM_ATENDIMENTO'}" class="btn btn-secondary fw-bold px-4 disabled" style="cursor: not-allowed;" title="Outro funcionário está atendendo">
-                        <i class="bi bi-lock-fill"></i> EM ATENDIMENTO
+                    <button th:if="${u.statusPlanilha == 'EM_ATENDIMENTO'}" class="btn btn-secondary fw-bold px-4 disabled d-flex align-items-center gap-2" style="cursor: not-allowed;">
+                        <i class="bi bi-lock-fill"></i> EM USO
                     </button>
                 </div>
 
             </div>
         </div>
 
-        <div th:if="${#lists.isEmpty(usuarios)}" class="text-center py-5 text-muted">
+        <div th:if="${#lists.isEmpty(usuarios)}" class="text-center py-5 bg-body rounded border border-dashed">
             <div class="mb-3">
-                <i class="bi bi-check-circle fs-1 text-success opacity-50"></i>
+                <i class="bi bi-inbox fs-1 text-body-secondary opacity-50"></i>
             </div>
-            <h5>Nenhum chamado pendente.</h5>
-            <small>Aguardando novas solicitações pelo site...</small>
+            <h5 class="fw-bold text-body-secondary">Fila vazia</h5>
+            <small class="text-body-secondary">Não há agendamentos pendentes pelo site no momento.</small>
         </div>
 
     </div>
@@ -151,31 +209,28 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- SCRIPT DO DARK MODE -->
+<!-- SCRIPT DO DARK MODE ATUALIZADO PARA O MENU DROPDOWN -->
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const htmlElement = document.documentElement;
         const themeToggleBtn = document.getElementById('themeToggleBtn');
         const themeIcon = document.getElementById('themeIcon');
 
-        // 1. Verifica se já existe um tema salvo no navegador do usuário
         const currentTheme = localStorage.getItem('theme') || 'light';
 
-        // 2. Aplica o tema imediatamente
         htmlElement.setAttribute('data-bs-theme', currentTheme);
         updateIcon(currentTheme);
 
-        // 3. Adiciona a ação de clique no botão
-        themeToggleBtn.addEventListener('click', () => {
+        themeToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Evita que o menu dropdown feche ao trocar o tema
             const isDark = htmlElement.getAttribute('data-bs-theme') === 'dark';
             const newTheme = isDark ? 'light' : 'dark';
 
             htmlElement.setAttribute('data-bs-theme', newTheme);
-            localStorage.setItem('theme', newTheme); // Salva a preferência
+            localStorage.setItem('theme', newTheme);
             updateIcon(newTheme);
         });
 
-        // Função auxiliar para trocar o ícone (Lua para Sol e vice-versa)
         function updateIcon(theme) {
             if (theme === 'dark') {
                 themeIcon.classList.remove('bi-moon-fill');

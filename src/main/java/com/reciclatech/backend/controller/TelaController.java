@@ -457,7 +457,18 @@ public class TelaController {
             model.addAttribute("estoqueReal", estoqueRealKg);
 
             // Variáveis antigas mantidas para não quebrar os gráficos de baixo
-            model.addAttribute("totalAtendimentos", googleSheetsService.listarUsuarios().size());
+            // Separa quem é cliente real de quem é registro de saída para a indústria
+            List<Usuario> todosUsuarios = googleSheetsService.listarUsuarios();
+            long clientesReais = todosUsuarios.stream()
+                    .filter(u -> u.getNome() == null || !u.getNome().contains("(SAÍDA)"))
+                    .count();
+
+            long totalExpedicoes = todosUsuarios.stream()
+                    .filter(u -> u.getNome() != null && u.getNome().contains("(SAÍDA)"))
+                    .count();
+
+            model.addAttribute("totalAtendimentos", clientesReais);
+            model.addAttribute("totalExpedicoes", totalExpedicoes); // Variável extra pra você usar no futuro!
             model.addAttribute("dadosRoscaKg", estoqueRealKg); // O gráfico agora vai mostrar o estoque atual!
 
         } catch (Exception e) {
