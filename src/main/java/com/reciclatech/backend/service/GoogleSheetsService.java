@@ -266,10 +266,25 @@ public class GoogleSheetsService {
         List<List<Object>> values = response.getValues();
         if (values == null) return 0.0;
 
-        return values.stream()
-                .filter(row -> row.size() > 6 && "VENDIDO".equals(row.get(6).toString()))
-                .mapToDouble(row -> Double.parseDouble(row.get(0).toString().replace(",", ".")))
-                .sum();
+        double totalPatio = 0.0;
+
+        for (List<Object> row : values) {
+            if (row.size() > 6) {
+                String status = row.get(6).toString();
+
+                if ("VENDIDO".equals(status) || "SAIDA_INDUSTRIA".equals(status)) {
+                    // Pega o peso (que está na primeira coluna desse bloco C2:I)
+                    double peso = Double.parseDouble(row.get(0).toString().replace(",", "."));
+
+                    if ("VENDIDO".equals(status)) {
+                        totalPatio += peso; // Comprou do catador: SOMA
+                    } else if ("SAIDA_INDUSTRIA".equals(status)) {
+                        totalPatio -= peso; // Vendeu pra indústria: SUBTRAI
+                    }
+                }
+            }
+        }
+        return totalPatio;
     }
 
     public List<RankingDTO> buscarRankingMateriais() throws IOException {
@@ -278,25 +293,44 @@ public class GoogleSheetsService {
         if (values == null) return new ArrayList<>();
 
         Map<String, Double> soma = new HashMap<>();
+
         for (List<Object> row : values) {
-            if (row.size() > 7 && "VENDIDO".equals(row.get(7).toString())) {
-                String nome = row.get(0).toString();
-                Double peso = Double.parseDouble(row.get(1).toString().replace(",", "."));
-                soma.put(nome, soma.getOrDefault(nome, 0.0) + peso);
+            // Verifica se a linha tem colunas suficientes para ler o Status (coluna I -> índice 7 neste bloco)
+            if (row.size() > 7) {
+                String status = row.get(7).toString();
+
+                if ("VENDIDO".equals(status) || "SAIDA_INDUSTRIA".equals(status)) {
+                    String nome = row.get(0).toString(); // Coluna B
+                    Double peso = Double.parseDouble(row.get(1).toString().replace(",", ".")); // Coluna C
+
+                    if ("VENDIDO".equals(status)) {
+                        // Entrada: Adiciona ao estoque
+                        soma.put(nome, soma.getOrDefault(nome, 0.0) + peso);
+                    } else if ("SAIDA_INDUSTRIA".equals(status)) {
+                        // Saída: Diminui do estoque
+                        soma.put(nome, soma.getOrDefault(nome, 0.0) - peso);
+                    }
+                }
             }
         }
 
         List<Material> todos = listarMateriais();
-        return soma.entrySet().stream().map(e -> {
-            String un = "kg";
-            for (Material m : todos) {
-                if (m.getNome() != null && m.getNome().equalsIgnoreCase(e.getKey())) {
-                    un = m.getUnidade();
-                    break;
-                }
-            }
-            return new RankingDTO(e.getKey(), e.getValue(), un);
-        }).sorted((a, b) -> b.peso.compareTo(a.peso)).limit(3).collect(Collectors.toList());
+        return soma.entrySet().stream()
+                .map(e -> {
+                    String un = "kg";
+                    for (Material m : todos) {
+                        if (m.getNome() != null && m.getNome().equalsIgnoreCase(e.getKey())) {
+                            un = m.getUnidade();
+                            break;
+                        }
+                    }
+                    return new RankingDTO(e.getKey(), e.getValue(), un);
+                })
+                // Se quiser, essa linha abaixo esconde do painel os materiais que zeraram o estoque:
+                .filter(dto -> dto.peso > 0)
+                .sorted((a, b) -> b.peso.compareTo(a.peso))
+                .limit(3) // <-- NOTA: Se você quiser que o painel mostre TODOS os materiais, e não só o Top 3, basta apagar essa linha ".limit(3)"
+                .collect(Collectors.toList());
     }
 
     public Material buscarMaterialPorId(Long id) throws IOException {
