@@ -494,8 +494,9 @@ public class GoogleSheetsService {
     }
 
     public Map<String, String> autenticarSaaS(String login, String senha) throws IOException {
+        // MUDANÇA 1: Agora ele lê até a coluna H (onde está a Senha Financeira)
         ValueRange response = sheetsService.spreadsheets().values()
-                .get(MASTER_SHEET_ID, "Acessos!A2:G")
+                .get(MASTER_SHEET_ID, "Acessos!A2:H")
                 .execute();
 
         List<List<Object>> values = response.getValues();
@@ -509,14 +510,24 @@ public class GoogleSheetsService {
 
                 if (sheetLogin.equals(login) && sheetSenha.equals(senha)) {
                     if (!"ATIVO".equalsIgnoreCase(status)) {
-                        throw new RuntimeException("Conta suspensa");
+                        throw new RuntimeException("Conta suspensa"); // Bloqueia inadimplentes
                     }
 
                     Map<String, String> dadosSessao = new HashMap<>();
                     dadosSessao.put("perfil", row.get(2).toString());
                     dadosSessao.put("idPlanilha", row.get(4).toString());
+
                     if (row.size() >= 6) dadosSessao.put("nomeArmazem", row.get(5).toString());
                     if (row.size() >= 7) dadosSessao.put("cnpj", row.get(6).toString());
+
+                    // MUDANÇA 2: Guarda a Senha Financeira (Coluna H - Índice 7)
+                    if (row.size() >= 8 && !row.get(7).toString().trim().isEmpty()) {
+                        dadosSessao.put("senhaFinanceira", row.get(7).toString().trim());
+                    } else {
+                        // Se esquecer de preencher na planilha, não quebra o sistema
+                        dadosSessao.put("senhaFinanceira", "admin123");
+                    }
+
                     return dadosSessao;
                 }
             }
