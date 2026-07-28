@@ -52,7 +52,7 @@
     <div class="container-fluid px-md-5">
         <a class="navbar-brand mb-0 h1 fw-bold d-flex align-items-center gap-2" href="#">
             <i class="bi bi-recycle fs-3"></i>
-            <span class="d-none d-sm-inline">Painel do Gestor</span>
+            <span class="d-none d-sm-inline" th:text="${session.nomeArmazem != null ? session.nomeArmazem : 'Painel do Gestor'}">Painel do Gestor</span>
             <span class="d-inline d-sm-none">Gestor</span>
         </a>
 
