@@ -10,7 +10,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .card { border-radius: 12px; border: none; transition: transform 0.2s; }
-        /* Aumentado de 250px para 350px para caber a legenda sem cortar */
         .chart-container { height: 350px; position: relative; }
 
         @media print {
@@ -18,12 +17,11 @@
             body { background-color: white !important; font-size: 11pt; }
             .container { width: 100% !important; max-width: none !important; margin: 0 !important; }
             .row { display: flex !important; flex-wrap: nowrap !important; }
-            .col-md-4, .col-md-6 { width: 50% !important; border: 1px solid #eee !important; padding: 10px !important; }
+            .col-md-3, .col-md-4, .col-md-6 { width: 50% !important; border: 1px solid #eee !important; padding: 10px !important; }
             .print-only { display: block !important; }
             table { width: 100% !important; border-collapse: collapse !important; }
             th, td { border: 1px solid #333 !important; padding: 5px !important; }
 
-            /* Força a cor preta em todos os textos na impressão */
             .card, .card h6, .card h3, .card span, .card-header,
             .text-white, .text-muted, .text-success, .text-danger, .text-primary {
                 color: #000 !important;
@@ -35,39 +33,50 @@
 <body class="bg-body-tertiary">
 <div class="container mt-4">
     <!-- CABEÇALHO -->
-    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print flex-wrap gap-3">
         <h2><i class="bi bi-cpu"></i> Inteligência de Negócio</h2>
-        <div>
-            <!-- BOTÃO PARA DAR BAIXA NO ESTOQUE -->
-            <a href="/admin/saida" class="btn btn-primary me-2 fw-bold shadow-sm">
-                <i class="bi bi-truck"></i> Registrar Venda (Saída)
+        <div class="d-flex gap-2 flex-wrap">
+            <!-- 🌟 NOVOS BOTÕES ADICIONADOS AQUI 🌟 -->
+            <a href="/admin/saida" class="btn btn-primary fw-bold shadow-sm">
+                <i class="bi bi-truck"></i> Saída
+            </a>
+            <a href="/admin/historico" class="btn btn-dark fw-bold shadow-sm">
+                <i class="bi bi-clock-history"></i> Histórico
+            </a>
+            <a href="/admin/despesas" class="btn btn-danger fw-bold shadow-sm">
+                <i class="bi bi-wallet2"></i> Despesas
             </a>
 
-            <button onclick="window.print()" class="btn btn-success me-2"><i class="bi bi-file-earmark-pdf"></i> Balanço Semanal</button>
-            <!-- Botão Voltar ajustado para btn-secondary para ficar visível em ambos os temas -->
-            <a href="/admin/coletas" class="btn btn-secondary shadow-sm">Voltar</a>
+            <button onclick="window.print()" class="btn btn-success fw-bold shadow-sm"><i class="bi bi-printer"></i> Balanço</button>
+            <a href="/admin/coletas" class="btn btn-secondary shadow-sm fw-bold">Voltar</a>
         </div>
     </div>
 
-    <!-- CAIXA DO DIA -->
-    <h5 class="fw-bold mb-3 no-print"><i class="bi bi-cash-coin"></i> Caixa de Hoje (Entradas e Saídas)</h5>
+    <!-- 🌟 CAIXA DO DIA (AGORA COM 4 COLUNAS PARA INCLUIR AS DESPESAS) 🌟 -->
+    <h5 class="fw-bold mb-3 no-print"><i class="bi bi-cash-coin"></i> Fluxo de Caixa Diário</h5>
     <div class="row g-3 mb-4 no-print">
-        <div class="col-md-4">
-            <div class="card shadow-sm p-3 bg-danger text-white text-center">
-                <h6>COMPRAS (Saiu do Caixa)</h6>
-                <h3>R$ <span th:text="${caixaSaidaHoje != null ? #numbers.formatDecimal(caixaSaidaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
+        <div class="col-md-3">
+            <div class="card shadow-sm p-3 bg-primary bg-opacity-75 text-white text-center h-100">
+                <h6 class="opacity-75">VENDAS (ENTROU)</h6>
+                <h3 class="fw-bold m-0">R$ <span th:text="${caixaEntradaHoje != null ? #numbers.formatDecimal(caixaEntradaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card shadow-sm p-3 bg-primary text-white text-center">
-                <h6>VENDAS (Entrou no Caixa)</h6>
-                <h3>R$ <span th:text="${caixaEntradaHoje != null ? #numbers.formatDecimal(caixaEntradaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
+        <div class="col-md-3">
+            <div class="card shadow-sm p-3 bg-warning text-dark text-center h-100">
+                <h6 class="opacity-75">COMPRAS (SAIU)</h6>
+                <h3 class="fw-bold m-0">R$ <span th:text="${caixaSaidaHoje != null ? #numbers.formatDecimal(caixaSaidaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card shadow-sm p-3 text-white text-center" th:classappend="${lucroDoDia != null && lucroDoDia >= 0} ? 'bg-success' : 'bg-secondary'">
-                <h6>SALDO DO DIA</h6>
-                <h3>R$ <span th:text="${lucroDoDia != null ? #numbers.formatDecimal(lucroDoDia, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
+        <div class="col-md-3">
+            <div class="card shadow-sm p-3 bg-danger text-white text-center h-100">
+                <h6 class="opacity-75">DESPESAS GERAIS</h6>
+                <h3 class="fw-bold m-0">R$ <span th:text="${totalDespesasHoje != null ? #numbers.formatDecimal(totalDespesasHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm p-3 text-white text-center h-100" th:classappend="${lucroDoDia != null && lucroDoDia >= 0} ? 'bg-success' : 'bg-secondary'">
+                <h6 class="opacity-75">LUCRO LÍQUIDO</h6>
+                <h3 class="fw-bold m-0">R$ <span th:text="${lucroDoDia != null ? #numbers.formatDecimal(lucroDoDia, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
             </div>
         </div>
     </div>
@@ -79,7 +88,6 @@
             <div class="card shadow-sm border-0">
                 <div class="card-body">
                     <div class="d-flex flex-wrap gap-3">
-                        <!-- Ajuste de classes no bg-body, text-body-secondary e text-body-emphasis para adaptar ao Dark/Light -->
                         <div th:each="item : ${estoqueReal}" class="border rounded p-3 text-center bg-body shadow-sm" style="min-width: 150px;">
                             <h6 class="text-body-secondary mb-1 fw-bold text-uppercase" th:text="${item.key}"></h6>
                             <h4 class="text-body-emphasis m-0" th:text="${#numbers.formatDecimal(item.value, 1, 'POINT', 1, 'COMMA')} + ' kg'"></h4>
@@ -96,7 +104,6 @@
     <!-- GRÁFICOS E INSIGHTS -->
     <h5 class="fw-bold mb-3 mt-4 no-print"><i class="bi bi-graph-up-arrow"></i> Desempenho e Gráficos</h5>
 
-    <!-- Linha 1: Gráfico de Volume e Quantidade de Clientes -->
     <div class="row no-print mb-4">
         <div class="col-md-8" th:if="${volumeDados != null}">
             <div class="card shadow-sm p-3 h-100">
@@ -113,7 +120,6 @@
         </div>
     </div>
 
-    <!-- Linha 2: Proporção de Estoque e Listas de Mais/Menos Comprados -->
     <div class="row no-print mb-4">
         <!-- Gráfico Rosca -->
         <div class="col-md-4" th:if="${dadosRoscaKg != null}">
@@ -157,7 +163,7 @@
         </div>
     </div>
 
-    <!-- ÁREA DE IMPRESSÃO (Oculta na tela) -->
+    <!-- ÁREA DE IMPRESSÃO -->
     <div class="print-only mt-2">
         <div class="text-center mb-4" style="border-bottom: 2px solid #000; padding-bottom: 10px;">
             <h2 class="fw-bold m-0">BALANÇO FINANCEIRO E ESTOQUE - COLETÂE</h2>
@@ -165,12 +171,13 @@
         </div>
 
         <table class="table table-bordered border-dark mt-3">
-            <thead class="table-dark text-center"><tr><th colspan="3">FECHAMENTO DO CAIXA DE HOJE</th></tr></thead>
+            <thead class="table-dark text-center"><tr><th colspan="4">FECHAMENTO DO CAIXA DE HOJE</th></tr></thead>
             <tbody>
             <tr class="text-center">
                 <td><strong>Entradas (Vendas):</strong><br>R$ <span th:text="${caixaEntradaHoje != null ? #numbers.formatDecimal(caixaEntradaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></td>
                 <td><strong>Saídas (Compras):</strong><br>R$ <span th:text="${caixaSaidaHoje != null ? #numbers.formatDecimal(caixaSaidaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></td>
-                <td><strong>Saldo:</strong><br>R$ <span th:text="${lucroDoDia != null ? #numbers.formatDecimal(lucroDoDia, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></td>
+                <td><strong>Despesas:</strong><br>R$ <span th:text="${totalDespesasHoje != null ? #numbers.formatDecimal(totalDespesasHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></td>
+                <td><strong>Lucro Líquido:</strong><br>R$ <span th:text="${lucroDoDia != null ? #numbers.formatDecimal(lucroDoDia, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></td>
             </tr>
             </tbody>
         </table>
@@ -192,12 +199,10 @@
 </div>
 
 <script th:inline="javascript">
-    // Mudei o script para rodar DENTRO do carregamento da página para ler o tema primeiro!
     document.addEventListener('DOMContentLoaded', () => {
         const currentTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-bs-theme', currentTheme);
 
-        // Adapta a cor das letras do gráfico de acordo com o tema (Claro = Preto, Escuro = Branco/Cinza claro)
         Chart.defaults.color = currentTheme === 'dark' ? '#dee2e6' : '#212529';
         Chart.defaults.borderColor = currentTheme === 'dark' ? '#495057' : '#e9ecef';
 
