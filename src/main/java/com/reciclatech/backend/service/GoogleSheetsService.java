@@ -40,10 +40,10 @@ public class GoogleSheetsService {
         return "15ZPzZ9Gxm5iv...";
     }
 
+    // 🌟 NOVO: MÉTODO À PROVA DE FALHAS PARA CARREGAR ARMAZÉNS
     public List<Map<String, Object>> obterCotacoesPublicas() {
         List<Map<String, Object>> cotacoes = new ArrayList<>();
         try {
-            // 1. Lê a planilha mestre para achar todos os clientes cadastrados
             ValueRange response = sheetsService.spreadsheets().values()
                     .get(MASTER_SHEET_ID, "Acessos!A2:F")
                     .execute();
@@ -51,7 +51,6 @@ public class GoogleSheetsService {
             List<List<Object>> values = response.getValues();
             if (values == null || values.isEmpty()) return cotacoes;
 
-            // HashSet para não repetir o armazém caso ele tenha GESTOR e OPERADOR cadastrados
             Set<String> planilhasProcessadas = new HashSet<>();
 
             for (List<Object> row : values) {
@@ -60,27 +59,26 @@ public class GoogleSheetsService {
                     String idPlanilha = row.get(4).toString().trim();
                     String nomeArmazem = row.get(5).toString().trim();
 
-                    // Se estiver ativo e a gente ainda não tiver pego os preços dele
                     if ("ATIVO".equalsIgnoreCase(status) && !planilhasProcessadas.contains(idPlanilha)) {
                         planilhasProcessadas.add(idPlanilha);
 
+                        // 1. Prepara os dados do armazém IMEDIATAMENTE
+                        Map<String, Object> dados = new HashMap<>();
+                        dados.put("idPlanilha", idPlanilha);
+                        dados.put("nome", nomeArmazem);
+                        dados.put("htmlId", nomeArmazem.replaceAll("[^a-zA-Z0-9]", "").toLowerCase());
+
+                        // 2. Tenta buscar os preços de forma segura
                         try {
-                            // Busca os materiais específicos da planilha deste cliente
                             List<Material> materiaisDesteArmazem = listarMateriais(idPlanilha);
-
-                            // Cria um "pacotinho" com o Nome e os Preços dele
-                            Map<String, Object> dados = new HashMap<>();
-                            dados.put("idPlanilha", idPlanilha);
-                            dados.put("nome", nomeArmazem);
                             dados.put("materiais", materiaisDesteArmazem);
-
-                            // Cria um ID HTML limpo (ex: "Coletaê Matriz" vira "coletaematriz")
-                            dados.put("htmlId", nomeArmazem.replaceAll("[^a-zA-Z0-9]", "").toLowerCase());
-
-                            cotacoes.add(dados);
                         } catch (Exception e) {
-                            System.err.println("Erro ao buscar preços do armazém " + nomeArmazem + ": " + e.getMessage());
+                            System.err.println("Erro ao buscar preços de " + nomeArmazem + ": " + e.getMessage());
+                            dados.put("materiais", new ArrayList<>()); // Evita quebrar a tela
                         }
+
+                        // 3. Adiciona o armazém na lista MESMO SE os preços falharem!
+                        cotacoes.add(dados);
                     }
                 }
             }
