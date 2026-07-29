@@ -1,76 +1,204 @@
 <!DOCTYPE html>
-<html xmlns:th="[http://www.thymeleaf.org](http://www.thymeleaf.org)" data-bs-theme="light">
+<html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
 <head>
-    <title>Central de Extratos</title>
+    <title>Central de Extratos - Coletaê</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
+
+    <!-- Bootstrap 5.3 & Google Fonts -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <style>
+        :root {
+            --primary: #059669;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bs-tertiary-bg);
+        }
+
+        /* Modernizando a Tabela */
+        .table-custom {
+            border-collapse: separate;
+            border-spacing: 0 10px;
+            margin-top: -10px;
+        }
+        .table-custom thead th {
+            border: none;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            color: var(--bs-secondary-color);
+            background: transparent;
+            padding-bottom: 0;
+        }
+        .table-custom tbody tr {
+            background-color: var(--bs-body-bg);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border-radius: 12px;
+        }
+        .table-custom tbody tr:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .table-custom tbody td {
+            border: none;
+            padding: 16px 20px;
+            vertical-align: middle;
+        }
+        .table-custom tbody td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+        .table-custom tbody td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+
+        /* Componente de Avatar */
+        .avatar-circle {
+            width: 40px; height: 40px;
+            background-color: rgba(5, 150, 105, 0.1);
+            color: var(--primary);
+            border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-weight: 600; font-size: 1.1rem;
+        }
+
+        /* Input de Busca */
+        .search-bar {
+            background-color: var(--bs-body-bg);
+            border: 1px solid var(--bs-border-color);
+            border-radius: 50px;
+            padding: 8px 20px;
+            width: 100%;
+            max-width: 350px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .search-bar input {
+            border: none; background: transparent; outline: none; width: 100%;
+            color: var(--bs-body-color);
+        }
+
+        /* Empty State */
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+            background-color: var(--bs-body-bg);
+            border-radius: 16px;
+            border: 1px dashed var(--bs-border-color);
+        }
+        .empty-icon {
+            font-size: 3rem; color: var(--bs-secondary-color); opacity: 0.5; margin-bottom: 15px;
+        }
+    </style>
 </head>
-<body class="bg-light p-3 p-md-5">
+<body class="p-3 p-md-5">
 
-<div class="container" style="max-width: 800px;">
+<div class="container-fluid" style="max-width: 1000px;">
 
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <!-- CABEÇALHO -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-            <h2 class="text-success fw-bold m-0"><i class="bi bi-files"></i> Extratos de Hoje</h2>
-            <small class="text-muted"><i class="bi bi-clock"></i> O histórico exibe apenas vendas das últimas 24h.</small>
+            <h2 class="fw-bold m-0 d-flex align-items-center gap-2">
+                <i class="bi bi-receipt text-success"></i> Central de Extratos
+                <!-- Tag contando o número de atendimentos -->
+                <span class="badge bg-success bg-opacity-10 text-success rounded-pill fs-6 py-1 px-3 border border-success border-opacity-25" th:text="${#lists.size(usuarios)} + ' Hoje'"></span>
+            </h2>
+            <p class="text-muted mb-0 mt-1 small"><i class="bi bi-clock-history"></i> O histórico exibe apenas as vendas confirmadas nas últimas 24h.</p>
         </div>
-        <a href="/admin/coletas" class="btn btn-outline-secondary">Voltar para Painel</a>
-    </div>
-
-    <div class="card shadow border-0">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead class="table-success">
-                    <tr>
-                        <th class="ps-4 py-3 text-nowrap">Colaborador</th>
-                        <th>ID</th>
-                        <th class="text-end pe-4">Documento</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-
-                    <tr th:if="${usuarios.empty}">
-                        <td colspan="3" class="text-center py-5 text-muted">
-                            <i class="bi bi-calendar-x fs-1 opacity-50"></i>
-                            <p class="mt-2 fw-bold">Nenhum atendimento finalizado hoje.</p>
-                            <small>Novas vendas aparecerão aqui automaticamente.</small>
-                        </td>
-                    </tr>
-
-                    <tr th:each="user : ${usuarios}">
-                        <td class="ps-4 fw-bold text-nowrap">
-                            <i class="bi bi-person-circle text-success me-2"></i>
-                            <span th:text="${user.nome}">Nome</span>
-                        </td>
-                        <td><span class="badge bg-secondary" th:text="'ID: ' + ${user.id}">ID</span></td>
-                        <td class="text-end pe-4">
-                            <a th:href="@{|/extrato/${user.id}?autoPrint=true|}" target="_blank" class="btn btn-success rounded-pill">
-                                <i class="bi bi-printer"></i> Imprimir Extrato
-                            </a>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
+        <div class="d-flex gap-3 align-items-center">
+            <!-- Barra de Pesquisa JS -->
+            <div class="search-bar shadow-sm">
+                <i class="bi bi-search text-muted"></i>
+                <input type="text" id="searchInput" placeholder="Buscar catador ou ID..." onkeyup="filterExtratos()">
             </div>
+            <a href="/admin/coletas" class="btn btn-dark rounded-pill fw-bold px-4 shadow-sm">Voltar</a>
         </div>
     </div>
 
-    <div class="alert alert-warning mt-4 text-center small">
-        <i class="bi bi-exclamation-triangle"></i> Somente ofertas com status <strong>VENDIDO</strong> aparecem aqui.
+    <!-- ÁREA DA LISTA / TABELA -->
+    <div class="table-responsive" style="overflow-visible;">
+        <table class="table table-custom w-100" id="extratosTable">
+            <thead th:if="${!usuarios.empty}">
+            <tr>
+                <th class="ps-4">Colaborador / Catador</th>
+                <th>Identificação</th>
+                <th class="text-end pe-4">Ação</th>
+            </tr>
+            </thead>
+            <tbody>
+
+            <!-- ESTADO VAZIO (EMPTY STATE) -->
+            <tr th:if="${usuarios.empty}">
+                <td colspan="3" class="p-0">
+                    <div class="empty-state shadow-sm">
+                        <div class="empty-icon"><i class="bi bi-inbox"></i></div>
+                        <h5 class="fw-bold text-dark">Nenhum atendimento finalizado hoje.</h5>
+                        <p class="text-muted mb-0">As novas vendas aparecerão aqui automaticamente após a conclusão no balcão.</p>
+                    </div>
+                </td>
+            </tr>
+
+            <!-- LINHAS DA TABELA -->
+            <tr th:each="user : ${usuarios}" class="extrato-row" th:data-name="${user.nome}" th:data-id="${user.id}">
+                <td class="ps-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-circle">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold m-0" th:text="${user.nome}">Nome do Catador</h6>
+                            <small class="text-muted"><i class="bi bi-whatsapp"></i> <span th:text="${user.telefone}"></span></small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge bg-light text-dark border border-secondary-subtle px-2 py-1 text-monospace">
+                        ID: <span th:text="${user.id}"></span>
+                    </span>
+                </td>
+                <td class="text-end pe-4">
+                    <a th:href="@{|/extrato/${user.id}?autoPrint=true|}" target="_blank" class="btn btn-outline-success rounded-pill fw-bold px-3 btn-sm">
+                        <i class="bi bi-printer-fill me-1"></i> Imprimir
+                    </a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
     </div>
+
+    <div th:if="${!usuarios.empty}" class="text-center mt-3">
+        <span class="text-muted small"><i class="bi bi-shield-check"></i> Ambiente Seguro. Somente ofertas com status <strong>VENDIDO</strong> são contabilizadas.</span>
+    </div>
+
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
 <script>
-    // Lê a memória do navegador e aplica o tema na página atual
+    // Filtro de pesquisa em tempo real
+    function filterExtratos() {
+        const input = document.getElementById('searchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('.extrato-row');
+
+        rows.forEach(row => {
+            const name = row.getAttribute('data-name').toLowerCase();
+            const id = row.getAttribute('data-id').toLowerCase();
+
+            if (name.includes(input) || id.includes(input)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    // Gerenciamento de Tema (Dark/Light)
     document.addEventListener('DOMContentLoaded', () => {
         const currentTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-bs-theme', currentTheme);
     });
 </script>
+</body>
 </html>
