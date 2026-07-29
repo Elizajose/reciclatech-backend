@@ -60,7 +60,14 @@
         }
         .btn-zap:hover { background: #16a34a; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(37, 211, 102, 0.4); }
 
-        /* 🌟 NOVO VISUAL DAS COTAÇÕES (Elegante e Discreto) */
+        /* Cotações por Armazém */
+        .price-card {
+            background: white; border: 1px solid #e5e7eb; border-radius: 16px;
+            padding: 20px; text-align: center; transition: 0.3s;
+        }
+        .price-card:hover { transform: translateY(-5px); border-color: var(--primary); box-shadow: 0 10px 25px -5px rgba(5, 150, 105, 0.1); }
+        .price-value { font-size: 1.75rem; font-weight: 900; color: var(--primary); }
+
         .nav-pills .nav-link { color: var(--dark); border-radius: 50px; padding: 10px 24px; font-weight: 600; margin: 0 5px; border: 1px solid #e5e7eb; background: white;}
         .nav-pills .nav-link.active { background-color: var(--primary); color: white; border-color: var(--primary);}
 
@@ -224,7 +231,7 @@
                  th:id="'content-' + ${armazem.htmlId}"
                  role="tabpanel">
 
-                <!-- 🌟 O NOVO DESIGN DE LISTA HORIZONTAL AQUI 🌟 -->
+                <!-- DESIGN DE LISTA HORIZONTAL -->
                 <div class="row g-3 justify-content-center">
                     <div th:each="m : ${armazem.materiais}" class="col-12 col-sm-6 col-lg-4">
                         <div class="price-item">
@@ -403,7 +410,7 @@
     </div>
 </footer>
 
-<!-- MODAL TERMOS MANTIDO IGUAL -->
+<!-- 🌟 MODAL DE TERMOS RESTAURADO (LGPD COMPLIANT) 🌟 -->
 <div class="modal fade" id="modalTermos" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable modal-lg">
         <div class="modal-content">
@@ -413,8 +420,24 @@
             </div>
             <div class="modal-body p-4 text-dark" style="text-align: justify;">
                 <h6 class="fw-bold">1. O Serviço</h6>
-                <p>O Coletaê é uma plataforma de intermediação e gestão para o mercado de recicláveis...</p>
-                <!-- (Textos mantidos do seu código original) -->
+                <p>O Coletaê é uma plataforma de intermediação e gestão para o mercado de recicláveis. O sistema facilita o agendamento de coletas e a formalização de transações entre vendedores e compradores (ferros-velhos/MEIs).</p>
+
+                <h6 class="fw-bold mt-4">2. Coleta de Dados e Finalidade</h6>
+                <p>Para o funcionamento do serviço, coletamos:</p>
+                <ul>
+                    <li><strong>Nome e WhatsApp:</strong> Para que o comprador possa entrar em contato e confirmar a coleta.</li>
+                    <li><strong>Localização/Endereço:</strong> Para permitir que a equipe de logística encontre o local do material.</li>
+                    <li><strong>CPF (Opcional para Recibo):</strong> Utilizado exclusivamente para a geração do comprovante de renda/recibo de pagamento.</li>
+                </ul>
+
+                <h6 class="fw-bold mt-4">3. Veracidade das Informações</h6>
+                <p>O usuário é responsável pela veracidade dos dados informados. O Coletaê funciona como uma ferramenta de registro; a origem ilícita de materiais é de inteira responsabilidade de quem realiza a oferta.</p>
+
+                <h6 class="fw-bold mt-4">4. Segurança</h6>
+                <p>Os dados são armazenados em nuvem (Google Cloud) e não são compartilhados com terceiros para fins publicitários. O acesso às informações é restrito aos gestores.</p>
+
+                <h6 class="fw-bold mt-4">5. Aceite</h6>
+                <p>Ao clicar em "Agendar Coleta" ou utilizar o "Coleta Rápida", o usuário concorda com o processamento desses dados para os fins descritos acima.</p>
             </div>
         </div>
     </div>
