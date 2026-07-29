@@ -145,7 +145,9 @@ public class TelaController {
     @PostMapping("/publicar")
     public String solicitarColeta(@RequestParam String endereco,
                                   @RequestParam String nomeVendedor,
-                                  @RequestParam String telefoneVendedor) {
+                                  @RequestParam String telefoneVendedor,
+                                  @RequestParam String idPlanilhaDestino) { // <--- A MÁGICA ENTRA AQUI
+
         String zapLimpo = telefoneVendedor.replaceAll("\\D", "");
         Usuario novo = new Usuario();
         novo.setNome(nomeVendedor);
@@ -154,7 +156,8 @@ public class TelaController {
         novo.setTipo(Usuario.TipoUsuario.CATADOR);
 
         try {
-            googleSheetsService.salvarSolicitacaoInicial(novo, endereco);
+            // Repassa o ID exato para o Google Sheets salvar na planilha certa!
+            googleSheetsService.salvarSolicitacaoInicial(novo, endereco, idPlanilhaDestino);
         } catch (IOException e) {
             System.err.println("Erro ao publicar: " + e.getMessage());
         }

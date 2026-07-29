@@ -92,8 +92,8 @@ public class GoogleSheetsService {
 
     // --- GESTÃO DE USUÁRIOS ---
 
-    public void salvarUsuario(Usuario usuario) throws IOException {
-        String spreadsheetId = getSpreadsheetIdAtivo();
+    // 🌟 NOVO: Salva o usuário especificando para qual planilha ele vai
+    public void salvarUsuario(Usuario usuario, String planilhaAlvo) throws IOException {
         usuario.prePersist();
         List<Object> row = Arrays.asList(
                 usuario.getId() != null ? usuario.getId() : System.currentTimeMillis(),
@@ -109,9 +109,14 @@ public class GoogleSheetsService {
 
         ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
         sheetsService.spreadsheets().values()
-                .append(spreadsheetId, "Usuarios!A1", body)
+                .append(planilhaAlvo, "Usuarios!A1", body)
                 .setValueInputOption("USER_ENTERED")
                 .execute();
+    }
+
+    // Sobrecarga para manter o resto do sistema antigo funcionando normal (Pesagem Rápida, etc)
+    public void salvarUsuario(Usuario usuario) throws IOException {
+        salvarUsuario(usuario, getSpreadsheetIdAtivo());
     }
 
     public List<Usuario> listarUsuarios() throws IOException {
@@ -172,12 +177,10 @@ public class GoogleSheetsService {
 
     // --- GESTÃO DE MATERIAIS ---
 
-    // 🌟 MUDANÇA: Agora o listarMateriais normal chama o listarMateriais passando o ID, reaproveitando código
     public List<Material> listarMateriais() throws IOException {
         return listarMateriais(getSpreadsheetIdAtivo());
     }
 
-    // 🌟 MUDANÇA: Sobrecarga para podermos buscar os preços de qualquer armazém sem mexer na sessão
     public List<Material> listarMateriais(String sheetId) throws IOException {
         ValueRange response = sheetsService.spreadsheets().values()
                 .get(sheetId, "Materiais!A2:D")
@@ -292,15 +295,24 @@ public class GoogleSheetsService {
                 }).collect(Collectors.toList());
     }
 
-    public void salvarSolicitacaoInicial(Usuario usuario, String endereco) throws IOException {
-        salvarUsuario(usuario);
+    // 🌟 MUDANÇA: Recebe o ID do armazém que o catador escolheu no formulário
+    public void salvarSolicitacaoInicial(Usuario usuario, String endereco, String idPlanilhaDestino) throws IOException {
+        // Se der algum erro e vier vazio, cai pro seu armazém matriz por segurança
+        String planilhaAlvo = (idPlanilhaDestino != null && !idPlanilhaDestino.trim().isEmpty()) ? idPlanilhaDestino : getSpreadsheetIdAtivo();
+
+        salvarUsuario(usuario, planilhaAlvo); // Salva o cliente na planilha certa!
+
         List<Object> rowOferta = Arrays.asList(
                 System.currentTimeMillis(), "Solicitação de Coleta", "0", endereco, "0", "0",
                 LocalDate.now().toString(), usuario.getTelefone(), "DISPONIVEL", LocalDate.now().toString()
         );
         ValueRange body = new ValueRange().setValues(Collections.singletonList(rowOferta));
-        String spreadsheetId = getSpreadsheetIdAtivo();
-        sheetsService.spreadsheets().values().append(spreadsheetId, "Ofertas!A1", body).setValueInputOption("USER_ENTERED").execute();
+        sheetsService.spreadsheets().values().append(planilhaAlvo, "Ofertas!A1", body).setValueInputOption("USER_ENTERED").execute();
+    }
+
+    // Sobrecarga de segurança para manter o sistema antigo funcionando
+    public void salvarSolicitacaoInicial(Usuario usuario, String endereco) throws IOException {
+        salvarSolicitacaoInicial(usuario, endereco, getSpreadsheetIdAtivo());
     }
 
     public List<Usuario> buscarUsuariosComColetasPendentes() throws IOException {
