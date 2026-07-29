@@ -60,16 +60,19 @@
         }
         .btn-zap:hover { background: #16a34a; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(37, 211, 102, 0.4); }
 
-        /* Cotações por Armazém */
-        .price-card {
-            background: white; border: 1px solid #e5e7eb; border-radius: 16px;
-            padding: 20px; text-align: center; transition: 0.3s;
-        }
-        .price-card:hover { transform: translateY(-5px); border-color: var(--primary); box-shadow: 0 10px 25px -5px rgba(5, 150, 105, 0.1); }
-        .price-value { font-size: 1.75rem; font-weight: 900; color: var(--primary); }
-
+        /* 🌟 NOVO VISUAL DAS COTAÇÕES (Elegante e Discreto) */
         .nav-pills .nav-link { color: var(--dark); border-radius: 50px; padding: 10px 24px; font-weight: 600; margin: 0 5px; border: 1px solid #e5e7eb; background: white;}
         .nav-pills .nav-link.active { background-color: var(--primary); color: white; border-color: var(--primary);}
+
+        .price-item {
+            background: white; border: 1px solid #e5e7eb; border-radius: 12px;
+            padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;
+            transition: all 0.2s ease-in-out;
+        }
+        .price-item:hover { border-color: var(--primary); box-shadow: 0 6px 16px rgba(5, 150, 105, 0.08); transform: translateY(-2px); }
+        .price-name { font-weight: 800; color: var(--dark); font-size: 0.9rem; margin: 0; line-height: 1.2; letter-spacing: 0.5px;}
+        .price-unit { font-size: 0.75rem; color: #6b7280; font-weight: 500;}
+        .price-value { font-size: 1.15rem; font-weight: 900; color: var(--primary); margin: 0; }
 
         /* Funcionalidades */
         .feature-card {
@@ -221,16 +224,28 @@
                  th:id="'content-' + ${armazem.htmlId}"
                  role="tabpanel">
 
-                <div class="row g-4 justify-content-center">
-                    <div th:each="m : ${armazem.materiais}" class="col-6 col-md-3">
-                        <div class="price-card">
-                            <div class="text-muted small text-uppercase fw-bold mb-2" th:text="${m.nome}">Papelão</div>
-                            <div class="price-value">R$ <span th:text="${m.precoPorKg}">0.00</span></div>
-                            <div class="text-muted small mt-1">por <span th:text="${m.unidade}">KG</span></div>
+                <!-- 🌟 O NOVO DESIGN DE LISTA HORIZONTAL AQUI 🌟 -->
+                <div class="row g-3 justify-content-center">
+                    <div th:each="m : ${armazem.materiais}" class="col-12 col-sm-6 col-lg-4">
+                        <div class="price-item">
+                            <div class="d-flex align-items-center gap-3">
+                                <!-- Ícone sutil ao lado do nome do material -->
+                                <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                    <i class="bi bi-recycle fs-6"></i>
+                                </div>
+                                <div class="text-start">
+                                    <p class="price-name text-uppercase" th:text="${m.nome}">Papelão</p>
+                                    <span class="price-unit">por <span th:text="${m.unidade}">KG</span></span>
+                                </div>
+                            </div>
+                            <!-- O Valor alinhado à direita -->
+                            <div class="price-value text-end">
+                                R$ <span th:text="${m.precoPorKg}">0.00</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div th:if="${#lists.isEmpty(armazem.materiais)}" class="col-12 text-center text-muted">
+                    <div th:if="${#lists.isEmpty(armazem.materiais)}" class="col-12 text-center text-muted py-4">
                         <p><i class="bi bi-info-circle me-2"></i>Nenhum preço cadastrado para este armazém no momento.</p>
                     </div>
                 </div>
