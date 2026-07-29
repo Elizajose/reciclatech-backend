@@ -40,7 +40,6 @@ public class GoogleSheetsService {
         return "15ZPzZ9Gxm5iv...";
     }
 
-    // 🌟 NOVO: MÉTODO PARA CARREGAR OS PREÇOS DE TODOS OS ARMAZÉNS NA TELA INICIAL
     public List<Map<String, Object>> obterCotacoesPublicas() {
         List<Map<String, Object>> cotacoes = new ArrayList<>();
         try {
@@ -71,6 +70,7 @@ public class GoogleSheetsService {
 
                             // Cria um "pacotinho" com o Nome e os Preços dele
                             Map<String, Object> dados = new HashMap<>();
+                            dados.put("idPlanilha", idPlanilha);
                             dados.put("nome", nomeArmazem);
                             dados.put("materiais", materiaisDesteArmazem);
 
