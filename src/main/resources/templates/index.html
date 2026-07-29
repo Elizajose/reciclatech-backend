@@ -102,6 +102,26 @@
         /* Footer */
         .social-circle { width: 45px; height: 45px; background: rgba(255,255,255,0.1); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: white; transition: 0.3s; text-decoration: none;}
         .social-circle:hover { background: var(--primary); color: white; transform: translateY(-3px);}
+
+        /* 🌟 CSS DOS PLANOS 🌟 */
+        .pricing-card {
+            background: white; border: 1px solid #e5e7eb; border-radius: 20px;
+            padding: 40px; text-align: center; transition: all 0.3s ease; position: relative;
+            height: 100%; display: flex; flex-direction: column;
+        }
+        .pricing-card:hover { transform: translateY(-10px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+        .pricing-card.popular { border: 2px solid var(--primary); box-shadow: 0 20px 25px -5px rgba(5, 150, 105, 0.1); transform: scale(1.05); z-index: 1;}
+        .pricing-card.popular:hover { transform: scale(1.05) translateY(-5px); }
+        .popular-badge {
+            position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
+            background: var(--primary); color: white; padding: 6px 16px; border-radius: 20px;
+            font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .plan-price { font-size: 3rem; font-weight: 900; color: var(--dark); margin: 20px 0; }
+        .plan-price span { font-size: 1rem; color: #6b7280; font-weight: 500; }
+        .plan-features { list-style: none; padding: 0; margin: 30px 0; text-align: left; flex-grow: 1;}
+        .plan-features li { margin-bottom: 15px; color: #4b5563; display: flex; align-items: flex-start; gap: 10px;}
+        .plan-features li i { color: var(--primary); font-size: 1.2rem; }
     </style>
 </head>
 <body>
@@ -119,6 +139,7 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto gap-2 align-items-center text-center">
                 <li class="nav-item"><a class="nav-link" href="#cotacoes">Cotações</a></li>
+                <li class="nav-item"><a class="nav-link" href="#planos">Planos</a></li>
                 <li class="nav-item"><a class="nav-link" href="#funcionalidades">O Sistema</a></li>
                 <li class="nav-item"><a class="nav-link" href="#reciclaveis">Como Reciclar</a></li>
                 <li class="nav-item"><a class="nav-link" href="#quem-somos">Nossa História</a></li>
@@ -261,8 +282,80 @@
     </div>
 </section>
 
+<!-- 🌟 NOVA SEÇÃO DE PLANOS 🌟 -->
+<section id="planos" class="py-5 bg-light">
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <h6 class="text-success fw-bold text-uppercase">Escolha o seu plano</h6>
+            <h2 class="fw-bold text-dark">Planos que crescem com a sua operação</h2>
+            <p class="text-muted mt-2">Sem taxas escondidas. Cancele quando quiser.</p>
+        </div>
+
+        <div class="row justify-content-center align-items-stretch g-4 px-lg-5 mt-4">
+
+            <!-- Plano Start -->
+            <div class="col-lg-4">
+                <div class="pricing-card">
+                    <h3 class="fw-bold text-dark">Start</h3>
+                    <p class="text-muted small">Para pequenos depósitos focados em controle básico.</p>
+                    <div class="plan-price">R$ 149<span>,90/mês</span></div>
+
+                    <ul class="plan-features">
+                        <li><i class="bi bi-check-circle-fill"></i> Controle de Pesagem</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Emissão de Recibos Digitais</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Cadastro de Catadores</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Cotação Online para o público</li>
+                        <li><i class="bi bi-check-circle-fill text-secondary opacity-50"></i> <span class="text-muted opacity-75 text-decoration-line-through">Painel Financeiro / DRE</span></li>
+                    </ul>
+
+                    <a href="https://wa.me/5587991919496?text=Olá!%20Quero%20assinar%20o%20Plano%20START%20do%20Coletaê." target="_blank" class="btn btn-outline-dark btn-lg w-100 fw-bold rounded-pill">Assinar Start</a>
+                </div>
+            </div>
+
+            <!-- Plano Pro (Destaque) -->
+            <div class="col-lg-4">
+                <div class="pricing-card popular bg-dark text-white">
+                    <div class="popular-badge">Mais Popular</div>
+                    <h3 class="fw-bold text-white">Pro</h3>
+                    <p class="text-light opacity-75 small">O sistema completo para organizar e lucrar mais.</p>
+                    <div class="plan-price text-white">R$ 199<span>,90/mês</span></div>
+
+                    <ul class="plan-features">
+                        <li><i class="bi bi-check-circle-fill text-warning"></i> <strong>Tudo do plano Start</strong></li>
+                        <li class="text-white"><i class="bi bi-check-circle-fill text-warning"></i> Painel Financeiro e Lucro do Dia</li>
+                        <li class="text-white"><i class="bi bi-check-circle-fill text-warning"></i> Controle de Estoque de Saída</li>
+                        <li class="text-white"><i class="bi bi-check-circle-fill text-warning"></i> Múltiplos Usuários (Gestor/Operador)</li>
+                        <li class="text-white"><i class="bi bi-check-circle-fill text-warning"></i> Histórico Completo de Vendas</li>
+                    </ul>
+
+                    <a href="https://wa.me/5587991919496?text=Olá!%20Quero%20assinar%20o%20Plano%20PRO%20do%20Coletaê." target="_blank" class="btn btn-success btn-lg w-100 fw-bold rounded-pill">Assinar Pro</a>
+                </div>
+            </div>
+
+            <!-- Plano Personalizado -->
+            <div class="col-lg-4">
+                <div class="pricing-card">
+                    <h3 class="fw-bold text-dark">Personalizado</h3>
+                    <p class="text-muted small">Para grandes operações, galpões múltiplos ou cooperativas.</p>
+                    <div class="plan-price fs-4 mt-4 mb-4" style="padding-top: 15px;">Sob Consulta</div>
+
+                    <ul class="plan-features">
+                        <li><i class="bi bi-star-fill text-dark"></i> <strong>Tudo do plano Pro</strong></li>
+                        <li><i class="bi bi-star-fill text-dark"></i> Treinamento Presencial/Online da Equipe</li>
+                        <li><i class="bi bi-star-fill text-dark"></i> Ajustes Específicos nas Planilhas</li>
+                        <li><i class="bi bi-star-fill text-dark"></i> Suporte Prioritário Direto</li>
+                    </ul>
+
+                    <a href="https://wa.me/5587991919496?text=Olá!%20Gostaria%20de%20fazer%20um%20orçamento%20para%20o%20Plano%20PERSONALIZADO%20do%20Coletaê." target="_blank" class="btn btn-outline-dark btn-lg w-100 fw-bold rounded-pill">Falar com Consultor</a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
 <!-- FUNCIONALIDADES DO SISTEMA -->
-<section id="funcionalidades" class="py-5 bg-light">
+<section id="funcionalidades" class="py-5 bg-white">
     <div class="container py-5">
         <div class="text-center mb-5">
             <h6 class="text-success fw-bold text-uppercase">Para o seu negócio</h6>
@@ -270,21 +363,21 @@
         </div>
         <div class="row g-4">
             <div class="col-md-4">
-                <div class="feature-card">
+                <div class="feature-card shadow-sm border-0 bg-light">
                     <div class="feature-icon-wrapper"><i class="bi bi-currency-exchange feature-icon"></i></div>
                     <h4 class="fw-bold">Painel Financeiro</h4>
                     <p class="text-muted mt-3 mb-0">Controle suas margens de lucro, saídas para a indústria e tenha uma visão clara do seu fluxo de caixa do dia.</p>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="feature-card">
+                <div class="feature-card shadow-sm border-0 bg-light">
                     <div class="feature-icon-wrapper"><i class="bi bi-lightning-charge feature-icon"></i></div>
                     <h4 class="fw-bold">Atendimento Ágil</h4>
                     <p class="text-muted mt-3 mb-0">Registre pesos no balcão rapidamente. O sistema calcula tudo na hora e já emite o comprovante digital.</p>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="feature-card">
+                <div class="feature-card shadow-sm border-0 bg-light">
                     <div class="feature-icon-wrapper"><i class="bi bi-shield-lock feature-icon"></i></div>
                     <h4 class="fw-bold">Gestão Segura</h4>
                     <p class="text-muted mt-3 mb-0">Sistema de perfis (Gestor vs Operador). Seus funcionários operam o pátio sem ter acesso aos dados financeiros.</p>
@@ -295,7 +388,7 @@
 </section>
 
 <!-- VÍDEO EDUCATIVO -->
-<section id="reciclaveis" class="py-5 bg-white">
+<section id="reciclaveis" class="py-5 bg-light">
     <div class="container py-5">
         <div class="row align-items-center g-5">
             <div class="col-lg-6">
@@ -336,7 +429,7 @@
 </section>
 
 <!-- QUEM SOMOS -->
-<section id="quem-somos" class="py-5 bg-light">
+<section id="quem-somos" class="py-5 bg-white">
     <div class="container py-5">
         <div class="row align-items-center g-5">
             <div class="col-lg-6 order-2 order-lg-1">
@@ -404,7 +497,7 @@
         </div>
         <hr class="border-secondary opacity-25">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4 text-secondary small">
-            <p class="m-0">© 2026 Coletaê SaaS. Desenvolvido por EJN.</p>
+            <p class="m-0">© 2026 Coletaê. Desenvolvido por EJN.</p>
             <a href="#" class="text-secondary text-decoration-none mt-2 mt-md-0" data-bs-toggle="modal" data-bs-target="#modalTermos">Termos de Uso e Privacidade</a>
         </div>
     </div>
