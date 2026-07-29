@@ -14,6 +14,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -40,7 +41,6 @@ public class GoogleSheetsService {
         return "15ZPzZ9Gxm5iv...";
     }
 
-    // 🌟 NOVO: MÉTODO À PROVA DE FALHAS PARA CARREGAR ARMAZÉNS
     public List<Map<String, Object>> obterCotacoesPublicas() {
         List<Map<String, Object>> cotacoes = new ArrayList<>();
         try {
@@ -61,23 +61,17 @@ public class GoogleSheetsService {
 
                     if ("ATIVO".equalsIgnoreCase(status) && !planilhasProcessadas.contains(idPlanilha)) {
                         planilhasProcessadas.add(idPlanilha);
-
-                        // 1. Prepara os dados do armazém IMEDIATAMENTE
                         Map<String, Object> dados = new HashMap<>();
                         dados.put("idPlanilha", idPlanilha);
                         dados.put("nome", nomeArmazem);
                         dados.put("htmlId", nomeArmazem.replaceAll("[^a-zA-Z0-9]", "").toLowerCase());
 
-                        // 2. Tenta buscar os preços de forma segura
                         try {
                             List<Material> materiaisDesteArmazem = listarMateriais(idPlanilha);
                             dados.put("materiais", materiaisDesteArmazem);
                         } catch (Exception e) {
-                            System.err.println("Erro ao buscar preços de " + nomeArmazem + ": " + e.getMessage());
-                            dados.put("materiais", new ArrayList<>()); // Evita quebrar a tela
+                            dados.put("materiais", new ArrayList<>());
                         }
-
-                        // 3. Adiciona o armazém na lista MESMO SE os preços falharem!
                         cotacoes.add(dados);
                     }
                 }
@@ -88,9 +82,61 @@ public class GoogleSheetsService {
         return cotacoes;
     }
 
-    // --- GESTÃO DE USUÁRIOS ---
+    // 🌟 NOVA GESTÃO DE DESPESAS 🌟
+    public void salvarDespesa(String descricao, BigDecimal valor) throws IOException {
+        String spreadsheetId = getSpreadsheetIdAtivo();
+        String valorFormatado = String.format("%.2f", valor).replace(".", ",");
+        List<Object> row = Arrays.asList(
+                System.currentTimeMillis(),
+                descricao,
+                valorFormatado,
+                LocalDate.now(ZoneId.of("America/Recife")).toString()
+        );
+        ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
+        sheetsService.spreadsheets().values()
+                .append(spreadsheetId, "Despesas!A1", body)
+                .setValueInputOption("USER_ENTERED")
+                .execute();
+    }
 
-    // 🌟 NOVO: Salva o usuário especificando para qual planilha ele vai
+    public List<Map<String, String>> listarDespesas() throws IOException {
+        String spreadsheetId = getSpreadsheetIdAtivo();
+        List<Map<String, String>> lista = new ArrayList<>();
+        try {
+            ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Despesas!A2:D").execute();
+            List<List<Object>> values = response.getValues();
+            if (values != null) {
+                for (List<Object> row : values) {
+                    if (row.size() >= 4) {
+                        Map<String, String> d = new HashMap<>();
+                        d.put("id", row.get(0).toString());
+                        d.put("descricao", row.get(1).toString());
+                        d.put("valor", row.get(2).toString());
+                        d.put("data", row.get(3).toString());
+                        lista.add(d);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Aba Despesas não configurada ou vazia.");
+        }
+        // Inverte a lista para a despesa mais nova aparecer no topo
+        Collections.reverse(lista);
+        return lista;
+    }
+
+    public Double calcularDespesasDoDia(String dataHoje) throws IOException {
+        List<Map<String, String>> despesas = listarDespesas();
+        double total = 0.0;
+        for (Map<String, String> d : despesas) {
+            if (dataHoje.equals(d.get("data"))) {
+                total += Double.parseDouble(d.get("valor").replace(",", "."));
+            }
+        }
+        return total;
+    }
+
+    // --- MÉTODOS EXISTENTES MANTIDOS ---
     public void salvarUsuario(Usuario usuario, String planilhaAlvo) throws IOException {
         usuario.prePersist();
         List<Object> row = Arrays.asList(
@@ -112,7 +158,6 @@ public class GoogleSheetsService {
                 .execute();
     }
 
-    // Sobrecarga para manter o resto do sistema antigo funcionando normal (Pesagem Rápida, etc)
     public void salvarUsuario(Usuario usuario) throws IOException {
         salvarUsuario(usuario, getSpreadsheetIdAtivo());
     }
@@ -131,23 +176,15 @@ public class GoogleSheetsService {
             u.setId(Long.parseLong(row.get(0).toString()));
             u.setNome(row.get(1).toString());
             u.setTelefone(row.get(2).toString());
-
-            if (row.size() > 3 && !row.get(3).toString().trim().isEmpty()) {
-                u.setCpf(row.get(3).toString());
-            }
-
-            if (row.size() > 5) {
-                u.setEndereco(row.get(5).toString());
-            }
+            if (row.size() > 3 && !row.get(3).toString().trim().isEmpty()) { u.setCpf(row.get(3).toString()); }
+            if (row.size() > 5) { u.setEndereco(row.get(5).toString()); }
             return u;
         }).collect(Collectors.toList());
     }
 
     public void atualizarCpfUsuario(String idVendedor, String cpfFinal) throws IOException {
         String spreadsheetId = getSpreadsheetIdAtivo();
-        if (cpfFinal == null || cpfFinal.trim().isEmpty() || cpfFinal.equals("NÃO INFORMADO")) {
-            return;
-        }
+        if (cpfFinal == null || cpfFinal.trim().isEmpty() || cpfFinal.equals("NÃO INFORMADO")) { return; }
 
         ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Usuarios!A:C").execute();
         List<List<Object>> values = response.getValues();
@@ -173,17 +210,12 @@ public class GoogleSheetsService {
         }
     }
 
-    // --- GESTÃO DE MATERIAIS ---
-
     public List<Material> listarMateriais() throws IOException {
         return listarMateriais(getSpreadsheetIdAtivo());
     }
 
     public List<Material> listarMateriais(String sheetId) throws IOException {
-        ValueRange response = sheetsService.spreadsheets().values()
-                .get(sheetId, "Materiais!A2:D")
-                .execute();
-
+        ValueRange response = sheetsService.spreadsheets().values().get(sheetId, "Materiais!A2:D").execute();
         List<List<Object>> values = response.getValues();
         if (values == null || values.isEmpty()) return Collections.emptyList();
 
@@ -205,7 +237,6 @@ public class GoogleSheetsService {
         ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Materiais!A:A").execute();
         List<List<Object>> values = response.getValues();
         int rowIndex = -1;
-
         if (values != null) {
             for (int i = 0; i < values.size(); i++) {
                 if (!values.get(i).isEmpty() && values.get(i).get(0).toString().equals(id.toString())) {
@@ -214,7 +245,6 @@ public class GoogleSheetsService {
                 }
             }
         }
-
         if (rowIndex != -1) {
             String precoFormatado = String.format("%.2f", novoPreco).replace(".", ",");
             ValueRange body = new ValueRange().setValues(Collections.singletonList(Collections.singletonList(precoFormatado)));
@@ -250,28 +280,16 @@ public class GoogleSheetsService {
         }
     }
 
-    // --- OPERAÇÕES DE VENDA E RELATÓRIOS ---
-
     public void registrarVendaFinal(String telefone, String material, Double peso, BigDecimal precoUn, BigDecimal total, String cpf) throws IOException {
         String spreadsheetId = getSpreadsheetIdAtivo();
         List<Object> row = Arrays.asList(
-                System.currentTimeMillis(),
-                material,
-                peso.toString().replace(".", ","),
-                "ENTREGA NO LOCAL",
-                precoUn.toString().replace(".", ","),
-                total.toString().replace(".", ","),
-                LocalDate.now().toString(),
-                telefone,
-                "VENDIDO",
-                cpf != null ? cpf : "NÃO INFORMADO"
+                System.currentTimeMillis(), material, peso.toString().replace(".", ","),
+                "ENTREGA NO LOCAL", precoUn.toString().replace(".", ","),
+                total.toString().replace(".", ","), LocalDate.now().toString(),
+                telefone, "VENDIDO", cpf != null ? cpf : "NÃO INFORMADO"
         );
-
         ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
-        sheetsService.spreadsheets().values()
-                .append(spreadsheetId, "Ofertas!A1", body)
-                .setValueInputOption("USER_ENTERED")
-                .execute();
+        sheetsService.spreadsheets().values().append(spreadsheetId, "Ofertas!A1", body).setValueInputOption("USER_ENTERED").execute();
     }
 
     public List<Oferta> buscarVendasPorUsuario(String telefone) throws IOException {
@@ -281,8 +299,7 @@ public class GoogleSheetsService {
         if (values == null || values.isEmpty()) return Collections.emptyList();
 
         return values.stream()
-                .filter(row -> row.size() > 8 &&
-                        telefone.equals(row.get(7).toString()) &&
+                .filter(row -> row.size() > 8 && telefone.equals(row.get(7).toString()) &&
                         ("VENDIDO".equals(row.get(8).toString()) || "SAIDA_INDUSTRIA".equals(row.get(8).toString())))
                 .map(row -> {
                     Oferta o = new Oferta();
@@ -293,13 +310,9 @@ public class GoogleSheetsService {
                 }).collect(Collectors.toList());
     }
 
-    // 🌟 MUDANÇA: Recebe o ID do armazém que o catador escolheu no formulário
     public void salvarSolicitacaoInicial(Usuario usuario, String endereco, String idPlanilhaDestino) throws IOException {
-        // Se der algum erro e vier vazio, cai pro seu armazém matriz por segurança
         String planilhaAlvo = (idPlanilhaDestino != null && !idPlanilhaDestino.trim().isEmpty()) ? idPlanilhaDestino : getSpreadsheetIdAtivo();
-
-        salvarUsuario(usuario, planilhaAlvo); // Salva o cliente na planilha certa!
-
+        salvarUsuario(usuario, planilhaAlvo);
         List<Object> rowOferta = Arrays.asList(
                 System.currentTimeMillis(), "Solicitação de Coleta", "0", endereco, "0", "0",
                 LocalDate.now().toString(), usuario.getTelefone(), "DISPONIVEL", LocalDate.now().toString()
@@ -308,7 +321,6 @@ public class GoogleSheetsService {
         sheetsService.spreadsheets().values().append(planilhaAlvo, "Ofertas!A1", body).setValueInputOption("USER_ENTERED").execute();
     }
 
-    // Sobrecarga de segurança para manter o sistema antigo funcionando
     public void salvarSolicitacaoInicial(Usuario usuario, String endereco) throws IOException {
         salvarSolicitacaoInicial(usuario, endereco, getSpreadsheetIdAtivo());
     }
@@ -332,7 +344,6 @@ public class GoogleSheetsService {
                 }
             }
         }
-
         return listarUsuarios().stream()
                 .filter(u -> statusMap.containsKey(u.getTelefone()))
                 .peek(u -> u.setStatusPlanilha(statusMap.get(u.getTelefone())))
@@ -351,11 +362,8 @@ public class GoogleSheetsService {
                 String status = row.get(6).toString();
                 if ("VENDIDO".equals(status) || "SAIDA_INDUSTRIA".equals(status)) {
                     double peso = Double.parseDouble(row.get(0).toString().replace(",", "."));
-                    if ("VENDIDO".equals(status)) {
-                        totalPatio += peso;
-                    } else if ("SAIDA_INDUSTRIA".equals(status)) {
-                        totalPatio -= peso;
-                    }
+                    if ("VENDIDO".equals(status)) { totalPatio += peso; }
+                    else if ("SAIDA_INDUSTRIA".equals(status)) { totalPatio -= peso; }
                 }
             }
         }
@@ -375,31 +383,21 @@ public class GoogleSheetsService {
                 if ("VENDIDO".equals(status) || "SAIDA_INDUSTRIA".equals(status)) {
                     String nome = row.get(0).toString();
                     Double peso = Double.parseDouble(row.get(1).toString().replace(",", "."));
-                    if ("VENDIDO".equals(status)) {
-                        soma.put(nome, soma.getOrDefault(nome, 0.0) + peso);
-                    } else if ("SAIDA_INDUSTRIA".equals(status)) {
-                        soma.put(nome, soma.getOrDefault(nome, 0.0) - peso);
-                    }
+                    if ("VENDIDO".equals(status)) { soma.put(nome, soma.getOrDefault(nome, 0.0) + peso); }
+                    else if ("SAIDA_INDUSTRIA".equals(status)) { soma.put(nome, soma.getOrDefault(nome, 0.0) - peso); }
                 }
             }
         }
-
         List<Material> todos = listarMateriais();
         return soma.entrySet().stream()
                 .map(e -> {
                     String un = "kg";
                     for (Material m : todos) {
-                        if (m.getNome() != null && m.getNome().equalsIgnoreCase(e.getKey())) {
-                            un = m.getUnidade();
-                            break;
-                        }
+                        if (m.getNome() != null && m.getNome().equalsIgnoreCase(e.getKey())) { un = m.getUnidade(); break; }
                     }
                     return new RankingDTO(e.getKey(), e.getValue(), un);
                 })
-                .filter(dto -> dto.peso > 0)
-                .sorted((a, b) -> b.peso.compareTo(a.peso))
-                .limit(3)
-                .collect(Collectors.toList());
+                .filter(dto -> dto.peso > 0).sorted((a, b) -> b.peso.compareTo(a.peso)).limit(3).collect(Collectors.toList());
     }
 
     public Material buscarMaterialPorId(Long id) throws IOException {
@@ -409,17 +407,14 @@ public class GoogleSheetsService {
 
     public List<Usuario> buscarUsuariosComVendasHoje() throws IOException {
         String spreadsheetId = getSpreadsheetIdAtivo();
-        ValueRange response = sheetsService.spreadsheets().values()
-                .get(spreadsheetId, "Ofertas!A2:J")
-                .execute();
+        ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Ofertas!A2:J").execute();
         List<List<Object>> values = response.getValues();
         if (values == null) return Collections.emptyList();
 
         String hoje = LocalDate.now().toString();
         Set<String> identificadores = values.stream()
                 .filter(row -> row.size() > 8 && "VENDIDO".equals(row.get(8).toString()) && hoje.equals(row.get(6).toString()))
-                .map(row -> row.get(7).toString())
-                .collect(Collectors.toSet());
+                .map(row -> row.get(7).toString()).collect(Collectors.toSet());
 
         return listarUsuarios().stream()
                 .filter(u -> identificadores.contains(u.getTelefone()) || identificadores.contains(u.getId().toString()))
@@ -429,41 +424,25 @@ public class GoogleSheetsService {
     public void registrarVendasEmLote(List<List<Object>> linhasParaSalvar) throws IOException {
         String spreadsheetId = getSpreadsheetIdAtivo();
         if (linhasParaSalvar == null || linhasParaSalvar.isEmpty()) return;
-
         ValueRange body = new ValueRange().setValues(linhasParaSalvar);
-        sheetsService.spreadsheets().values()
-                .append(spreadsheetId, "Ofertas!A1", body)
-                .setValueInputOption("USER_ENTERED")
-                .execute();
+        sheetsService.spreadsheets().values().append(spreadsheetId, "Ofertas!A1", body).setValueInputOption("USER_ENTERED").execute();
     }
 
     public void marcarComoEmAtendimento(String idVendedor) throws IOException {
         String spreadsheetId = getSpreadsheetIdAtivo();
-        Usuario usuario = listarUsuarios().stream()
-                .filter(u -> u.getId().toString().equals(idVendedor) || u.getTelefone().equals(idVendedor))
-                .findFirst()
-                .orElse(null);
-
+        Usuario usuario = listarUsuarios().stream().filter(u -> u.getId().toString().equals(idVendedor) || u.getTelefone().equals(idVendedor)).findFirst().orElse(null);
         String telefone = usuario != null ? usuario.getTelefone() : idVendedor;
         String idStr = usuario != null ? usuario.getId().toString() : idVendedor;
 
         ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Ofertas!H:I").execute();
         List<List<Object>> values = response.getValues();
-
         if (values != null) {
             for (int i = 0; i < values.size(); i++) {
                 List<Object> row = values.get(i);
                 if (row.size() >= 2) {
-                    String identificadorPlanilha = row.get(0).toString();
-                    String statusPlanilha = row.get(1).toString();
-
-                    if ((identificadorPlanilha.equals(telefone) || identificadorPlanilha.equals(idStr)) && statusPlanilha.equals("DISPONIVEL")) {
-                        int numeroDaLinha = i + 1;
+                    if ((row.get(0).toString().equals(telefone) || row.get(0).toString().equals(idStr)) && row.get(1).toString().equals("DISPONIVEL")) {
                         ValueRange body = new ValueRange().setValues(Collections.singletonList(Collections.singletonList("EM_ATENDIMENTO")));
-                        sheetsService.spreadsheets().values()
-                                .update(spreadsheetId, "Ofertas!I" + numeroDaLinha, body)
-                                .setValueInputOption("USER_ENTERED")
-                                .execute();
+                        sheetsService.spreadsheets().values().update(spreadsheetId, "Ofertas!I" + (i + 1), body).setValueInputOption("USER_ENTERED").execute();
                     }
                 }
             }
@@ -472,32 +451,20 @@ public class GoogleSheetsService {
 
     public void marcarSolicitacaoComoConcluida(String idVendedor) throws IOException {
         String spreadsheetId = getSpreadsheetIdAtivo();
-        Usuario usuario = listarUsuarios().stream()
-                .filter(u -> u.getId().toString().equals(idVendedor) || u.getTelefone().equals(idVendedor))
-                .findFirst()
-                .orElse(null);
-
+        Usuario usuario = listarUsuarios().stream().filter(u -> u.getId().toString().equals(idVendedor) || u.getTelefone().equals(idVendedor)).findFirst().orElse(null);
         String telefone = usuario != null ? usuario.getTelefone() : idVendedor;
         String idStr = usuario != null ? usuario.getId().toString() : idVendedor;
 
         ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Ofertas!H:I").execute();
         List<List<Object>> values = response.getValues();
-
         if (values != null) {
             for (int i = 0; i < values.size(); i++) {
                 List<Object> row = values.get(i);
                 if (row.size() >= 2) {
-                    String identificadorPlanilha = row.get(0).toString();
                     String statusPlanilha = row.get(1).toString();
-
-                    if ((identificadorPlanilha.equals(telefone) || identificadorPlanilha.equals(idStr)) &&
-                            (statusPlanilha.equals("DISPONIVEL") || statusPlanilha.equals("EM_ATENDIMENTO"))) {
-                        int numeroDaLinha = i + 1;
+                    if ((row.get(0).toString().equals(telefone) || row.get(0).toString().equals(idStr)) && (statusPlanilha.equals("DISPONIVEL") || statusPlanilha.equals("EM_ATENDIMENTO"))) {
                         ValueRange body = new ValueRange().setValues(Collections.singletonList(Collections.singletonList("FINALIZADO")));
-                        sheetsService.spreadsheets().values()
-                                .update(spreadsheetId, "Ofertas!I" + numeroDaLinha, body)
-                                .setValueInputOption("USER_ENTERED")
-                                .execute();
+                        sheetsService.spreadsheets().values().update(spreadsheetId, "Ofertas!I" + (i + 1), body).setValueInputOption("USER_ENTERED").execute();
                     }
                 }
             }
@@ -505,62 +472,43 @@ public class GoogleSheetsService {
     }
 
     @Scheduled(cron = "0 0 3 * * *")
-    public void limparOfertasAntigasAutomaticamente() {
-        // Mantido
-    }
+    public void limparOfertasAntigasAutomaticamente() { }
 
     public List<Oferta> getHistoricoCompleto() throws IOException {
         String spreadsheetId = getSpreadsheetIdAtivo();
         List<Oferta> listaTotal = new ArrayList<>();
 
         ValueRange resOfertas = sheetsService.spreadsheets().values().get(spreadsheetId, "Ofertas!A2:J").execute();
-        if (resOfertas.getValues() != null) {
-            listaTotal.addAll(converterLinhasParaOfertas(resOfertas.getValues()));
-        }
+        if (resOfertas.getValues() != null) { listaTotal.addAll(converterLinhasParaOfertas(resOfertas.getValues())); }
 
         try {
             ValueRange resHistorico = sheetsService.spreadsheets().values().get(spreadsheetId, "Historico_Ofertas!A2:J").execute();
-            if (resHistorico.getValues() != null) {
-                listaTotal.addAll(converterLinhasParaOfertas(resHistorico.getValues()));
-            }
-        } catch (Exception e) {
-            System.out.println("Aba Historico_Ofertas vazia.");
-        }
+            if (resHistorico.getValues() != null) { listaTotal.addAll(converterLinhasParaOfertas(resHistorico.getValues())); }
+        } catch (Exception e) {}
 
+        Collections.reverse(listaTotal); // Opcional: inverte a lista para os mais novos aparecerem em cima
         return listaTotal;
     }
 
     private List<Oferta> converterLinhasParaOfertas(List<List<Object>> values) {
         return values.stream()
-                .filter(row -> row.size() > 8 &&
-                        ("VENDIDO".equals(row.get(8).toString()) || "SAIDA_INDUSTRIA".equals(row.get(8).toString())))
+                .filter(row -> row.size() > 8 && ("VENDIDO".equals(row.get(8).toString()) || "SAIDA_INDUSTRIA".equals(row.get(8).toString())))
                 .map(row -> {
                     Oferta o = new Oferta();
                     o.setMaterial(row.get(1).toString());
                     o.setPeso(Double.parseDouble(row.get(2).toString().replace(",", ".")));
                     o.setPrecoEstimado(new BigDecimal(row.get(5).toString().replace(",", ".")));
                     o.setData(row.size() > 6 ? row.get(6).toString() : "Sem Data");
-
-                    if (row.size() > 7 && row.get(7) != null) {
-                        o.setIdUsuario(row.get(7).toString());
-                    }
-
+                    if (row.size() > 7 && row.get(7) != null) { o.setIdUsuario(row.get(7).toString()); }
                     if (row.size() > 8 && row.get(8) != null) {
-                        String statusPlanilha = row.get(8).toString();
-                        try {
-                            o.setStatus(Oferta.StatusOferta.valueOf(statusPlanilha));
-                        } catch (Exception e) {}
+                        try { o.setStatus(Oferta.StatusOferta.valueOf(row.get(8).toString())); } catch (Exception e) {}
                     }
-
                     return o;
                 }).collect(Collectors.toList());
     }
 
     public Map<String, String> autenticarSaaS(String login, String senha) throws IOException {
-        ValueRange response = sheetsService.spreadsheets().values()
-                .get(MASTER_SHEET_ID, "Acessos!A2:H")
-                .execute();
-
+        ValueRange response = sheetsService.spreadsheets().values().get(MASTER_SHEET_ID, "Acessos!A2:H").execute();
         List<List<Object>> values = response.getValues();
         if (values == null || values.isEmpty()) return null;
 
@@ -571,23 +519,15 @@ public class GoogleSheetsService {
                 String status = row.get(3).toString().trim();
 
                 if (sheetLogin.equals(login) && sheetSenha.equals(senha)) {
-                    if (!"ATIVO".equalsIgnoreCase(status)) {
-                        throw new RuntimeException("Conta suspensa");
-                    }
+                    if (!"ATIVO".equalsIgnoreCase(status)) { throw new RuntimeException("Conta suspensa"); }
 
                     Map<String, String> dadosSessao = new HashMap<>();
                     dadosSessao.put("perfil", row.get(2).toString());
                     dadosSessao.put("idPlanilha", row.get(4).toString());
-
                     if (row.size() >= 6) dadosSessao.put("nomeArmazem", row.get(5).toString());
                     if (row.size() >= 7) dadosSessao.put("cnpj", row.get(6).toString());
-
-                    if (row.size() >= 8 && !row.get(7).toString().trim().isEmpty()) {
-                        dadosSessao.put("senhaFinanceira", row.get(7).toString().trim());
-                    } else {
-                        dadosSessao.put("senhaFinanceira", "admin123");
-                    }
-
+                    if (row.size() >= 8 && !row.get(7).toString().trim().isEmpty()) { dadosSessao.put("senhaFinanceira", row.get(7).toString().trim()); }
+                    else { dadosSessao.put("senhaFinanceira", "admin123"); }
                     return dadosSessao;
                 }
             }
