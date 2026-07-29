@@ -7,7 +7,7 @@ import com.reciclatech.backend.model.Usuario;
 import com.reciclatech.backend.model.Material;
 import com.reciclatech.backend.model.Oferta;
 import com.reciclatech.backend.controller.TelaController.RankingDTO;
-import jakarta.servlet.http.HttpSession; // Necessário para ler a sessão
+import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Service;
 import org.springframework.scheduling.annotation.Scheduled;
 
@@ -22,9 +22,9 @@ import java.util.stream.Collectors;
 public class GoogleSheetsService {
 
     private final Sheets sheetsService;
-    private final HttpSession session; // Injetamos a sessão para descobrir qual planilha ler
+    private final HttpSession session;
 
-    // ID DA SUA PLANILHA MESTRE (Única fixa no sistema)
+    // ID DA SUA PLANILHA MESTRE
     private final String MASTER_SHEET_ID = "1IRyZeg2ZZ8icCO-v_TsAvy01AqUTwbawYbuf_E0gZ4o";
 
     public GoogleSheetsService(Sheets sheetsService, HttpSession session) {
@@ -32,17 +32,65 @@ public class GoogleSheetsService {
         this.session = session;
     }
 
-    // Método mágico que descobre qual planilha pertence ao usuário logado no momento
     private String getSpreadsheetIdAtivo() {
         String idSessao = (String) session.getAttribute("idPlanilhaAtiva");
         if (idSessao != null && !idSessao.isEmpty()) {
             return idSessao;
         }
-        // Fallback de segurança caso não ache na sessão (joga para a sua padrão)
         return "15ZPzZ9Gxm5iv...";
     }
 
-    // --- GESTÃO DE USUÁRIOS (Aba: Usuarios) ---
+    // 🌟 NOVO: MÉTODO PARA CARREGAR OS PREÇOS DE TODOS OS ARMAZÉNS NA TELA INICIAL
+    public List<Map<String, Object>> obterCotacoesPublicas() {
+        List<Map<String, Object>> cotacoes = new ArrayList<>();
+        try {
+            // 1. Lê a planilha mestre para achar todos os clientes cadastrados
+            ValueRange response = sheetsService.spreadsheets().values()
+                    .get(MASTER_SHEET_ID, "Acessos!A2:F")
+                    .execute();
+
+            List<List<Object>> values = response.getValues();
+            if (values == null || values.isEmpty()) return cotacoes;
+
+            // HashSet para não repetir o armazém caso ele tenha GESTOR e OPERADOR cadastrados
+            Set<String> planilhasProcessadas = new HashSet<>();
+
+            for (List<Object> row : values) {
+                if (row.size() >= 6) {
+                    String status = row.get(3).toString().trim();
+                    String idPlanilha = row.get(4).toString().trim();
+                    String nomeArmazem = row.get(5).toString().trim();
+
+                    // Se estiver ativo e a gente ainda não tiver pego os preços dele
+                    if ("ATIVO".equalsIgnoreCase(status) && !planilhasProcessadas.contains(idPlanilha)) {
+                        planilhasProcessadas.add(idPlanilha);
+
+                        try {
+                            // Busca os materiais específicos da planilha deste cliente
+                            List<Material> materiaisDesteArmazem = listarMateriais(idPlanilha);
+
+                            // Cria um "pacotinho" com o Nome e os Preços dele
+                            Map<String, Object> dados = new HashMap<>();
+                            dados.put("nome", nomeArmazem);
+                            dados.put("materiais", materiaisDesteArmazem);
+
+                            // Cria um ID HTML limpo (ex: "Coletaê Matriz" vira "coletaematriz")
+                            dados.put("htmlId", nomeArmazem.replaceAll("[^a-zA-Z0-9]", "").toLowerCase());
+
+                            cotacoes.add(dados);
+                        } catch (Exception e) {
+                            System.err.println("Erro ao buscar preços do armazém " + nomeArmazem + ": " + e.getMessage());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erro Crítico ao buscar lista de armazéns mestre: " + e.getMessage());
+        }
+        return cotacoes;
+    }
+
+    // --- GESTÃO DE USUÁRIOS ---
 
     public void salvarUsuario(Usuario usuario) throws IOException {
         String spreadsheetId = getSpreadsheetIdAtivo();
@@ -122,12 +170,17 @@ public class GoogleSheetsService {
         }
     }
 
-    // --- GESTÃO DE MATERIAIS (Aba: Materiais) ---
+    // --- GESTÃO DE MATERIAIS ---
 
+    // 🌟 MUDANÇA: Agora o listarMateriais normal chama o listarMateriais passando o ID, reaproveitando código
     public List<Material> listarMateriais() throws IOException {
-        String spreadsheetId = getSpreadsheetIdAtivo();
+        return listarMateriais(getSpreadsheetIdAtivo());
+    }
+
+    // 🌟 MUDANÇA: Sobrecarga para podermos buscar os preços de qualquer armazém sem mexer na sessão
+    public List<Material> listarMateriais(String sheetId) throws IOException {
         ValueRange response = sheetsService.spreadsheets().values()
-                .get(spreadsheetId, "Materiais!A2:D")
+                .get(sheetId, "Materiais!A2:D")
                 .execute();
 
         List<List<Object>> values = response.getValues();
@@ -196,7 +249,7 @@ public class GoogleSheetsService {
         }
     }
 
-    // --- OPERAÇÕES DE VENDA E RELATÓRIOS (Aba: Ofertas) ---
+    // --- OPERAÇÕES DE VENDA E RELATÓRIOS ---
 
     public void registrarVendaFinal(String telefone, String material, Double peso, BigDecimal precoUn, BigDecimal total, String cpf) throws IOException {
         String spreadsheetId = getSpreadsheetIdAtivo();
@@ -443,7 +496,7 @@ public class GoogleSheetsService {
 
     @Scheduled(cron = "0 0 3 * * *")
     public void limparOfertasAntigasAutomaticamente() {
-        // Mantido conforme o seu código anterior (executa nas planilhas se necessário)
+        // Mantido
     }
 
     public List<Oferta> getHistoricoCompleto() throws IOException {
@@ -494,7 +547,6 @@ public class GoogleSheetsService {
     }
 
     public Map<String, String> autenticarSaaS(String login, String senha) throws IOException {
-        // MUDANÇA 1: Agora ele lê até a coluna H (onde está a Senha Financeira)
         ValueRange response = sheetsService.spreadsheets().values()
                 .get(MASTER_SHEET_ID, "Acessos!A2:H")
                 .execute();
@@ -510,7 +562,7 @@ public class GoogleSheetsService {
 
                 if (sheetLogin.equals(login) && sheetSenha.equals(senha)) {
                     if (!"ATIVO".equalsIgnoreCase(status)) {
-                        throw new RuntimeException("Conta suspensa"); // Bloqueia inadimplentes
+                        throw new RuntimeException("Conta suspensa");
                     }
 
                     Map<String, String> dadosSessao = new HashMap<>();
@@ -520,11 +572,9 @@ public class GoogleSheetsService {
                     if (row.size() >= 6) dadosSessao.put("nomeArmazem", row.get(5).toString());
                     if (row.size() >= 7) dadosSessao.put("cnpj", row.get(6).toString());
 
-                    // MUDANÇA 2: Guarda a Senha Financeira (Coluna H - Índice 7)
                     if (row.size() >= 8 && !row.get(7).toString().trim().isEmpty()) {
                         dadosSessao.put("senhaFinanceira", row.get(7).toString().trim());
                     } else {
-                        // Se esquecer de preencher na planilha, não quebra o sistema
                         dadosSessao.put("senhaFinanceira", "admin123");
                     }
 

@@ -3,7 +3,6 @@ package com.reciclatech.backend.controller;
 import com.reciclatech.backend.model.Material;
 import com.reciclatech.backend.model.Oferta;
 import com.reciclatech.backend.model.Usuario;
-import com.reciclatech.backend.model.StatusColeta;
 import com.reciclatech.backend.repository.MaterialRepository;
 import com.reciclatech.backend.repository.OfertaRepository;
 import com.reciclatech.backend.repository.UsuarioRepository;
@@ -31,15 +30,14 @@ public class TelaController {
 
     @Autowired private GoogleSheetsService googleSheetsService;
 
-    // --- HOME (Reciclômetro e Ranking via Google Sheets) ---
+    // --- HOME (Cotações Dinâmicas Multi-Armazém) ---
     @GetMapping("/")
     public String home(Model model) {
         try {
-            model.addAttribute("materiais", googleSheetsService.listarMateriais());
-            model.addAttribute("topMateriais", googleSheetsService.buscarRankingMateriais());
+            // Agora a home recebe a lista completa de todos os parceiros ativos e seus preços!
+            model.addAttribute("listaArmazens", googleSheetsService.obterCotacoesPublicas());
         } catch (Exception e) {
-            model.addAttribute("materiais", new ArrayList<>());
-            model.addAttribute("topMateriais", new ArrayList<>());
+            model.addAttribute("listaArmazens", new ArrayList<>());
         }
         return "index";
     }
