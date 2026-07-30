@@ -11,7 +11,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
-        /* Mesclando o visual de Nota Fiscal com as suas configurações de fundo */
         body { font-family: 'Courier New', Courier, monospace; background-color: #555; padding: 40px; }
 
         .folha {
@@ -48,7 +47,6 @@
         #qrcode { display: inline-block; }
         #qrcode img { width: 85px; height: 85px; }
 
-        /* REGRA DE RESPONSIVIDADE (PARA NÃO BUGAR NO CELULAR) */
         @media (max-width: 768px) {
             body { padding: 10px; background: #f8f9fa; }
             .folha { padding: 20px; width: 100%; max-width: 100%; min-height: auto; box-shadow: none; }
@@ -74,7 +72,8 @@
 
 <!-- Botões do seu sistema (WhatsApp, Voltar, Imprimir) -->
 <div class="text-center mb-4 no-print d-flex flex-wrap justify-content-center gap-2 botoes-topo mt-2">
-    <a th:href="${isSaida} ? '/admin/analises' : '/meus-extratos'" class="btn btn-outline-light fw-bold">
+    <!-- CORREÇÃO AQUI: Botão voltar vai para a Home do Administrador /admin/coletas -->
+    <a href="/admin/coletas" class="btn btn-outline-light fw-bold">
         <i class="bi bi-arrow-left"></i> Voltar
     </a>
     <button onclick="window.print()" class="btn btn-success">
@@ -110,12 +109,10 @@
             </div>
             <div class="col-4">
                 <strong>CPF/CNPJ:</strong><br>
-                <!-- 👇 Se for SAÍDA, ele exibe o CNPJ que escondemos no Endereço! 👇 -->
                 <span th:text="${isSaida ? vendedor.endereco : (vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO')}"></span>
             </div>
             <div class="col-12 mt-3">
                 <strong>ENDEREÇO / OBSERVAÇÃO DA CARGA:</strong><br>
-                <!-- 👇 Se for SAÍDA, põe um texto fixo, senão mostra o endereço do catador 👇 -->
                 <span th:text="${isSaida ? 'Carga registrada e expedida.' : vendedor.endereco}"></span>
             </div>
         </div>
@@ -171,7 +168,7 @@
         </div>
     </div>
 
-    <!-- RODAPÉ COM QR CODE E LOGO (Seu código original mantido) -->
+    <!-- RODAPÉ COM QR CODE E LOGO -->
     <div class="row mt-4 pt-4 align-items-center justify-content-between border-top">
         <div class="col-5 text-center">
             <div id="qrcode" class="mb-2"></div>
