@@ -10,16 +10,36 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 
     <style>
-        /* Trava o cabeçalho da tabela no topo quando rolar os itens */
+        /* Trava o cabeçalho da tabela no topo quando rolar os itens na tela */
         .table-scroll { max-height: 50vh; overflow-y: auto; }
         .table-scroll thead th { position: sticky; top: 0; z-index: 1; background-color: var(--bs-tertiary-bg); }
+
+        /* 🌟 MÁGICA DA IMPRESSÃO AQUI 🌟 */
+        @media print {
+            body { background: white !important; padding: 0 !important; }
+            .container-lg { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+
+            /* Tira as bordas e sombras do layout do sistema */
+            .card { border: none !important; box-shadow: none !important; background: transparent !important; }
+            .card-body { padding: 0 !important; }
+
+            /* QUEBRA A TRAVA DE SCROLL PARA MOSTRAR TODOS OS ITENS NA FOLHA */
+            .table-scroll { max-height: none !important; overflow: visible !important; }
+
+            /* Tira cores de fundo das linhas para economizar tinta e ficar limpo */
+            .table-light { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; }
+            .bg-body-tertiary, .bg-body { background-color: transparent !important; }
+
+            /* Ajuste de margens */
+            .mb-5 { margin-bottom: 0 !important; }
+        }
     </style>
 </head>
 <body class="bg-body-tertiary p-3 p-md-5">
 
 <div class="container-lg">
 
-    <!-- CABEÇALHO -->
+    <!-- CABEÇALHO (Some na Impressão) -->
     <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
         <h3 class="fw-bold text-body-emphasis m-0">
             <i class="bi bi-tags-fill text-success me-2"></i> Tabela de Preços e Materiais
@@ -29,14 +49,14 @@
         </a>
     </div>
 
-    <!-- TÍTULO QUE SÓ APARECE NA IMPRESSÃO DO PDF -->
+    <!-- TÍTULO OFICIAL (Só aparece na Impressão do PDF) -->
     <div class="d-none d-print-block mb-4 text-center">
-        <h2 class="fw-bold">TABELA OFICIAL DE PREÇOS</h2>
-        <p class="text-muted">Data da impressão: <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy')}"></span></p>
-        <hr>
+        <h2 class="fw-bold">TABELA OFICIAL DE PREÇOS - COLETAÊ</h2>
+        <p class="text-muted">Documento gerado em: <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy')}"></span></p>
+        <hr style="border-top: 2px solid #000;">
     </div>
 
-    <!-- FORMULÁRIO DE ADICIONAR NOVO (Some na hora da impressão) -->
+    <!-- FORMULÁRIO DE ADICIONAR NOVO (Some na Impressão) -->
     <div class="card mb-4 border-success shadow-sm bg-body d-print-none">
         <div class="card-header bg-success text-white fw-bold">
             <i class="bi bi-plus-circle me-1"></i> Cadastrar Novo Material
@@ -70,22 +90,20 @@
         </div>
     </div>
 
-    <!-- LISTA DE MATERIAIS COM BUSCA E EXPORTAÇÃO -->
+    <!-- LISTA DE MATERIAIS -->
     <div class="card shadow-sm border-0 mb-5 bg-body">
+
+        <!-- Controles de Tabela (Some na Impressão) -->
         <div class="card-header bg-body border-bottom-0 pt-4 pb-0 d-flex justify-content-between align-items-center flex-wrap gap-3 d-print-none">
             <h5 class="fw-bold m-0 text-body-emphasis">Materiais Cadastrados</h5>
 
-            <!-- Agrupamento de Ações: Exportar e Buscar -->
             <div class="d-flex align-items-center flex-wrap gap-2">
-
-                <!-- Botão Dropdown Exportar -->
                 <div class="dropdown">
                     <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2 shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-download"></i> Exportar
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0">
                         <li>
-                            <!-- GERA O PDF CHAMANDO A TELA DE IMPRESSÃO (CTRL+P) -->
                             <a class="dropdown-item text-danger fw-bold d-flex align-items-center" href="#" onclick="window.print(); return false;">
                                 <i class="bi bi-file-earmark-pdf-fill me-2 fs-5"></i> Salvar em PDF
                             </a>
@@ -98,7 +116,6 @@
                     </ul>
                 </div>
 
-                <!-- Barra de Pesquisa -->
                 <div class="input-group shadow-sm" style="max-width: 300px;">
                     <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
                     <input type="text" id="campoBusca" class="form-control border-start-0 ps-0" placeholder="Buscar material rapidamente..." onkeyup="filtrarTabela()">
@@ -106,6 +123,7 @@
             </div>
         </div>
 
+        <!-- Tabela -->
         <div class="card-body p-0 mt-3">
             <div class="table-scroll">
                 <table class="table table-hover align-middle mb-0 bg-body">
@@ -113,18 +131,17 @@
                     <tr>
                         <th class="ps-4">Item</th>
                         <th width="30%">Preço Atual</th>
-                        <!-- A coluna remover some do PDF -->
                         <th width="15%" class="text-end pe-4 d-print-none">Remover</th>
                     </tr>
                     </thead>
                     <tbody id="tabelaMateriais">
                     <tr th:each="mat : ${materiais}">
                         <td class="ps-4">
-                            <span class="fw-bold text-body-emphasis fs-6 nome-item" th:text="${mat.nome}">Cobre</span>
+                            <span class="fw-bold text-body-emphasis fs-6 nome-item text-uppercase" th:text="${mat.nome}">Cobre</span>
                             <span class="badge bg-secondary-subtle text-secondary border ms-2" th:text="${mat.unidade}">KG</span>
                         </td>
                         <td>
-                            <!-- Na tela, mostra as caixas para digitar o preço -->
+                            <!-- Form para a Tela -->
                             <form action="/admin/atualizar" method="post" class="d-flex gap-2 d-print-none" style="max-width: 250px;">
                                 <input type="hidden" name="id" th:value="${mat.id}">
                                 <div class="input-group input-group-sm shadow-sm">
@@ -133,10 +150,9 @@
                                     <button class="btn btn-outline-success" title="Atualizar Preço"><i class="bi bi-check-lg"></i></button>
                                 </div>
                             </form>
-                            <!-- No PDF, esconde a caixa e mostra apenas o texto com o valor limpo -->
+                            <!-- Texto Limpo para o PDF -->
                             <span class="d-none d-print-inline fw-bold text-success fs-5">R$ <span th:text="${mat.precoPorKg}">0.00</span></span>
                         </td>
-                        <!-- O botão de lixeira some do PDF -->
                         <td class="text-end pe-4 d-print-none">
                             <a th:href="@{'/admin/material/deletar/' + ${mat.id}}"
                                class="btn btn-outline-danger btn-sm shadow-sm"
@@ -146,7 +162,6 @@
                             </a>
                         </td>
                     </tr>
-                    <!-- Mensagem mostrada se a busca não encontrar nada -->
                     <tr id="msgVazia" style="display: none;" class="d-print-none">
                         <td colspan="3" class="text-center py-4 text-muted fst-italic">
                             Nenhum material encontrado com este nome.
@@ -164,8 +179,21 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // Aplica o tema
         const currentTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-bs-theme', currentTheme);
+
+        // 🌟 ORDENAÇÃO ALFABÉTICA AUTOMÁTICA (A-Z) 🌟
+        let tbody = document.getElementById("tabelaMateriais");
+        let linhas = Array.from(tbody.querySelectorAll("tr:not(#msgVazia)"));
+
+        linhas.sort((a, b) => {
+            let nomeA = a.querySelector(".nome-item").innerText.trim().toLowerCase();
+            let nomeB = b.querySelector(".nome-item").innerText.trim().toLowerCase();
+            return nomeA.localeCompare(nomeB);
+        });
+
+        linhas.forEach(linha => tbody.appendChild(linha)); // Devolve pra tabela ordenado
     });
 
     function filtrarTabela() {
@@ -175,7 +203,6 @@
 
         linhas.forEach(linha => {
             let nomeItem = linha.querySelector(".nome-item").innerText.toLowerCase();
-
             if (nomeItem.includes(input)) {
                 linha.style.display = "";
                 temResultado = true;
