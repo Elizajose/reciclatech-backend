@@ -1,33 +1,44 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
 <head>
-    <title>Checklist de Pesagem</title>
+    <title>Checklist de Pesagem - Coletaê</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
-        /* CSS para garantir que a lista role e o rodapé fique travado */
-        .card-pesagem { max-height: 90vh; display: flex; flex-direction: column; }
-        .area-scroll { overflow-y: auto; flex-grow: 1; padding-right: 5px; }
-        /* Barra de rolagem mais fina e elegante */
-        .area-scroll::-webkit-scrollbar { width: 6px; }
-        .area-scroll::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.2); border-radius: 10px; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bs-tertiary-bg); }
+        .card-pesagem { max-height: 92vh; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; }
+        .area-scroll { overflow-y: auto; flex-grow: 1; padding: 10px 20px; }
+        .area-scroll::-webkit-scrollbar { width: 8px; }
+        .area-scroll::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.15); border-radius: 10px; }
         [data-bs-theme="dark"] .area-scroll::-webkit-scrollbar-thumb { background-color: rgba(255,255,255,0.2); }
+
+        .material-row { transition: background-color 0.2s; border-radius: 8px; }
+        .material-row:hover { background-color: rgba(0, 0, 0, 0.02); }
+        [data-bs-theme="dark"] .material-row:hover { background-color: rgba(255, 255, 255, 0.05); }
+
+        .form-control:focus { box-shadow: none; border-color: #198754; }
     </style>
 </head>
-<body class="bg-body-tertiary pb-4 pt-3">
+<body class="pb-4 pt-4">
 
-<div class="container" style="max-width: 650px;">
+<!-- Aumentei a largura máxima de 650px para 1000px -->
+<div class="container" style="max-width: 1000px;">
 
-    <div class="card shadow mb-4 border-0 card-pesagem bg-body">
+    <div class="card shadow-lg border-0 card-pesagem bg-body">
 
         <!-- Cabeçalho Fixo -->
-        <div class="card-header bg-success text-white py-3 flex-shrink-0">
-            <h5 class="m-0 fw-bold"><i class="bi bi-scale fs-4 me-2"></i> 1. Pesagem na Balança</h5>
-            <small th:text="${vendedor.nome}" class="text-white-50 text-uppercase fw-bold">Nome do Cliente</small>
+        <div class="card-header bg-success text-white py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2 border-0">
+            <h4 class="m-0 fw-bold"><i class="bi bi-scale me-2"></i> Atendimento de Balcão</h4>
+            <div class="text-end">
+                <span class="badge bg-white text-success rounded-pill px-3 py-2 fs-6 text-uppercase shadow-sm">
+                    <i class="bi bi-person-fill me-1"></i> <span th:text="${vendedor.nome}">Nome</span>
+                </span>
+            </div>
         </div>
 
         <!-- Formulário Ocupando o Restante -->
@@ -36,66 +47,74 @@
 
             <!-- Faixa de Instrução -->
             <div class="bg-body-tertiary p-3 border-bottom text-center flex-shrink-0">
-                <h6 class="fw-bold text-body-secondary text-uppercase m-0">
-                    <i class="bi bi-calculator me-1"></i> Insira os pesos parciais e some
-                </h6>
+                <p class="fw-bold text-muted text-uppercase m-0 small letter-spacing-1">
+                    <i class="bi bi-info-circle me-1"></i> Insira os pesos parciais por lote e clique em adicionar. O sistema somará tudo.
+                </p>
             </div>
 
-            <!-- ÁREA DE SCROLL INTERNO (A MÁGICA ACONTECE AQUI) -->
-            <div class="card-body bg-body p-3 area-scroll">
-                <div th:each="mat : ${todosMateriais}" class="row mb-4 align-items-center border-bottom pb-3 mx-1">
+            <!-- ÁREA DE SCROLL INTERNO -->
+            <div class="card-body bg-body p-2 p-md-4 area-scroll">
+                <div th:each="mat : ${todosMateriais}" class="row align-items-center border-bottom py-3 mx-0 material-row">
 
-                    <!-- Lado Esquerdo: Nome e Preço -->
-                    <div class="col-12 col-sm-5 mb-3 mb-sm-0 text-center text-sm-start">
-                        <span class="fw-bold d-block fs-5 text-body-emphasis" th:text="${mat.nome}">Cobre</span>
-                        <small class="text-success fw-bold" th:text="'Base: R$ ' + ${mat.precoPorKg}">Preço</small>
-                        <small class="text-body-secondary fw-bold" th:text="'/' + ${mat.unidade}">/KG</small>
+                    <!-- Lado Esquerdo: Nome e Preço (Ocupa 4 colunas em telas grandes) -->
+                    <div class="col-12 col-lg-4 mb-3 mb-lg-0 text-center text-lg-start">
+                        <span class="fw-bold d-block fs-5 text-body-emphasis" th:text="${mat.nome}">Material</span>
+                        <div class="d-inline-block bg-success bg-opacity-10 text-success px-2 py-1 rounded small fw-bold mt-1">
+                            Base: R$ <span th:text="${mat.precoPorKg}">0.00</span> / <span th:text="${mat.unidade}">KG</span>
+                        </div>
                     </div>
 
-                    <!-- Lado Direito: Inputs da Balança -->
-                    <div class="col-12 col-sm-7">
-                        <!-- Parcial -->
-                        <div class="input-group input-group-sm mb-2 shadow-sm">
-                            <input type="number" step="0.01"
-                                   th:id="'parcial_' + ${mat.id}"
-                                   class="form-control text-center bg-body-tertiary fw-bold"
-                                   placeholder="Pesar lote..."
-                                   inputmode="decimal">
-                            <button class="btn btn-primary fw-bold px-3" type="button" th:onclick="'adicionarAoTotal(' + ${mat.id} + ')'" title="Adicionar peso">
-                                <i class="bi bi-plus-lg"></i> Adicionar
-                            </button>
-                        </div>
+                    <!-- Lado Direito: Inputs da Balança (Ocupa 8 colunas em telas grandes, divididas lado a lado) -->
+                    <div class="col-12 col-lg-8">
+                        <div class="row g-2">
+                            <!-- Parcial -->
+                            <div class="col-12 col-md-6">
+                                <div class="input-group shadow-sm h-100">
+                                    <input type="number" step="0.01"
+                                           th:id="'parcial_' + ${mat.id}"
+                                           class="form-control text-center bg-light"
+                                           placeholder="Peso do lote..."
+                                           inputmode="decimal">
+                                    <button class="btn btn-primary fw-bold" type="button" th:onclick="'adicionarAoTotal(' + ${mat.id} + ')'">
+                                        <i class="bi bi-plus-lg"></i> Somar
+                                    </button>
+                                </div>
+                            </div>
 
-                        <!-- Totalizador -->
-                        <div class="input-group input-group-sm shadow-sm">
-                            <span class="input-group-text bg-body-tertiary text-body-secondary fw-bold" style="font-size: 0.75rem;">Total</span>
-
-                            <input type="number" step="0.01"
-                                   th:name="'qtd_' + ${mat.id}"
-                                   th:id="'total_' + ${mat.id}"
-                                   class="form-control text-center fw-bold text-success bg-body fs-6"
-                                   placeholder="0"
-                                   readonly>
-
-                            <span class="input-group-text small fw-bold bg-body-tertiary text-body-secondary" style="font-size: 0.75rem;" th:text="${mat.unidade}">KG</span>
-
-                            <button class="btn btn-outline-danger px-3" type="button" th:onclick="'zerarTotal(' + ${mat.id} + ')'" title="Zerar balança do item">
-                                <i class="bi bi-trash3-fill"></i>
-                            </button>
+                            <!-- Totalizador -->
+                            <div class="col-12 col-md-6">
+                                <div class="input-group shadow-sm h-100">
+                                    <span class="input-group-text bg-light text-muted fw-bold small">TOTAL</span>
+                                    <input type="number" step="0.01"
+                                           th:name="'qtd_' + ${mat.id}"
+                                           th:id="'total_' + ${mat.id}"
+                                           class="form-control text-center fw-bold text-success fs-5 bg-white"
+                                           placeholder="0.00"
+                                           readonly>
+                                    <span class="input-group-text bg-light text-muted small fw-bold" th:text="${mat.unidade}">KG</span>
+                                    <button class="btn btn-outline-danger" type="button" th:onclick="'zerarTotal(' + ${mat.id} + ')'" title="Zerar item">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- RODAPÉ FIXO (BOTÕES) -->
-            <div class="card-footer bg-body-tertiary border-top p-3 flex-shrink-0">
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-success btn-lg fw-bold p-3 shadow-sm">
-                        AVANÇAR PARA REVISÃO <i class="bi bi-arrow-right-circle ms-1"></i>
-                    </button>
-                    <a href="/admin/coletas" class="btn btn-outline-secondary py-2 fw-bold" onclick="limparRascunho()">
-                        <i class="bi bi-x-circle me-1"></i> Cancelar Coleta
-                    </a>
+            <div class="card-footer bg-body-tertiary border-top p-4 flex-shrink-0">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm py-3">
+                            AVANÇAR PARA REVISÃO <i class="bi bi-arrow-right-circle ms-2"></i>
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="/admin/coletas" class="btn btn-outline-secondary btn-lg w-100 fw-bold py-3" onclick="limparRascunho()">
+                            Cancelar
+                        </a>
+                    </div>
                 </div>
             </div>
         </form>
@@ -103,13 +122,11 @@
 </div>
 
 <script>
-    // --- 0. ATIVAR DARK MODE AUTOMATICAMENTE ---
     document.addEventListener('DOMContentLoaded', () => {
         const currentTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-bs-theme', currentTheme);
     });
 
-    // --- 1. LÓGICA DE RECUPERAÇÃO DE DADOS (Quando a página carrega) ---
     document.addEventListener("DOMContentLoaded", function() {
         let idVendedor = document.getElementById('idVendedor').value;
         let rascunhoString = sessionStorage.getItem('rascunho_pesagem_' + idVendedor);
@@ -121,17 +138,12 @@
             if (agora - rascunho.timestamp < 7200000) {
                 for (let idInput in rascunho.pesos) {
                     let campoTotal = document.getElementById(idInput);
-                    if (campoTotal) {
-                        campoTotal.value = rascunho.pesos[idInput];
-                    }
+                    if (campoTotal) { campoTotal.value = rascunho.pesos[idInput]; }
                 }
-            } else {
-                sessionStorage.removeItem('rascunho_pesagem_' + idVendedor);
-            }
+            } else { sessionStorage.removeItem('rascunho_pesagem_' + idVendedor); }
         }
     });
 
-    // --- 2. LÓGICA DA BALANÇA ---
     function adicionarAoTotal(id) {
         let inputParcial = document.getElementById('parcial_' + id);
         let inputTotal = document.getElementById('total_' + id);
@@ -152,7 +164,6 @@
         document.getElementById('parcial_' + id).value = '';
     }
 
-    // --- 3. LÓGICA ANTES DE AVANÇAR (Varredura + Salvar Rascunho) ---
     function validarAntesDeEnviar() {
         let idVendedor = document.getElementById('idVendedor').value;
         let inputsParciais = document.querySelectorAll('input[id^="parcial_"]');
@@ -165,28 +176,20 @@
             }
         });
 
-        let rascunho = {
-            timestamp: new Date().getTime(),
-            pesos: {}
-        };
-
+        let rascunho = { timestamp: new Date().getTime(), pesos: {} };
         let inputsTotais = document.querySelectorAll('input[id^="total_"]');
         inputsTotais.forEach(function(input) {
-            if (input.value && parseFloat(input.value) > 0) {
-                rascunho.pesos[input.id] = input.value;
-            }
+            if (input.value && parseFloat(input.value) > 0) { rascunho.pesos[input.id] = input.value; }
         });
 
         sessionStorage.setItem('rascunho_pesagem_' + idVendedor, JSON.stringify(rascunho));
         return true;
     }
 
-    // --- 4. LÓGICA DE CANCELAMENTO ---
     function limparRascunho() {
         let idVendedor = document.getElementById('idVendedor').value;
         sessionStorage.removeItem('rascunho_pesagem_' + idVendedor);
     }
 </script>
-
 </body>
 </html>
