@@ -287,7 +287,9 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
         if (session.getAttribute("gestorAutorizado") == null) return "redirect:/admin/analises/autenticar";
-        session.removeAttribute("gestorAutorizado");
+
+        // 🔥 A MÁGICA FOI AQUI: A linha que apagava sua sessão foi removida! 🔥
+        // Agora você fica logado no financeiro até decidir sair.
 
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         response.setHeader("Pragma", "no-cache"); response.setHeader("Expires", "0");
