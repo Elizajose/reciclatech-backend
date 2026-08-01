@@ -216,10 +216,14 @@
                             <label><i class="bi bi-geo-alt text-muted me-1"></i> Bairro/Localização</label>
                         </div>
 
+                        <!-- O Catador escolhe para qual armazém vai a coleta -->
                         <div class="form-floating mb-4">
                             <select class="form-select fw-bold text-primary notranslate" id="armazemDestino" name="idPlanilhaDestino" required>
-                                <option value="" disabled selected>Selecione um Armazém...</option>
-                                <option th:each="armazem : ${listaArmazens}" th:value="${armazem.idPlanilha}" th:text="${armazem.nome}"></option>
+                                <option value="" data-telefone="" disabled selected>Selecione um Armazém...</option>
+                                <option th:each="armazem : ${listaArmazens}"
+                                        th:value="${armazem.idPlanilha}"
+                                        th:data-telefone="${armazem.telefone}"
+                                        th:text="${armazem.nome}"></option>
                             </select>
                             <label><i class="bi bi-shop text-muted me-1"></i> Para qual Armazém?</label>
                         </div>
@@ -620,8 +624,15 @@
         let combo = document.getElementById("armazemDestino");
         let nomeArmazem = combo.options[combo.selectedIndex].text;
 
+        // 🌟 PUXA O TELEFONE DO ARMAZÉM SELECIONADO NA LISTA 🌟
+        let telefoneArmazem = combo.options[combo.selectedIndex].getAttribute("data-telefone");
+
         let msg = `Olá! Me chamo *${nome}* e desejo agendar uma coleta em *${end}* para o armazém *${nomeArmazem}*. Vi os preços no site!`;
-        window.open(`https://wa.me/5587991919496?text=${encodeURIComponent(msg)}`, '_blank');
+
+        // Se a célula do armazém estiver vazia na planilha, usa o seu número de segurança
+        let numeroDestino = telefoneArmazem ? telefoneArmazem : "000000000000000";
+
+        window.open(`https://wa.me/${numeroDestino}?text=${encodeURIComponent(msg)}`, '_blank');
         setTimeout(() => { event.target.submit(); }, 300);
     }
 </script>

@@ -44,8 +44,9 @@ public class GoogleSheetsService {
     public List<Map<String, Object>> obterCotacoesPublicas() {
         List<Map<String, Object>> cotacoes = new ArrayList<>();
         try {
+            // 🌟 Alterado de A2:F para A2:I para buscar a coluna do WhatsApp 🌟
             ValueRange response = sheetsService.spreadsheets().values()
-                    .get(MASTER_SHEET_ID, "Acessos!A2:F")
+                    .get(MASTER_SHEET_ID, "Acessos!A2:I")
                     .execute();
 
             List<List<Object>> values = response.getValues();
@@ -59,12 +60,24 @@ public class GoogleSheetsService {
                     String idPlanilha = row.get(4).toString().trim();
                     String nomeArmazem = row.get(5).toString().trim();
 
+                    // CAPTURA O TELEFONE ESPECÍFICO DO ARMAZÉM
+                    String telefoneArmazem = "5587991919496"; // O seu número fica como fallback (segurança)
+                    if (row.size() >= 9 && !row.get(8).toString().trim().isEmpty()) {
+                        // Limpa o número deixando só os dígitos numéricos
+                        telefoneArmazem = row.get(8).toString().replaceAll("\\D", "");
+                        // Garante que o código do Brasil (55) está no início para o link do zap funcionar
+                        if(!telefoneArmazem.startsWith("55")) {
+                            telefoneArmazem = "55" + telefoneArmazem;
+                        }
+                    }
+
                     if ("ATIVO".equalsIgnoreCase(status) && !planilhasProcessadas.contains(idPlanilha)) {
                         planilhasProcessadas.add(idPlanilha);
                         Map<String, Object> dados = new HashMap<>();
                         dados.put("idPlanilha", idPlanilha);
                         dados.put("nome", nomeArmazem);
                         dados.put("htmlId", nomeArmazem.replaceAll("[^a-zA-Z0-9]", "").toLowerCase());
+                        dados.put("telefone", telefoneArmazem); // 🌟 Envia o telefone para o HTML 🌟
 
                         try {
                             List<Material> materiaisDesteArmazem = listarMateriais(idPlanilha);
