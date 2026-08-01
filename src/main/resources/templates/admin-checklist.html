@@ -26,12 +26,9 @@
 </head>
 <body class="pb-4 pt-4">
 
-<!-- Aumentei a largura máxima de 650px para 1000px -->
 <div class="container" style="max-width: 1000px;">
-
     <div class="card shadow-lg border-0 card-pesagem bg-body">
 
-        <!-- Cabeçalho Fixo -->
         <div class="card-header bg-success text-white py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2 border-0">
             <h4 class="m-0 fw-bold"><i class="bi bi-scale me-2"></i> Atendimento de Balcão</h4>
             <div class="text-end">
@@ -41,33 +38,28 @@
             </div>
         </div>
 
-        <!-- Formulário Ocupando o Restante -->
         <form action="/admin/revisar-coleta" method="post" onsubmit="return validarAntesDeEnviar()" class="d-flex flex-column flex-grow-1 overflow-hidden">
             <input type="hidden" name="idVendedor" id="idVendedor" th:value="${vendedor.id}">
 
-            <!-- Faixa de Instrução -->
             <div class="bg-body-tertiary p-3 border-bottom text-center flex-shrink-0">
                 <p class="fw-bold text-muted text-uppercase m-0 small letter-spacing-1">
                     <i class="bi bi-info-circle me-1"></i> Insira os pesos parciais por lote e clique em adicionar. O sistema somará tudo.
                 </p>
             </div>
 
-            <!-- ÁREA DE SCROLL INTERNO -->
             <div class="card-body bg-body p-2 p-md-4 area-scroll">
                 <div th:each="mat : ${todosMateriais}" class="row align-items-center border-bottom py-3 mx-0 material-row">
 
-                    <!-- Lado Esquerdo: Nome e Preço (Ocupa 4 colunas em telas grandes) -->
                     <div class="col-12 col-lg-4 mb-3 mb-lg-0 text-center text-lg-start">
                         <span class="fw-bold d-block fs-5 text-body-emphasis" th:text="${mat.nome}">Material</span>
                         <div class="d-inline-block bg-success bg-opacity-10 text-success px-2 py-1 rounded small fw-bold mt-1">
-                            Base: R$ <span th:text="${mat.precoPorKg}">0.00</span> / <span th:text="${mat.unidade}">KG</span>
+                            <span th:if="${precosVip != null && precosVip.containsKey(mat.nome)}" class="badge bg-warning text-dark me-1 px-1 py-0 shadow-sm">VIP</span>
+                            Base: R$ <span th:text="${precosVip != null && precosVip.containsKey(mat.nome) ? precosVip.get(mat.nome) : mat.precoPorKg}">0.00</span> / <span th:text="${mat.unidade}">KG</span>
                         </div>
                     </div>
 
-                    <!-- Lado Direito: Inputs da Balança (Ocupa 8 colunas em telas grandes, divididas lado a lado) -->
                     <div class="col-12 col-lg-8">
                         <div class="row g-2">
-                            <!-- Parcial -->
                             <div class="col-12 col-md-6">
                                 <div class="input-group shadow-sm h-100">
                                     <input type="number" step="0.01"
@@ -81,7 +73,6 @@
                                 </div>
                             </div>
 
-                            <!-- Totalizador -->
                             <div class="col-12 col-md-6">
                                 <div class="input-group shadow-sm h-100">
                                     <span class="input-group-text bg-light text-muted fw-bold small">TOTAL</span>
@@ -102,7 +93,6 @@
                 </div>
             </div>
 
-            <!-- RODAPÉ FIXO (BOTÕES) -->
             <div class="card-footer bg-body-tertiary border-top p-4 flex-shrink-0">
                 <div class="row g-3">
                     <div class="col-md-8">

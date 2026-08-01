@@ -26,10 +26,8 @@ public class GoogleSheetsService {
     private final Sheets sheetsService;
     private final HttpSession session;
 
-    // ID DA SUA PLANILHA MESTRE
     private final String MASTER_SHEET_ID = "1IRyZeg2ZZ8icCO-v_TsAvy01AqUTwbawYbuf_E0gZ4o";
 
-    // 🌟 Mapa em memória para gerenciar a fila de gravação por planilha (Evita sobrescrita de dados)
     private final ConcurrentHashMap<String, Object> locksPlanilhas = new ConcurrentHashMap<>();
 
     public GoogleSheetsService(Sheets sheetsService, HttpSession session) {
@@ -37,7 +35,6 @@ public class GoogleSheetsService {
         this.session = session;
     }
 
-    // 🌟 Método que gera e recupera a trava (lock) única para cada armazém
     private Object getLock(String spreadsheetId) {
         return locksPlanilhas.computeIfAbsent(spreadsheetId, k -> new Object());
     }
@@ -53,7 +50,6 @@ public class GoogleSheetsService {
     public List<Map<String, Object>> obterCotacoesPublicas() {
         List<Map<String, Object>> cotacoes = new ArrayList<>();
         try {
-            // Alterado de A2:F para A2:I para buscar a coluna do WhatsApp
             ValueRange response = sheetsService.spreadsheets().values()
                     .get(MASTER_SHEET_ID, "Acessos!A2:I")
                     .execute();
@@ -69,12 +65,9 @@ public class GoogleSheetsService {
                     String idPlanilha = row.get(4).toString().trim();
                     String nomeArmazem = row.get(5).toString().trim();
 
-                    // CAPTURA O TELEFONE ESPECÍFICO DO ARMAZÉM
-                    String telefoneArmazem = "5587991919496"; // O seu número fica como fallback (segurança)
+                    String telefoneArmazem = "5587991919496";
                     if (row.size() >= 9 && !row.get(8).toString().trim().isEmpty()) {
-                        // Limpa o número deixando só os dígitos numéricos
                         telefoneArmazem = row.get(8).toString().replaceAll("\\D", "");
-                        // Garante que o código do Brasil (55) está no início para o link do zap funcionar
                         if(!telefoneArmazem.startsWith("55")) {
                             telefoneArmazem = "55" + telefoneArmazem;
                         }
@@ -86,7 +79,7 @@ public class GoogleSheetsService {
                         dados.put("idPlanilha", idPlanilha);
                         dados.put("nome", nomeArmazem);
                         dados.put("htmlId", nomeArmazem.replaceAll("[^a-zA-Z0-9]", "").toLowerCase());
-                        dados.put("telefone", telefoneArmazem); // Envia o telefone para o HTML
+                        dados.put("telefone", telefoneArmazem);
 
                         try {
                             List<Material> materiaisDesteArmazem = listarMateriais(idPlanilha);
@@ -104,7 +97,6 @@ public class GoogleSheetsService {
         return cotacoes;
     }
 
-    // NOVA GESTÃO DE DESPESAS
     public void salvarDespesa(String descricao, BigDecimal valor) throws IOException {
         String spreadsheetId = getSpreadsheetIdAtivo();
         String valorFormatado = String.format("%.2f", valor).replace(".", ",");
@@ -142,7 +134,6 @@ public class GoogleSheetsService {
         } catch (Exception e) {
             System.err.println("Aba Despesas não configurada ou vazia.");
         }
-        // Inverte a lista para a despesa mais nova aparecer no topo
         Collections.reverse(lista);
         return lista;
     }
@@ -158,7 +149,6 @@ public class GoogleSheetsService {
         return total;
     }
 
-    // --- MÉTODOS EXISTENTES MANTIDOS ---
     public void salvarUsuario(Usuario usuario, String planilhaAlvo) throws IOException {
         usuario.prePersist();
         List<Object> row = Arrays.asList(
@@ -443,13 +433,10 @@ public class GoogleSheetsService {
                 .collect(Collectors.toList());
     }
 
-    // 🌟 TRAVA DE CONCORRÊNCIA IMPLEMENTADA AQUI 🌟
     public void registrarVendasEmLote(List<List<Object>> linhasParaSalvar) throws IOException {
         String spreadsheetId = getSpreadsheetIdAtivo();
         if (linhasParaSalvar == null || linhasParaSalvar.isEmpty()) return;
 
-        // TRAVA DE CONCORRÊNCIA: Apenas uma thread (operador) pode gravar nesta planilha por vez.
-        // Outros operadores do mesmo armazém ficam em fila de espera (milissegundos).
         synchronized (getLock(spreadsheetId)) {
             ValueRange body = new ValueRange().setValues(linhasParaSalvar);
             sheetsService.spreadsheets().values()
@@ -517,13 +504,13 @@ public class GoogleSheetsService {
             if (resHistorico.getValues() != null) { listaTotal.addAll(converterLinhasParaOfertas(resHistorico.getValues())); }
         } catch (Exception e) {}
 
-        Collections.reverse(listaTotal); // Opcional: inverte a lista para os mais novos aparecerem em cima
+        Collections.reverse(listaTotal);
         return listaTotal;
     }
 
     private List<Oferta> converterLinhasParaOfertas(List<List<Object>> values) {
         return values.stream()
-                .filter(row -> row.size() > 8 && ("VENDIDO".equals(row.get(8).toString()) || "SAIDA_INDUSTRIA".equals(row.get(8).toString())))
+                .filter(row -> row.size() > 8 && ("VENDIDO".equals(row.get(8).toString()) || "SAIDA_INDUSTRIA".equals(row.get(8).toString()) || "AJUSTE_POSITIVO".equals(row.get(8).toString()) || "AJUSTE_NEGATIVO".equals(row.get(8).toString())))
                 .map(row -> {
                     Oferta o = new Oferta();
                     o.setMaterial(row.get(1).toString());
@@ -564,5 +551,85 @@ public class GoogleSheetsService {
             }
         }
         return null;
+    }
+
+    public Map<String, BigDecimal> buscarPrecosEspeciais(String telefone) {
+        Map<String, BigDecimal> mapa = new HashMap<>();
+        if (telefone == null || telefone.isEmpty()) return mapa;
+        try {
+            String spreadsheetId = getSpreadsheetIdAtivo();
+            ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Precos_Especiais!A2:C").execute();
+            List<List<Object>> values = response.getValues();
+            if (values != null) {
+                for (List<Object> row : values) {
+                    if (row.size() >= 3 && row.get(0).toString().equals(telefone)) {
+                        mapa.put(row.get(1).toString(), new BigDecimal(row.get(2).toString().replace(",", ".")));
+                    }
+                }
+            }
+        } catch (Exception e) {}
+        return mapa;
+    }
+
+    public List<Map<String, String>> listarFornecedoresVip() {
+        List<Map<String, String>> lista = new ArrayList<>();
+        try {
+            String spreadsheetId = getSpreadsheetIdAtivo();
+            ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Precos_Especiais!A2:C").execute();
+            List<List<Object>> values = response.getValues();
+            if (values != null) {
+                for (List<Object> row : values) {
+                    if (row.size() >= 3) {
+                        Map<String, String> m = new HashMap<>();
+                        m.put("telefone", row.get(0).toString());
+                        m.put("material", row.get(1).toString());
+                        m.put("preco", row.get(2).toString());
+                        lista.add(m);
+                    }
+                }
+            }
+        } catch (Exception e) {}
+        return lista;
+    }
+
+    public void salvarFornecedorVip(String telefone, String material, BigDecimal preco) throws IOException {
+        String spreadsheetId = getSpreadsheetIdAtivo();
+        String precoStr = String.format("%.2f", preco).replace(".", ",");
+        List<Object> row = Arrays.asList(telefone.replaceAll("\\D", ""), material, precoStr);
+        ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
+        sheetsService.spreadsheets().values().append(spreadsheetId, "Precos_Especiais!A1", body).setValueInputOption("USER_ENTERED").execute();
+    }
+
+    public void deletarFornecedorVip(String telefone, String material) throws IOException {
+        String spreadsheetId = getSpreadsheetIdAtivo();
+        ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Precos_Especiais!A:C").execute();
+        List<List<Object>> values = response.getValues();
+        int rowIndex = -1;
+        if (values != null) {
+            for (int i = 0; i < values.size(); i++) {
+                List<Object> row = values.get(i);
+                if (row.size() >= 2 && row.get(0).toString().equals(telefone) && row.get(1).toString().equals(material)) {
+                    rowIndex = i;
+                    break;
+                }
+            }
+        }
+        if (rowIndex != -1) {
+            sheetsService.spreadsheets().values().clear(spreadsheetId, "Precos_Especiais!A" + (rowIndex + 1) + ":C" + (rowIndex + 1), new ClearValuesRequest()).execute();
+        }
+    }
+
+    public void salvarAjusteEstoque(String material, Double peso, String tipoAjuste, String motivo) throws IOException {
+        String spreadsheetId = getSpreadsheetIdAtivo();
+        String idUnico = UUID.randomUUID().toString().substring(0, 13).toUpperCase();
+        List<Object> row = Arrays.asList(
+                idUnico, material, peso.toString().replace(".", ","), "AJUSTE MANUAL: " + motivo,
+                "0,00", "0,00", LocalDate.now(ZoneId.of("America/Recife")).toString(),
+                "SISTEMA", tipoAjuste, "NÃO INFORMADO"
+        );
+        synchronized (getLock(spreadsheetId)) {
+            ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
+            sheetsService.spreadsheets().values().append(spreadsheetId, "Ofertas!A1", body).setValueInputOption("USER_ENTERED").execute();
+        }
     }
 }
