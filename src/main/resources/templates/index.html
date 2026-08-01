@@ -28,6 +28,14 @@
             scroll-behavior: smooth;
         }
 
+        /* 🌟 CSS DO TRADUTOR INVISÍVEL 🌟 */
+        .VIpgJd-ZVi9od-ORHb-OEVmcd { display: none !important; }
+        .goog-te-banner-frame { display: none !important; }
+        body { top: 0px !important; }
+        #google_translate_element { display: none !important; }
+        .skiptranslate { display: none !important; }
+        font { background-color: transparent !important; box-shadow: none !important; }
+
         /* Tipografia e Navegação */
         h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.025em; }
         .navbar { background: rgba(255, 255, 255, 0.95) !important; backdrop-filter: blur(10px); border-bottom: 1px solid #e5e7eb; }
@@ -44,7 +52,7 @@
         }
         .hero-title { font-weight: 900; line-height: 1.1; margin-bottom: 24px; font-size: 3.5rem; }
 
-        /* Formulário de Agendamento Glassmorphism */
+        /* Formulário de Agendamento */
         .form-glass {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 24px;
@@ -53,7 +61,6 @@
             border: 1px solid rgba(255,255,255,0.2);
         }
 
-        /* 🌟 CORREÇÃO DO FORMULÁRIO: Cor do texto garantida como escura 🌟 */
         .form-floating > .form-control, .form-floating > .form-select {
             border-radius: 12px;
             border: 1px solid #d1d5db;
@@ -62,7 +69,7 @@
         }
 
         .form-floating > label {
-            color: #4b5563 !important; /* Força os labels (Seu Nome, etc) a ficarem na cor chumbo/escura */
+            color: #4b5563 !important;
             font-weight: 500;
         }
 
@@ -79,62 +86,38 @@
         .btn-zap:hover { background: #16a34a; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(37, 211, 102, 0.4); }
 
         /* Cotações por Armazém */
-        .price-card {
-            background: white; border: 1px solid #e5e7eb; border-radius: 16px;
-            padding: 20px; text-align: center; transition: 0.3s;
-        }
+        .price-card { background: white; border: 1px solid #e5e7eb; border-radius: 16px; padding: 20px; text-align: center; transition: 0.3s; }
         .price-card:hover { transform: translateY(-5px); border-color: var(--primary); box-shadow: 0 10px 25px -5px rgba(5, 150, 105, 0.1); }
         .price-value { font-size: 1.75rem; font-weight: 900; color: var(--primary); }
-
         .nav-pills .nav-link { color: var(--dark); border-radius: 50px; padding: 10px 24px; font-weight: 600; margin: 0 5px; border: 1px solid #e5e7eb; background: white;}
         .nav-pills .nav-link.active { background-color: var(--primary); color: white; border-color: var(--primary);}
-
-        .price-item {
-            background: white; border: 1px solid #e5e7eb; border-radius: 12px;
-            padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;
-            transition: all 0.2s ease-in-out;
-        }
+        .price-item { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s ease-in-out; }
         .price-item:hover { border-color: var(--primary); box-shadow: 0 6px 16px rgba(5, 150, 105, 0.08); transform: translateY(-2px); }
         .price-name { font-weight: 800; color: var(--dark); font-size: 0.9rem; margin: 0; line-height: 1.2; letter-spacing: 0.5px;}
         .price-unit { font-size: 0.75rem; color: #6b7280; font-weight: 500;}
         .price-value { font-size: 1.15rem; font-weight: 900; color: var(--primary); margin: 0; }
 
-        /* Funcionalidades */
-        .feature-card {
-            background: white; border: 1px solid #e5e7eb; border-radius: 20px;
-            padding: 40px 30px; transition: 0.3s; height: 100%;
-        }
+        /* Funcionalidades e Vídeos */
+        .feature-card { background: white; border: 1px solid #e5e7eb; border-radius: 20px; padding: 40px 30px; transition: 0.3s; height: 100%; }
         .feature-card:hover { border-color: var(--primary); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05); }
         .feature-icon-wrapper { width: 64px; height: 64px; background: #ecfdf5; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; }
         .feature-icon { font-size: 2rem; color: var(--primary); }
-
-        /* Vídeo e Dicas */
         .video-container { border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15); position: relative; padding-bottom: 56.25%; height: 0; }
         .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         .recycle-tip { display: flex; gap: 16px; margin-bottom: 24px; }
         .tip-number { width: 40px; height: 40px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;}
-
-        /* Quem Somos Carousel */
         .carousel-item img { border-radius: 24px; }
 
         /* Footer */
         .social-circle { width: 45px; height: 45px; background: rgba(255,255,255,0.1); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: white; transition: 0.3s; text-decoration: none;}
         .social-circle:hover { background: var(--primary); color: white; transform: translateY(-3px);}
 
-        /* CSS DOS PLANOS */
-        .pricing-card {
-            background: white; border: 1px solid #e5e7eb; border-radius: 20px;
-            padding: 40px; text-align: center; transition: all 0.3s ease; position: relative;
-            height: 100%; display: flex; flex-direction: column;
-        }
+        /* Planos */
+        .pricing-card { background: white; border: 1px solid #e5e7eb; border-radius: 20px; padding: 40px; text-align: center; transition: all 0.3s ease; position: relative; height: 100%; display: flex; flex-direction: column; }
         .pricing-card:hover { transform: translateY(-10px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
         .pricing-card.popular { border: 2px solid var(--primary); box-shadow: 0 20px 25px -5px rgba(5, 150, 105, 0.1); transform: scale(1.05); z-index: 1;}
         .pricing-card.popular:hover { transform: scale(1.05) translateY(-5px); }
-        .popular-badge {
-            position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
-            background: var(--primary); color: white; padding: 6px 16px; border-radius: 20px;
-            font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
-        }
+        .popular-badge { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: var(--primary); color: white; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
         .plan-price { font-size: 3rem; font-weight: 900; color: var(--dark); margin: 20px 0; }
         .plan-price span { font-size: 1rem; color: #6b7280; font-weight: 500; }
         .plan-features { list-style: none; padding: 0; margin: 30px 0; text-align: left; flex-grow: 1;}
@@ -144,11 +127,14 @@
 </head>
 <body>
 
+<!-- Elemento Oculto do Google Translate -->
+<div id="google_translate_element"></div>
+
 <!-- NAVEGAÇÃO -->
 <nav class="navbar navbar-expand-lg sticky-top py-3">
     <div class="container">
         <!-- Logo em Texto Modernizada -->
-        <a class="navbar-brand fw-bold fs-3 text-dark d-flex align-items-center gap-2" href="/">
+        <a class="navbar-brand fw-bold fs-3 text-dark d-flex align-items-center gap-2 notranslate" href="/">
             <i class="bi bi-recycle text-success"></i> Coletaê
         </a>
         <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -162,15 +148,28 @@
                 <li class="nav-item"><a class="nav-link" href="#reciclaveis">Como Reciclar</a></li>
                 <li class="nav-item"><a class="nav-link" href="#quem-somos">Nossa História</a></li>
 
-                <!-- Botão de Captura de Clientes (SaaS) -->
                 <li class="nav-item">
                     <a class="nav-link text-primary fw-bold" href="https://wa.me/5587991919496?text=Olá!%20Sou%20dono%20de%20um%20armazém%20e%20quero%20testar%20o%20sistema%20Coletaê!" target="_blank">
                         <i class="bi bi-rocket-takeoff me-1"></i> Seja um Parceiro
                     </a>
                 </li>
 
+                <!-- SELETOR DE IDIOMAS (ESTILO MODERNO) -->
+                <li class="nav-item dropdown ms-lg-2 mt-3 mt-lg-0 d-flex align-items-center">
+                    <a class="nav-link dropdown-toggle text-dark fw-bold d-flex align-items-center gap-2 border rounded-pill px-3 py-1 bg-white shadow-sm notranslate" href="#" id="langDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <img src="https://flagcdn.com/w20/br.png" id="currentLangImg" alt="Bandeira" width="20" class="rounded-1">
+                        <span id="currentLangText">PT</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2 notranslate" aria-labelledby="langDropdown" style="min-width: 140px; border-radius: 12px;">
+                        <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#" onclick="trocarIdioma('pt')"><img src="https://flagcdn.com/w20/br.png" width="20" class="rounded-1"> Português</a></li>
+                        <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#" onclick="trocarIdioma('en')"><img src="https://flagcdn.com/w20/us.png" width="20" class="rounded-1"> English</a></li>
+                        <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#" onclick="trocarIdioma('es')"><img src="https://flagcdn.com/w20/es.png" width="20" class="rounded-1"> Español</a></li>
+                        <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#" onclick="trocarIdioma('fr')"><img src="https://flagcdn.com/w20/fr.png" width="20" class="rounded-1"> Français</a></li>
+                    </ul>
+                </li>
+
                 <li class="nav-item ms-lg-3 mt-3 mt-lg-0">
-                    <a th:href="@{/admin/coletas}" class="btn btn-dark rounded-pill fw-bold px-4 py-2 shadow-sm">
+                    <a th:href="@{/admin/coletas}" class="btn btn-dark rounded-pill fw-bold px-4 py-2 shadow-sm notranslate">
                         <i class="bi bi-lock-fill me-1"></i> Entrar
                     </a>
                 </li>
@@ -188,7 +187,6 @@
                 <h1 class="hero-title">Gestão Inteligente para o seu Armazém.</h1>
                 <p class="lead mb-4 opacity-75 fs-5">Organize suas coletas, automatize recibos e gerencie preços em tempo real. A plataforma definitiva para transformar resíduos em resultados.</p>
 
-                <!-- Botões de Ação Duplos -->
                 <div class="d-flex flex-column flex-sm-row align-items-center justify-content-center justify-content-lg-start gap-3 mt-4">
                     <a href="#cotacoes" class="btn btn-warning btn-lg fw-bold px-4 rounded-pill shadow-sm">Ver Preços de Hoje</a>
 
@@ -199,7 +197,6 @@
             </div>
 
             <div class="col-lg-5">
-                <!-- FORMULÁRIO MODERNO (Com campo de Armazém) -->
                 <div class="form-glass">
                     <div class="text-center mb-4">
                         <h3 class="fw-bold text-dark m-0">Agendar Coleta</h3>
@@ -219,9 +216,8 @@
                             <label><i class="bi bi-geo-alt text-muted me-1"></i> Bairro/Localização</label>
                         </div>
 
-                        <!-- O Catador escolhe para qual armazém vai a coleta -->
                         <div class="form-floating mb-4">
-                            <select class="form-select fw-bold text-primary" id="armazemDestino" name="idPlanilhaDestino" required>
+                            <select class="form-select fw-bold text-primary notranslate" id="armazemDestino" name="idPlanilhaDestino" required>
                                 <option value="" disabled selected>Selecione um Armazém...</option>
                                 <option th:each="armazem : ${listaArmazens}" th:value="${armazem.idPlanilha}" th:text="${armazem.nome}"></option>
                             </select>
@@ -250,9 +246,8 @@
             <p class="text-muted">Selecione o armazém parceiro para conferir a cotação atual.</p>
         </div>
 
-        <ul class="nav nav-pills justify-content-center mb-5" id="pills-tab" role="tablist">
+        <ul class="nav nav-pills justify-content-center mb-5 notranslate" id="pills-tab" role="tablist">
             <li class="nav-item" role="presentation" th:each="armazem : ${listaArmazens}">
-                <!-- COTAÇÕES CORRIGIDAS: Sem a classe 'active' automática -->
                 <button class="nav-link shadow-sm"
                         th:id="'tab-' + ${armazem.htmlId}"
                         data-bs-toggle="pill"
@@ -264,7 +259,6 @@
         </ul>
 
         <div class="tab-content" id="pills-tabContent">
-            <!-- COTAÇÕES CORRIGIDAS: Sem a classe 'show active' automática -->
             <div th:each="armazem : ${listaArmazens}"
                  class="tab-pane fade"
                  th:id="'content-' + ${armazem.htmlId}"
@@ -279,10 +273,10 @@
                                 </div>
                                 <div class="text-start">
                                     <p class="price-name text-uppercase" th:text="${m.nome}">Papelão</p>
-                                    <span class="price-unit">por <span th:text="${m.unidade}">KG</span></span>
+                                    <span class="price-unit">por <span class="notranslate" th:text="${m.unidade}">KG</span></span>
                                 </div>
                             </div>
-                            <div class="price-value text-end">
+                            <div class="price-value text-end notranslate">
                                 R$ <span th:text="${m.precoPorKg}">0.00</span>
                             </div>
                         </div>
@@ -312,7 +306,7 @@
                 <div class="pricing-card">
                     <h3 class="fw-bold text-dark">Start</h3>
                     <p class="text-muted small">Para pequenos depósitos focados em controle básico.</p>
-                    <div class="plan-price">R$ 149<span>,90/mês</span></div>
+                    <div class="plan-price notranslate">R$ 149<span>,90/mês</span></div>
 
                     <ul class="plan-features">
                         <li><i class="bi bi-check-circle-fill"></i> Controle de Pesagem</li>
@@ -331,7 +325,7 @@
                     <div class="popular-badge">Mais Popular</div>
                     <h3 class="fw-bold text-white">Pro</h3>
                     <p class="text-light opacity-75 small">O sistema completo para organizar e lucrar mais.</p>
-                    <div class="plan-price text-white">R$ 199<span>,90/mês</span></div>
+                    <div class="plan-price text-white notranslate">R$ 199<span>,90/mês</span></div>
 
                     <ul class="plan-features">
                         <li><i class="bi bi-check-circle-fill text-warning"></i> <strong>Tudo do plano Start</strong></li>
@@ -485,7 +479,7 @@
     <div class="container pt-4">
         <div class="row justify-content-between g-4 mb-5">
             <div class="col-lg-4">
-                <div class="fs-3 fw-bold mb-4 d-flex align-items-center gap-2">
+                <div class="fs-3 fw-bold mb-4 d-flex align-items-center gap-2 notranslate">
                     <i class="bi bi-recycle text-success"></i> Coletaê
                 </div>
                 <p class="text-secondary small">Simplificando a gestão de resíduos sólidos com tecnologia acessível para armazéns e cooperativas.</p>
@@ -495,7 +489,7 @@
                 <ul class="list-unstyled text-secondary small">
                     <li class="mb-2"><i class="bi bi-geo-alt me-2 text-success"></i> Salgueiro, Pernambuco</li>
                     <li class="mb-2"><i class="bi bi-whatsapp me-2 text-success"></i> (87) 9XXXX-94XX</li>
-                    <li class="mb-2"><i class="bi bi-envelope me-2 text-success"></i> contato@coletae.com.br</li>
+                    <li class="mb-2"><i class="bi bi-envelope me-2 text-success"></i> contato@coletae.net.br</li>
                 </ul>
             </div>
             <div class="col-lg-2">
@@ -508,13 +502,13 @@
         </div>
         <hr class="border-secondary opacity-25">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4 text-secondary small">
-            <p class="m-0">© 2026 Coletaê. Desenvolvido por EJN.</p>
+            <p class="m-0 notranslate">© 2026 Coletaê. Desenvolvido por EJN.</p>
             <a href="#" class="text-secondary text-decoration-none mt-2 mt-md-0" data-bs-toggle="modal" data-bs-target="#modalTermos">Termos de Uso e Privacidade</a>
         </div>
     </div>
 </footer>
 
-<!-- MODAL DE TERMOS -->
+<!-- 🌟 MODAL DE TERMOS E PRIVACIDADE (NOVO E COMPLETO) 🌟 -->
 <div class="modal fade" id="modalTermos" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable modal-lg">
         <div class="modal-content">
@@ -523,34 +517,93 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4 text-dark" style="text-align: justify;">
-                <h6 class="fw-bold">1. O Serviço</h6>
-                <p>O Coletaê é uma plataforma de intermediação e gestão para o mercado de recicláveis. O sistema facilita o agendamento de coletas e a formalização de transações entre vendedores e compradores (ferros-velhos/MEIs).</p>
 
-                <h6 class="fw-bold mt-4">2. Coleta de Dados e Finalidade</h6>
-                <p>Para o funcionamento do serviço, coletamos:</p>
-                <ul>
-                    <li><strong>Nome e WhatsApp:</strong> Para que o comprador possa entrar em contato e confirmar a coleta.</li>
-                    <li><strong>Localização/Endereço:</strong> Para permitir que a equipe de logística encontre o local do material.</li>
-                    <li><strong>CPF (Opcional para Recibo):</strong> Utilizado exclusivamente para a geração do comprovante de renda/recibo de pagamento.</li>
-                </ul>
+                <p class="text-muted small text-center mb-4">Versão 1.0 · Atualizado pela última vez em Agosto/2026</p>
 
-                <h6 class="fw-bold mt-4">3. Veracidade das Informações</h6>
-                <p>O usuário é responsável pela veracidade dos dados informados. O Coletaê funciona como uma ferramenta de registro; a origem ilícita de materiais é de inteira responsabilidade de quem realiza a oferta.</p>
+                <p>Pelo presente instrumento, o <strong>USUÁRIO</strong> declara que leu, compreendeu e concorda integralmente com os Termos de Uso abaixo para acesso e utilização do sistema <strong>Coletaê</strong>.</p>
 
-                <h6 class="fw-bold mt-4">4. Segurança</h6>
-                <p>Os dados são armazenados em nuvem (Google Cloud) e não são compartilhados com terceiros para fins publicitários. O acesso às informações é restrito aos gestores.</p>
+                <h6 class="fw-bold mt-4">1. OBJETO</h6>
+                <p>1.1. O Coletaê é uma plataforma digital (software como serviço — SaaS) destinada à gestão de operações de depósitos de reciclagem, incluindo agendamento de coletas, registro de materiais e pesagens, pagamentos, emissão de recibos e geração de relatórios de caixa e estoque.</p>
+                <p>1.2. Estes Termos de Uso regulam o acesso e a utilização do Coletaê por você (o usuário ou visitante), estabelecendo direitos, deveres e responsabilidades de ambas as partes.</p>
+                <p>1.3. O Coletaê é uma ferramenta de apoio operacional. Ele organiza e armazena as informações que você insere, mas não substitui processos internos, controles fiscais, contábeis ou a orientação de profissionais habilitados.</p>
 
-                <h6 class="fw-bold mt-4">5. Aceite</h6>
-                <p>Ao clicar em "Agendar Coleta" ou utilizar o "Coleta Rápida", o usuário concorda com o processamento desses dados para os fins descritos acima.</p>
+                <h6 class="fw-bold mt-4">2. CADASTRO E ACESSO</h6>
+                <p>2.1. O acesso ao painel de gestão exige um cadastro com dados verdadeiros, completos e atualizados.</p>
+                <p>2.2. Quando a conta da empresa permite múltiplos usuários (ex: Gestor e Operador), cabe ao administrador da empresa gerir quem pode acessar e definir as permissões. Todo acesso feito por usuários autorizados pela empresa é de responsabilidade da própria empresa.</p>
+
+                <h6 class="fw-bold mt-4">3. RESPONSABILIDADE DO USUÁRIO</h6>
+                <p>3.1. O usuário é integralmente responsável por todas as informações que insere e pelas operações que registra no sistema, incluindo pesos, valores, tipos de material, cadastros e geração de recibos.</p>
+                <p>3.2. O usuário deve utilizar o Coletaê em conformidade com a legislação vigente, abstendo-se de qualquer uso ilícito, incluindo a receptação de materiais de origem duvidosa. O Coletaê funciona como uma ferramenta de registro e não se responsabiliza pela procedência do material comercializado no balcão físico do armazém.</p>
+
+                <h6 class="fw-bold mt-4">4. PROTEÇÃO DE DADOS (LGPD) E AGENDAMENTOS</h6>
+                <p>4.1. O tratamento de dados pessoais no Coletaê observa a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD).</p>
+                <p>4.2. <strong>Visitantes e Catadores:</strong> Ao utilizar o formulário "Agendar Coleta" na página inicial, coletamos Nome, WhatsApp e Endereço com a finalidade exclusiva de permitir que o armazém selecionado entre em contato e realize a coleta no local indicado. Ao clicar em "Agendar Coleta", você consente com este fluxo.</p>
+                <p>4.3. <strong>Armazéns e Gestores:</strong> Em relação aos dados de catadores inseridos na plataforma (para emissão de recibos com CPF, por exemplo), o armazém atua como Controlador desses dados e o Coletaê atua como Operador, processando-os por meio da infraestrutura de nuvem do Google Cloud.</p>
+
+                <h6 class="fw-bold mt-4">5. LIMITAÇÃO DE RESPONSABILIDADE DO COLETAÊ</h6>
+                <p>5.1. O Coletaê não se responsabiliza por decisões financeiras tomadas pelo usuário com base nos relatórios gerados, nem por erros de digitação cometidos pelos operadores no momento da pesagem.</p>
+                <p>5.2. O sistema é dependente de serviços de terceiros para seu pleno funcionamento (como hospedagem web e bancos de dados do Google). Falhas ou indisponibilidades temporárias nessas redes estão fora do nosso controle, não caracterizando quebra de contrato.</p>
+
+                <h6 class="fw-bold mt-4">6. PAGAMENTOS E ASSINATURAS</h6>
+                <p>6.1. O uso da área de gestão do Coletaê está sujeito à contratação de um plano de assinatura recorrente.</p>
+                <p>6.2. O não pagamento acarretará a suspensão automática do acesso ao painel administrativo. O cancelamento interrompe as cobranças futuras, mas não gera devolução de valores de períodos já utilizados.</p>
+
+                <h6 class="fw-bold mt-4">7. PROPRIEDADE INTELECTUAL</h6>
+                <p>7.1. Todo o software, marca, layout e código do Coletaê são de propriedade exclusiva de seus desenvolvedores originais.</p>
+                <p>7.2. É estritamente proibido copiar, modificar, distribuir, licenciar, sublicenciar ou fazer engenharia reversa do sistema, no todo ou em parte.</p>
+
+                <h6 class="fw-bold mt-4">8. FORO</h6>
+                <p>8.1. Fica eleito o foro da <strong>Comarca de Salgueiro — Pernambuco</strong> para dirimir quaisquer controvérsias decorrentes destes Termos, com renúncia a qualquer outro, por mais privilegiado que seja.</p>
+
+                <div class="text-center mt-4">
+                    <p class="small text-muted m-0">www.coletae.net.br | Coletaê Plataforma de Reciclagem</p>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- SCRIPTS DO GOOGLE TRANSLATE E LÓGICA DO SELETOR -->
+<script type="text/javascript">
+    function googleTranslateElementInit() {
+        new google.translate.TranslateElement({pageLanguage: 'pt', autoDisplay: false}, 'google_translate_element');
+    }
+</script>
+<script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
 <script>
-    // Script de máscara do Zap
+    // Gerenciador de troca de idiomas no Cookie
+    function trocarIdioma(lang) {
+        if(lang === 'pt') {
+            document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=" + window.location.hostname + ";";
+        } else {
+            document.cookie = "googtrans=/pt/" + lang + "; path=/;";
+            document.cookie = "googtrans=/pt/" + lang + "; path=/; domain=" + window.location.hostname + ";";
+        }
+        window.location.reload();
+    }
+
+    // Leitura do Cookie para atualizar a bandeira ao carregar a página
     document.addEventListener("DOMContentLoaded", () => {
+        let match = document.cookie.match(/googtrans=\/pt\/([a-z]{2})/);
+        let currentLang = match ? match[1] : 'pt';
+
+        const flags = {
+            'pt': { img: 'https://flagcdn.com/w20/br.png', text: 'PT' },
+            'en': { img: 'https://flagcdn.com/w20/us.png', text: 'EN' },
+            'es': { img: 'https://flagcdn.com/w20/es.png', text: 'ES' },
+            'fr': { img: 'https://flagcdn.com/w20/fr.png', text: 'FR' }
+        };
+
+        if(flags[currentLang]) {
+            document.getElementById('currentLangImg').src = flags[currentLang].img;
+            document.getElementById('currentLangText').innerText = flags[currentLang].text;
+        }
+
+        // Mantém a funcionalidade do WhatsApp
         const telInput = document.getElementById("telZap");
         telInput.addEventListener("input", (e) => {
             let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,5})(\d{0,4})/);

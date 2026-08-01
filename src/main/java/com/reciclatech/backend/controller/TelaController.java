@@ -121,10 +121,20 @@ public class TelaController {
     @GetMapping("/admin/coletas")
     public String telaListaColetas(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+
+        // ZONA OPERACIONAL: Se o usuário veio parar no painel de coletas (balcão),
+        // nós trancamos o cofre financeiro instantaneamente por segurança.
+        session.removeAttribute("gestorAutorizado");
+
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        response.setHeader("Pragma", "no-cache"); response.setDateHeader("Expires", 0);
-        try { model.addAttribute("usuarios", googleSheetsService.buscarUsuariosComColetasPendentes()); }
-        catch (IOException e) { model.addAttribute("usuarios", new ArrayList<>()); }
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0);
+
+        try {
+            model.addAttribute("usuarios", googleSheetsService.buscarUsuariosComColetasPendentes());
+        } catch (IOException e) {
+            model.addAttribute("usuarios", new ArrayList<>());
+        }
         return "admin-lista-coletas";
     }
 
@@ -341,10 +351,20 @@ public class TelaController {
         return "analises";
     }
 
-    // --- ROTAS DA SENHA DE GESTOR E SAÍDA ---
     @GetMapping("/admin/analises/autenticar")
-    public String telaSenhaGestor(HttpSession session) {
-        if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
+    public String telaSenhaGestor(HttpSession session, HttpServletResponse response) {
+        String perfil = (String) session.getAttribute("perfilUser");
+        if (!"GESTOR".equalsIgnoreCase(perfil)) return "redirect:/admin/coletas";
+
+        // ZONA DE AUTENTICAÇÃO: Se o cliente chegou na tela de digitar a senha
+        // (ex: clicando na setinha de voltar do navegador), a autorização é destruída.
+        session.removeAttribute("gestorAutorizado");
+
+        // Impede o navegador de "salvar" essa tela no cache da setinha de voltar
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0);
+
         return "autenticar-analises";
     }
 
