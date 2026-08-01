@@ -36,7 +36,6 @@
     <div class="d-flex justify-content-between align-items-center mb-4 no-print flex-wrap gap-3">
         <h2><i class="bi bi-cpu"></i> Inteligência de Negócio</h2>
         <div class="d-flex gap-2 flex-wrap">
-            <!-- 🌟 NOVOS BOTÕES ADICIONADOS AQUI 🌟 -->
             <a href="/admin/saida" class="btn btn-primary fw-bold shadow-sm">
                 <i class="bi bi-truck"></i> Saída
             </a>
@@ -47,12 +46,17 @@
                 <i class="bi bi-wallet2"></i> Despesas
             </a>
 
+            <!-- 🌟 NOVO BOTÃO DE AJUSTE DE ESTOQUE 🌟 -->
+            <a href="/admin/ajuste-estoque" class="btn btn-warning text-dark fw-bold shadow-sm">
+                <i class="bi bi-boxes"></i> Ajustar Estoque
+            </a>
+
             <button onclick="window.print()" class="btn btn-success fw-bold shadow-sm"><i class="bi bi-printer"></i> Balanço</button>
             <a href="/admin/analises/sair" class="btn btn-outline-danger shadow-sm fw-bold"><i class="bi bi-lock-fill"></i> Trancar e Voltar</a>
         </div>
     </div>
 
-    <!-- CAIXA DO DIA (AGORA COM 4 COLUNAS PARA INCLUIR AS DESPESAS) -->
+    <!-- CAIXA DO DIA -->
     <h5 class="fw-bold mb-3 no-print"><i class="bi bi-cash-coin"></i> Fluxo de Caixa Diário</h5>
     <div class="row g-3 mb-4 no-print">
         <div class="col-md-3">

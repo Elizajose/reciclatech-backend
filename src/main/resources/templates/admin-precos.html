@@ -40,13 +40,19 @@
 <div class="container-lg">
 
     <!-- CABEÇALHO (Some na Impressão) -->
-    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none flex-wrap gap-2">
         <h3 class="fw-bold text-body-emphasis m-0">
             <i class="bi bi-tags-fill text-success me-2"></i> Tabela de Preços e Materiais
         </h3>
-        <a href="/admin/coletas" class="btn btn-secondary shadow-sm">
-            <i class="bi bi-arrow-left"></i> Voltar ao Painel
-        </a>
+        <div class="d-flex gap-2">
+            <!-- 🌟 NOVO BOTÃO DE PREÇOS VIP 🌟 -->
+            <a href="/admin/fornecedores-vip" class="btn btn-warning shadow-sm fw-bold">
+                <i class="bi bi-star-fill text-dark me-1"></i> Preços VIP
+            </a>
+            <a href="/admin/coletas" class="btn btn-secondary shadow-sm">
+                <i class="bi bi-arrow-left"></i> Voltar ao Painel
+            </a>
+        </div>
     </div>
 
     <!-- TÍTULO OFICIAL (Só aparece na Impressão do PDF) -->
@@ -183,17 +189,27 @@
         const currentTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-bs-theme', currentTheme);
 
-        // 🌟 ORDENAÇÃO ALFABÉTICA AUTOMÁTICA (A-Z) 🌟
-        let tbody = document.getElementById("tabelaMateriais");
-        let linhas = Array.from(tbody.querySelectorAll("tr:not(#msgVazia)"));
+        // 🌟 ORDENAÇÃO ALFABÉTICA SEGURA 🌟
+        try {
+            let tbody = document.getElementById("tabelaMateriais");
+            if (tbody) {
+                let linhas = Array.from(tbody.querySelectorAll("tr:not(#msgVazia)"));
 
-        linhas.sort((a, b) => {
-            let nomeA = a.querySelector(".nome-item").innerText.trim().toLowerCase();
-            let nomeB = b.querySelector(".nome-item").innerText.trim().toLowerCase();
-            return nomeA.localeCompare(nomeB);
-        });
+                linhas.sort((a, b) => {
+                    let elementoA = a.querySelector(".nome-item");
+                    let elementoB = b.querySelector(".nome-item");
 
-        linhas.forEach(linha => tbody.appendChild(linha)); // Devolve pra tabela ordenado
+                    let nomeA = elementoA ? elementoA.innerText.trim().toLowerCase() : "";
+                    let nomeB = elementoB ? elementoB.innerText.trim().toLowerCase() : "";
+
+                    return nomeA.localeCompare(nomeB);
+                });
+
+                linhas.forEach(linha => tbody.appendChild(linha));
+            }
+        } catch (erro) {
+            console.log("Erro na ordenação da tabela.", erro);
+        }
     });
 
     function filtrarTabela() {
@@ -202,12 +218,15 @@
         let temResultado = false;
 
         linhas.forEach(linha => {
-            let nomeItem = linha.querySelector(".nome-item").innerText.toLowerCase();
-            if (nomeItem.includes(input)) {
-                linha.style.display = "";
-                temResultado = true;
-            } else {
-                linha.style.display = "none";
+            let elementoNome = linha.querySelector(".nome-item");
+            if (elementoNome) {
+                let nomeItem = elementoNome.innerText.toLowerCase();
+                if (nomeItem.includes(input)) {
+                    linha.style.display = "";
+                    temResultado = true;
+                } else {
+                    linha.style.display = "none";
+                }
             }
         });
 
