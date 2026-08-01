@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.time.ZoneId;
+import java.util.UUID;
 
 @Controller
 public class TelaController {
@@ -122,8 +123,7 @@ public class TelaController {
     public String telaListaColetas(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
 
-        // ZONA OPERACIONAL: Se o usuário veio parar no painel de coletas (balcão),
-        // nós trancamos o cofre financeiro instantaneamente por segurança.
+        // ZONA OPERACIONAL: Destrói autorização financeira se o usuário voltar ao balcão
         session.removeAttribute("gestorAutorizado");
 
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
@@ -202,8 +202,11 @@ public class TelaController {
                 BigDecimal precoUn = BigDecimal.valueOf(precosFinais.get(i));
                 BigDecimal total = precoUn.multiply(BigDecimal.valueOf(pesosFinais.get(i)));
 
+                // Uso de UUID para evitar condições de corrida gerando IDs duplicados
+                String idVendaUnico = UUID.randomUUID().toString().substring(0, 13).toUpperCase();
+
                 List<Object> row = Arrays.asList(
-                        System.currentTimeMillis() + i, mat.getNome(), pesosFinais.get(i).toString().replace(".", ","), "ENTREGA NO LOCAL",
+                        idVendaUnico, mat.getNome(), pesosFinais.get(i).toString().replace(".", ","), "ENTREGA NO LOCAL",
                         precoUn.toString().replace(".", ","), total.toString().replace(".", ","), LocalDate.now(ZoneId.of("America/Recife")).toString(),
                         idVendedor, "VENDIDO", cpfFinal != null && !cpfFinal.trim().isEmpty() ? cpfFinal : "NÃO INFORMADO"
                 );
@@ -260,22 +263,30 @@ public class TelaController {
         catch (IOException e) { return "redirect:/admin/coletas?erro=pesagem_rapida"; }
     }
 
-    // 🌟 NOVA TELA: HISTÓRICO DE MOVIMENTAÇÕES 🌟
+    // 🌟 TELA: HISTÓRICO DE MOVIMENTAÇÕES (BLINDADA) 🌟
     @GetMapping("/admin/historico")
-    public String historicoMovimentacoes(Model model, HttpSession session) {
+    public String historicoMovimentacoes(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
+        if (session.getAttribute("gestorAutorizado") == null) return "redirect:/admin/analises/autenticar";
+
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache"); response.setDateHeader("Expires", 0);
 
         try { model.addAttribute("historico", googleSheetsService.getHistoricoCompleto()); }
         catch (Exception e) { model.addAttribute("historico", new ArrayList<>()); }
         return "admin-historico";
     }
 
-    // 🌟 NOVA TELA: DESPESAS E CONTAS 🌟
+    // 🌟 TELA: DESPESAS E CONTAS (BLINDADA) 🌟
     @GetMapping("/admin/despesas")
-    public String telaDespesas(Model model, HttpSession session) {
+    public String telaDespesas(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
+        if (session.getAttribute("gestorAutorizado") == null) return "redirect:/admin/analises/autenticar";
+
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache"); response.setDateHeader("Expires", 0);
 
         try { model.addAttribute("despesas", googleSheetsService.listarDespesas()); }
         catch (Exception e) { model.addAttribute("despesas", new ArrayList<>()); }
@@ -284,7 +295,9 @@ public class TelaController {
 
     @PostMapping("/admin/despesas/nova")
     public String registrarDespesa(@RequestParam String descricao, @RequestParam Double valor, HttpSession session) {
-        if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/login";
+        if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser")) || session.getAttribute("gestorAutorizado") == null) {
+            return "redirect:/admin/analises/autenticar";
+        }
 
         try { googleSheetsService.salvarDespesa(descricao, BigDecimal.valueOf(valor)); }
         catch (Exception e) { System.err.println("Erro despesa: " + e.getMessage()); }
@@ -297,9 +310,6 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
         if (session.getAttribute("gestorAutorizado") == null) return "redirect:/admin/analises/autenticar";
-
-        // 🔥 A MÁGICA FOI AQUI: A linha que apagava sua sessão foi removida! 🔥
-        // Agora você fica logado no financeiro até decidir sair.
 
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         response.setHeader("Pragma", "no-cache"); response.setHeader("Expires", "0");
@@ -356,11 +366,8 @@ public class TelaController {
         String perfil = (String) session.getAttribute("perfilUser");
         if (!"GESTOR".equalsIgnoreCase(perfil)) return "redirect:/admin/coletas";
 
-        // ZONA DE AUTENTICAÇÃO: Se o cliente chegou na tela de digitar a senha
-        // (ex: clicando na setinha de voltar do navegador), a autorização é destruída.
         session.removeAttribute("gestorAutorizado");
 
-        // Impede o navegador de "salvar" essa tela no cache da setinha de voltar
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         response.setHeader("Pragma", "no-cache");
         response.setDateHeader("Expires", 0);
@@ -382,11 +389,16 @@ public class TelaController {
         session.removeAttribute("gestorAutorizado"); return "redirect:/admin/coletas";
     }
 
+    // 🌟 TELA: SAÍDA (BLINDADA) 🌟
     @GetMapping("/admin/saida")
     public String telaSaida(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
+        if (session.getAttribute("gestorAutorizado") == null) return "redirect:/admin/analises/autenticar";
+
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache"); response.setDateHeader("Expires", 0);
+
         try { model.addAttribute("materiais", googleSheetsService.listarMateriais()); }
         catch (Exception e) { model.addAttribute("materiais", new ArrayList<>()); }
         return "admin-saida";
@@ -394,7 +406,10 @@ public class TelaController {
 
     @PostMapping("/admin/registrar-saida-lote")
     public String registrarSaidaLote(@RequestParam String nomeIndustria, @RequestParam(required = false) String cnpjIndustria, @RequestParam Map<String, String> params, HttpSession session) {
-        if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/login";
+        if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser")) || session.getAttribute("gestorAutorizado") == null) {
+            return "redirect:/admin/analises/autenticar";
+        }
+
         try {
             Long idGerado = System.currentTimeMillis();
             String cnpjFinal = (cnpjIndustria != null && !cnpjIndustria.trim().isEmpty()) ? cnpjIndustria : "NÃO INFORMADO";
@@ -415,7 +430,11 @@ public class TelaController {
                     if (pesoSaida > 0 && precoVenda > 0) {
                         BigDecimal precoUn = BigDecimal.valueOf(precoVenda);
                         BigDecimal total = precoUn.multiply(BigDecimal.valueOf(pesoSaida));
-                        List<Object> row = Arrays.asList(System.currentTimeMillis() + mat.getId(), mat.getNome(), pesoSaida.toString().replace(".", ","), "VENDA INDÚSTRIA", precoUn.toString().replace(".", ","), total.toString().replace(".", ","), LocalDate.now(ZoneId.of("America/Recife")).toString(), idGerado.toString(), "SAIDA_INDUSTRIA", cnpjFinal);
+
+                        // Uso de UUID para evitar condições de corrida gerando IDs duplicados
+                        String idSaidaUnico = UUID.randomUUID().toString().substring(0, 13).toUpperCase();
+
+                        List<Object> row = Arrays.asList(idSaidaUnico, mat.getNome(), pesoSaida.toString().replace(".", ","), "VENDA INDÚSTRIA", precoUn.toString().replace(".", ","), total.toString().replace(".", ","), LocalDate.now(ZoneId.of("America/Recife")).toString(), idGerado.toString(), "SAIDA_INDUSTRIA", cnpjFinal);
                         loteDeVendas.add(row);
                     }
                 }

@@ -18,6 +18,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class GoogleSheetsService {
@@ -28,9 +29,17 @@ public class GoogleSheetsService {
     // ID DA SUA PLANILHA MESTRE
     private final String MASTER_SHEET_ID = "1IRyZeg2ZZ8icCO-v_TsAvy01AqUTwbawYbuf_E0gZ4o";
 
+    // 🌟 Mapa em memória para gerenciar a fila de gravação por planilha (Evita sobrescrita de dados)
+    private final ConcurrentHashMap<String, Object> locksPlanilhas = new ConcurrentHashMap<>();
+
     public GoogleSheetsService(Sheets sheetsService, HttpSession session) {
         this.sheetsService = sheetsService;
         this.session = session;
+    }
+
+    // 🌟 Método que gera e recupera a trava (lock) única para cada armazém
+    private Object getLock(String spreadsheetId) {
+        return locksPlanilhas.computeIfAbsent(spreadsheetId, k -> new Object());
     }
 
     private String getSpreadsheetIdAtivo() {
@@ -44,7 +53,7 @@ public class GoogleSheetsService {
     public List<Map<String, Object>> obterCotacoesPublicas() {
         List<Map<String, Object>> cotacoes = new ArrayList<>();
         try {
-            // 🌟 Alterado de A2:F para A2:I para buscar a coluna do WhatsApp 🌟
+            // Alterado de A2:F para A2:I para buscar a coluna do WhatsApp
             ValueRange response = sheetsService.spreadsheets().values()
                     .get(MASTER_SHEET_ID, "Acessos!A2:I")
                     .execute();
@@ -77,7 +86,7 @@ public class GoogleSheetsService {
                         dados.put("idPlanilha", idPlanilha);
                         dados.put("nome", nomeArmazem);
                         dados.put("htmlId", nomeArmazem.replaceAll("[^a-zA-Z0-9]", "").toLowerCase());
-                        dados.put("telefone", telefoneArmazem); // 🌟 Envia o telefone para o HTML 🌟
+                        dados.put("telefone", telefoneArmazem); // Envia o telefone para o HTML
 
                         try {
                             List<Material> materiaisDesteArmazem = listarMateriais(idPlanilha);
@@ -95,7 +104,7 @@ public class GoogleSheetsService {
         return cotacoes;
     }
 
-    // 🌟 NOVA GESTÃO DE DESPESAS 🌟
+    // NOVA GESTÃO DE DESPESAS
     public void salvarDespesa(String descricao, BigDecimal valor) throws IOException {
         String spreadsheetId = getSpreadsheetIdAtivo();
         String valorFormatado = String.format("%.2f", valor).replace(".", ",");
@@ -434,11 +443,20 @@ public class GoogleSheetsService {
                 .collect(Collectors.toList());
     }
 
+    // 🌟 TRAVA DE CONCORRÊNCIA IMPLEMENTADA AQUI 🌟
     public void registrarVendasEmLote(List<List<Object>> linhasParaSalvar) throws IOException {
         String spreadsheetId = getSpreadsheetIdAtivo();
         if (linhasParaSalvar == null || linhasParaSalvar.isEmpty()) return;
-        ValueRange body = new ValueRange().setValues(linhasParaSalvar);
-        sheetsService.spreadsheets().values().append(spreadsheetId, "Ofertas!A1", body).setValueInputOption("USER_ENTERED").execute();
+
+        // TRAVA DE CONCORRÊNCIA: Apenas uma thread (operador) pode gravar nesta planilha por vez.
+        // Outros operadores do mesmo armazém ficam em fila de espera (milissegundos).
+        synchronized (getLock(spreadsheetId)) {
+            ValueRange body = new ValueRange().setValues(linhasParaSalvar);
+            sheetsService.spreadsheets().values()
+                    .append(spreadsheetId, "Ofertas!A1", body)
+                    .setValueInputOption("USER_ENTERED")
+                    .execute();
+        }
     }
 
     public void marcarComoEmAtendimento(String idVendedor) throws IOException {
