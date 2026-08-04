@@ -24,31 +24,35 @@
         <form action="/admin/ajuste-estoque/novo" method="post" class="row g-4 mt-1">
             <div class="col-md-6">
                 <label class="fw-bold text-body-secondary mb-1">Qual Material?</label>
-                <select name="material" class="form-select form-select-lg" required>
-                    <option value="" disabled selected>Selecione o item...</option>
-                    <option th:each="mat : ${materiais}" th:value="${mat.nome}" th:text="${mat.nome}"></option>
+                <!-- 👇 Adicionado ID e evento onchange 👇 -->
+                <select name="material" id="selectMaterial" class="form-select form-select-lg" required onchange="atualizarUnidade()">
+                    <option value="" disabled selected data-unidade="KG/UN">Selecione o item...</option>
+                    <!-- 👇 Adicionado o atributo th:data-unidade 👇 -->
+                    <option th:each="mat : ${materiais}" th:value="${mat.nome}" th:text="${mat.nome}" th:data-unidade="${mat.unidade}"></option>
                 </select>
             </div>
 
             <div class="col-md-6">
                 <label class="fw-bold text-body-secondary mb-1">Tipo de Ajuste</label>
                 <select name="tipoAjuste" class="form-select form-select-lg" required>
-                    <option value="AJUSTE_NEGATIVO">(-) Quebra / Perda de Peso</option>
-                    <option value="AJUSTE_POSITIVO">(+) Sobra / Achado</option>
+                    <option value="AJUSTE_NEGATIVO">(-) Quebra / Perda / Saída</option>
+                    <option value="AJUSTE_POSITIVO">(+) Sobra / Achado / Entrada</option>
                 </select>
             </div>
 
             <div class="col-md-4">
-                <label class="fw-bold text-body-secondary mb-1">Peso da Diferença</label>
+                <!-- 👇 Texto ajustado para abranger Quantidade e Peso 👇 -->
+                <label class="fw-bold text-body-secondary mb-1">Qtd / Peso da Diferença</label>
                 <div class="input-group input-group-lg">
                     <input type="number" step="0.01" name="peso" class="form-control" placeholder="0.00" required>
-                    <span class="input-group-text">KG</span>
+                    <!-- 👇 ID adicionado para o JavaScript mudar a unidade 👇 -->
+                    <span class="input-group-text fw-bold text-secondary" id="unidadeLabel">KG/UN</span>
                 </div>
             </div>
 
             <div class="col-md-8">
                 <label class="fw-bold text-body-secondary mb-1">Motivo do Ajuste</label>
-                <input type="text" name="motivo" class="form-control form-control-lg" placeholder="Ex: Papelão secou e perdeu peso" required>
+                <input type="text" name="motivo" class="form-control form-control-lg" placeholder="Ex: Papelão secou, Garrafas quebraram" required>
             </div>
 
             <div class="col-12 mt-4 text-end">
@@ -65,6 +69,16 @@
         const currentTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-bs-theme', currentTheme);
     });
+
+    //NOVA FUNÇÃO: Atualiza a etiqueta da unidade com base no material selecionado
+    function atualizarUnidade() {
+        const select = document.getElementById('selectMaterial');
+        const selectedOption = select.options[select.selectedIndex];
+        // Pega a unidade do banco (ex: UN, KG) ou deixa KG por padrão se der erro
+        const unidade = selectedOption.getAttribute('data-unidade') || 'KG';
+
+        document.getElementById('unidadeLabel').innerText = unidade;
+    }
 </script>
 </body>
 </html>

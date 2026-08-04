@@ -36,21 +36,10 @@
     <div class="d-flex justify-content-between align-items-center mb-4 no-print flex-wrap gap-3">
         <h2><i class="bi bi-cpu"></i> Inteligência de Negócio</h2>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="/admin/saida" class="btn btn-primary fw-bold shadow-sm">
-                <i class="bi bi-truck"></i> Saída
-            </a>
-            <a href="/admin/historico" class="btn btn-dark fw-bold shadow-sm">
-                <i class="bi bi-clock-history"></i> Histórico
-            </a>
-            <a href="/admin/despesas" class="btn btn-danger fw-bold shadow-sm">
-                <i class="bi bi-wallet2"></i> Despesas
-            </a>
-
-            <!-- 🌟 NOVO BOTÃO DE AJUSTE DE ESTOQUE 🌟 -->
-            <a href="/admin/ajuste-estoque" class="btn btn-warning text-dark fw-bold shadow-sm">
-                <i class="bi bi-boxes"></i> Ajustar Estoque
-            </a>
-
+            <a href="/admin/saida" class="btn btn-primary fw-bold shadow-sm"><i class="bi bi-truck"></i> Saída</a>
+            <a href="/admin/historico" class="btn btn-dark fw-bold shadow-sm"><i class="bi bi-clock-history"></i> Histórico</a>
+            <a href="/admin/despesas" class="btn btn-danger fw-bold shadow-sm"><i class="bi bi-wallet2"></i> Despesas</a>
+            <a href="/admin/ajuste-estoque" class="btn btn-warning text-dark fw-bold shadow-sm"><i class="bi bi-boxes"></i> Ajustar Estoque</a>
             <button onclick="window.print()" class="btn btn-success fw-bold shadow-sm"><i class="bi bi-printer"></i> Balanço</button>
             <a href="/admin/analises/sair" class="btn btn-outline-danger shadow-sm fw-bold"><i class="bi bi-lock-fill"></i> Trancar e Voltar</a>
         </div>
@@ -106,36 +95,60 @@
     </div>
 
     <!-- GRÁFICOS E INSIGHTS -->
-    <h5 class="fw-bold mb-3 mt-4 no-print"><i class="bi bi-graph-up-arrow"></i> Desempenho e Gráficos</h5>
+    <h5 class="fw-bold mb-3 mt-4 no-print"><i class="bi bi-graph-up-arrow"></i> Desempenho e Indicadores Sociais</h5>
 
-    <div class="row no-print mb-4">
-        <div class="col-md-8" th:if="${volumeDados != null}">
-            <div class="card shadow-sm p-3 h-100">
-                <h5 class="fw-bold text-body-secondary">Evolução de Compras</h5><hr>
-                <div style="height: 300px;"><canvas id="graficoVolume"></canvas></div>
-            </div>
-        </div>
-        <div class="col-md-4">
+    <!-- 🌟 NOVA SEÇÃO DE CARDS DE DESEMPENHO EM BLOCO TRIPLO 🌟 -->
+    <div class="row no-print mb-4 align-items-stretch">
+
+        <div class="col-md-4 mb-3 mb-md-0">
             <div class="card shadow-sm p-4 bg-dark text-white text-center h-100 d-flex justify-content-center align-items-center">
                 <h5 class="fw-bold text-warning mb-3"><i class="bi bi-people-fill fs-1 d-block mb-2"></i> Clientes Atendidos</h5>
                 <h1 class="display-3 fw-bold m-0" th:text="${totalAtendimentos}">0</h1>
                 <p class="mb-0 mt-2 opacity-75 small">Total de clientes registrados</p>
             </div>
         </div>
+
+        <div class="col-md-4 mb-3 mb-md-0">
+            <div class="card shadow-sm border-0 h-100 bg-success text-white" id="cardReciclometro">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="fw-bold mb-3 text-center"><i class="bi bi-recycle fs-4 me-2"></i> Reciclômetro</h5>
+                    <h2 class="fw-bold mb-1 text-center" th:text="${#numbers.formatDecimal(totalGeralKg, 1, 'POINT', 1, 'COMMA')} + ' KG'"></h2>
+                    <p class="small opacity-75 mb-4 text-center">Total retirado das ruas (Histórico)</p>
+
+                    <ul class="list-unstyled small mb-auto px-2">
+                        <li th:each="item : ${top5Reciclometro}" class="d-flex justify-content-between border-bottom border-light border-opacity-25 py-2">
+                            <span class="text-uppercase" th:text="${item.key}"></span>
+                            <span class="fw-bold" th:text="${#numbers.formatDecimal(item.value, 1, 'POINT', 1, 'COMMA')} + ' kg'"></span>
+                        </li>
+                    </ul>
+                    <button type="button" class="btn btn-light text-success fw-bold w-100 mt-3 shadow-sm d-print-none" onclick="compartilharReciclometro()">
+                        <i class="bi bi-whatsapp"></i> Compartilhar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm p-4 bg-primary text-white text-center h-100 d-flex justify-content-center align-items-center">
+                <h5 class="fw-bold text-light mb-3"><i class="bi bi-cash-stack fs-1 d-block mb-2"></i> Economia Local</h5>
+                <h2 class="display-5 fw-bold m-0">R$ <span th:text="${#numbers.formatDecimal(totalPagoCatadores, 1, 'POINT', 2, 'COMMA')}"></span></h2>
+                <p class="mb-0 mt-3 opacity-75 small">Valor total injetado na comunidade através dos pagamentos aos catadores.</p>
+            </div>
+        </div>
     </div>
 
-    <div class="row no-print mb-4">
-        <!-- Gráfico Rosca -->
-        <div class="col-md-4" th:if="${dadosRoscaKg != null}">
-            <div class="card shadow-sm p-3 h-100">
-                <h5 class="text-center fw-bold text-body-secondary">Proporção do Estoque (KG)</h5>
+    <!-- 🌟 SEÇÃO DE PROPORÇÕES E RANKINGS DE BAIXA 🌟 -->
+    <div class="row no-print mb-4 align-items-stretch">
+
+        <div class="col-md-4 mb-3 mb-md-0" th:if="${dadosRoscaKg != null}">
+            <div class="card shadow-sm p-3 h-100 border-0">
+                <h5 class="text-center fw-bold text-body-secondary">Proporção Atual do Estoque</h5>
                 <hr>
                 <div class="chart-container"><canvas id="graficoKg"></canvas></div>
             </div>
         </div>
 
-        <!-- Lista Top 3 Mais Comprados -->
-        <div class="col-md-4">
+        <div class="col-md-4 mb-3 mb-md-0">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-body fw-bold text-success border-bottom-0 pt-3">
                     <i class="bi bi-arrow-up-circle-fill"></i> Mais Comprados (Top 3)
@@ -150,7 +163,6 @@
             </div>
         </div>
 
-        <!-- Lista Baixa Coleta -->
         <div class="col-md-4">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-body fw-bold text-danger border-bottom-0 pt-3">
@@ -212,15 +224,6 @@
 
         const cores = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6610f2', '#fd7e14', '#20c997', '#adb5bd'];
 
-        const volumeData = /*[[${volumeDados}]]*/ null;
-        if(volumeData && Object.keys(volumeData).length > 0) {
-            new Chart(document.getElementById('graficoVolume').getContext('2d'), {
-                type: 'line',
-                data: { labels: Object.keys(volumeData), datasets: [{ label: 'KG', data: Object.values(volumeData), borderColor: '#0d6efd', fill: true, tension: 0.4 }] },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        }
-
         const dataKg = /*[[${dadosRoscaKg}]]*/ null;
         if(dataKg && Object.keys(dataKg).length > 0) {
             new Chart(document.getElementById('graficoKg').getContext('2d'), {
@@ -230,6 +233,24 @@
             });
         }
     });
+
+    // Função para compartilhar o Reciclômetro diretamente no WhatsApp
+    function compartilharReciclometro() {
+        let total = document.querySelector('#cardReciclometro h2').innerText;
+        let msg = `♻️ *O Armazém Coletaê já retirou ${total} de materiais das ruas!*\n\n🏆 *Nosso Top 5 Histórico:* \n`;
+
+        let items = document.querySelectorAll('#cardReciclometro li');
+        items.forEach(li => {
+            let nome = li.children[0].innerText.trim();
+            let peso = li.children[1].innerText.trim();
+            msg += `- ${nome}: ${peso}\n`;
+        });
+
+        msg += `\nFaça sua parte! Traga sua reciclagem para nós e ajude a limpar o mundo. 🌍💚`;
+
+        let zapUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+        window.open(zapUrl, '_blank');
+    }
 </script>
 </body>
 </html>

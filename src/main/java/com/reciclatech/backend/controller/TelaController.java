@@ -318,6 +318,11 @@ public class TelaController {
             Double caixaSaidaHoje = 0.0;
             Map<String, Double> estoqueRealKg = new HashMap<>();
 
+            // 🌟 VARIÁVEIS PARA OS NOVOS CARDS E CORREÇÕES DO RANKING 🌟
+            Map<String, Double> totalCompradoKg = new HashMap<>();
+            Double totalGeralKg = 0.0;
+            Double totalPagoCatadores = 0.0;
+
             for (Oferta o : historico) {
                 if (o.getMaterial() == null || o.getPeso() == null) continue;
                 String material = o.getMaterial(); Double peso = o.getPeso();
@@ -331,6 +336,13 @@ public class TelaController {
                 } else if (status.equals("VENDIDO") || status.equals("AJUSTE_POSITIVO")) {
                     estoqueRealKg.put(material, estoqueRealKg.getOrDefault(material, 0.0) + peso);
                     if (isHoje && status.equals("VENDIDO")) caixaSaidaHoje += valor;
+
+                    // Lógica para preencher o Top 3, Baixa Coleta e Reciclômetro
+                    if (status.equals("VENDIDO")) {
+                        totalCompradoKg.put(material, totalCompradoKg.getOrDefault(material, 0.0) + peso);
+                        totalGeralKg += peso;
+                        totalPagoCatadores += valor;
+                    }
                 }
             }
 
@@ -339,11 +351,36 @@ public class TelaController {
             Double totalDespesasHoje = googleSheetsService.calcularDespesasDoDia(dataHoje);
             Double lucroDoDia = caixaEntradaHoje - caixaSaidaHoje - totalDespesasHoje;
 
+            // 🌟 RESTAURANDO O RANKING TOP 3 🌟
+            Map<String, Double> rankingMaisColetados = totalCompradoKg.entrySet().stream()
+                    .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                    .limit(3)
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
+
+            // 🌟 RESTAURANDO A BAIXA COLETA (< 50kg) 🌟
+            Map<String, Double> baixaColeta = totalCompradoKg.entrySet().stream()
+                    .filter(e -> e.getValue() < 50.0)
+                    .sorted(Map.Entry.comparingByValue())
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
+
+            // 🌟 TOP 5 PARA O RECICLÔMETRO 🌟
+            Map<String, Double> top5Reciclometro = totalCompradoKg.entrySet().stream()
+                    .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                    .limit(5)
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
+
             model.addAttribute("caixaEntradaHoje", caixaEntradaHoje);
             model.addAttribute("caixaSaidaHoje", caixaSaidaHoje);
             model.addAttribute("totalDespesasHoje", totalDespesasHoje);
             model.addAttribute("lucroDoDia", lucroDoDia);
             model.addAttribute("estoqueReal", estoqueRealKg);
+
+            // Enviando as correções para o HTML
+            model.addAttribute("rankingMaisColetados", rankingMaisColetados);
+            model.addAttribute("baixaColeta", baixaColeta);
+            model.addAttribute("totalGeralKg", totalGeralKg);
+            model.addAttribute("totalPagoCatadores", totalPagoCatadores);
+            model.addAttribute("top5Reciclometro", top5Reciclometro);
 
             List<Usuario> todosUsuarios = googleSheetsService.listarUsuarios();
             long clientesReais = todosUsuarios.stream().filter(u -> u.getNome() == null || !u.getNome().contains("(SAÍDA)")).count();
@@ -400,19 +437,60 @@ public class TelaController {
     }
 
     @PostMapping("/admin/registrar-saida-lote")
-    public String registrarSaidaLote(@RequestParam String nomeIndustria, @RequestParam(required = false) String cnpjIndustria, @RequestParam Map<String, String> params, HttpSession session) {
+    public String registrarSaidaLote(@RequestParam String nomeIndustria, @RequestParam(required = false) String cnpjIndustria, @RequestParam Map<String, String> params, HttpSession session, org.springframework.web.servlet.mvc.support.RedirectAttributes ra) {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser")) || session.getAttribute("gestorAutorizado") == null) {
             return "redirect:/admin/analises/autenticar";
         }
 
         try {
-            Long idGerado = System.currentTimeMillis();
-            String cnpjFinal = (cnpjIndustria != null && !cnpjIndustria.trim().isEmpty()) ? cnpjIndustria : "NÃO INFORMADO";
-            Usuario novaIndustria = new Usuario(); novaIndustria.setId(idGerado); novaIndustria.setNome(nomeIndustria.toUpperCase() + " (SAÍDA)"); novaIndustria.setTelefone(idGerado.toString()); novaIndustria.setEndereco(cnpjFinal); novaIndustria.setTipo(Usuario.TipoUsuario.CATADOR);
-            googleSheetsService.salvarSolicitacaoInicial(novaIndustria, novaIndustria.getEndereco());
+            // 1. CALCULANDO ESTOQUE REAL ANTES DE QUALQUER COISA
+            List<Oferta> historico = googleSheetsService.getHistoricoCompleto();
+            Map<String, Double> estoqueRealKg = new HashMap<>();
+
+            for (Oferta o : historico) {
+                if (o.getMaterial() == null || o.getPeso() == null) continue;
+                String status = (o.getStatus() != null) ? o.getStatus().toString().toUpperCase() : "VENDIDO";
+
+                if (status.equals("SAIDA_INDUSTRIA") || status.equals("AJUSTE_NEGATIVO")) {
+                    estoqueRealKg.put(o.getMaterial(), estoqueRealKg.getOrDefault(o.getMaterial(), 0.0) - o.getPeso());
+                } else if (status.equals("VENDIDO") || status.equals("AJUSTE_POSITIVO")) {
+                    estoqueRealKg.put(o.getMaterial(), estoqueRealKg.getOrDefault(o.getMaterial(), 0.0) + o.getPeso());
+                }
+            }
 
             List<Material> todosMateriais = googleSheetsService.listarMateriais();
             List<List<Object>> loteDeVendas = new ArrayList<>();
+
+            // 2. VALIDAÇÃO DE TRAVA DE ESTOQUE
+            for (Material mat : todosMateriais) {
+                String pesoStr = params.get("peso_" + mat.getId());
+                if (pesoStr != null && !pesoStr.isEmpty()) {
+                    Double pesoSaida = Double.parseDouble(pesoStr.replace(",", "."));
+                    if (pesoSaida > 0) {
+                        Double disponivelNoPatio = estoqueRealKg.getOrDefault(mat.getNome(), 0.0);
+
+                        // Trava: Se tentou vender mais do que tem
+                        if (pesoSaida > disponivelNoPatio) {
+                            ra.addFlashAttribute("erroEstoque", "Quantidade incompatível! Você tentou vender " + pesoSaida + "kg de " + mat.getNome() + ", mas só possui " + String.format("%.2f", disponivelNoPatio) + "kg no pátio.");
+                            return "redirect:/admin/saida";
+                        }
+                    }
+                }
+            }
+
+            // 3. REGISTRANDO A VENDA (Já passou na validação)
+            Long idGerado = System.currentTimeMillis();
+            String cnpjFinal = (cnpjIndustria != null && !cnpjIndustria.trim().isEmpty()) ? cnpjIndustria : "NÃO INFORMADO";
+
+            Usuario novaIndustria = new Usuario();
+            novaIndustria.setId(idGerado);
+            novaIndustria.setNome(nomeIndustria.toUpperCase() + " (SAÍDA)");
+            novaIndustria.setTelefone(idGerado.toString());
+            novaIndustria.setEndereco(cnpjFinal);
+            novaIndustria.setTipo(Usuario.TipoUsuario.CATADOR);
+
+            // CORREÇÃO DO ERRO FANTASMA: Salva apenas o cliente (sem abrir solicitação pendente)
+            googleSheetsService.salvarUsuario(novaIndustria);
 
             for (Material mat : todosMateriais) {
                 String pesoStr = params.get("peso_" + mat.getId());
@@ -433,11 +511,16 @@ public class TelaController {
                     }
                 }
             }
+
             if (loteDeVendas.isEmpty()) return "redirect:/admin/saida?erro=vazio";
             googleSheetsService.registrarVendasEmLote(loteDeVendas);
-            googleSheetsService.marcarSolicitacaoComoConcluida(idGerado.toString());
+
             return "redirect:/extrato/" + idGerado;
-        } catch (Exception e) { return "redirect:/admin/saida?erro=true"; }
+
+        } catch (Exception e) {
+            ra.addFlashAttribute("erroEstoque", "Ocorreu um erro interno ao processar a saída.");
+            return "redirect:/admin/saida";
+        }
     }
 
     // 🌟 ROTA: FORNECEDORES VIP 🌟
