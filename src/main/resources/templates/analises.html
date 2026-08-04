@@ -52,7 +52,10 @@
             <input type="hidden" name="saidas" th:value="${caixaSaidaHoje}">
             <input type="hidden" name="despesas" th:value="${totalDespesasHoje}">
             <input type="hidden" name="lucro" th:value="${lucroDoDia}">
-            <input type="hidden" name="pesoTotal" th:value="${totalGeralKg}">
+
+            <!-- 🌟 AGORA PUXA SÓ O QUE FOI COMPRADO HOJE E NÃO O HISTÓRICO TODO 🌟 -->
+            <input type="hidden" name="pesoTotal" th:value="${pesoCompradoHoje}">
+
             <button type="submit" class="btn btn-outline-danger btn-sm fw-bold shadow-sm">
                 <i class="bi bi-lock"></i> Encerrar Dia
             </button>

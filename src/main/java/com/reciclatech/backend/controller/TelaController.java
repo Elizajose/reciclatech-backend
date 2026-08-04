@@ -314,7 +314,6 @@ public class TelaController {
             List<Oferta> historico = googleSheetsService.getHistoricoCompleto();
             String dataHoje = LocalDate.now(ZoneId.of("America/Recife")).toString();
 
-            // 🌟 Mapeando as unidades para o HTML saber quem é KG e quem é UN 🌟
             List<Material> todosMateriais = googleSheetsService.listarMateriais();
             Map<String, String> mapaUnidades = todosMateriais.stream().collect(Collectors.toMap(Material::getNome, Material::getUnidade));
             model.addAttribute("mapaUnidades", mapaUnidades);
@@ -326,6 +325,9 @@ public class TelaController {
             Map<String, Double> totalCompradoKg = new HashMap<>();
             Double totalGeralKg = 0.0;
             Double totalPagoCatadores = 0.0;
+
+            // 🌟 NOVA VARIÁVEL: Guarda apenas o peso comprado HOJE 🌟
+            Double pesoCompradoHoje = 0.0;
 
             for (Oferta o : historico) {
                 if (o.getMaterial() == null || o.getPeso() == null) continue;
@@ -339,16 +341,21 @@ public class TelaController {
                     if (isHoje && status.equals("SAIDA_INDUSTRIA")) caixaEntradaHoje += valor;
                 } else if (status.equals("VENDIDO") || status.equals("AJUSTE_POSITIVO")) {
                     estoqueRealKg.put(material, estoqueRealKg.getOrDefault(material, 0.0) + peso);
-                    if (isHoje && status.equals("VENDIDO")) caixaSaidaHoje += valor;
+
+                    if (isHoje && status.equals("VENDIDO")) {
+                        caixaSaidaHoje += valor;
+                        // 🌟 SEPARAÇÃO: Soma o peso apenas para as métricas de HOJE 🌟
+                        if ("KG".equalsIgnoreCase(mapaUnidades.getOrDefault(material, "KG"))) {
+                            pesoCompradoHoje += peso;
+                        }
+                    }
 
                     if (status.equals("VENDIDO")) {
-                        // 🌟 TRAVA: Só entra no Reciclômetro e no Top/Baixa se for KG 🌟
                         String unidadeMat = mapaUnidades.getOrDefault(material, "KG");
                         if ("KG".equalsIgnoreCase(unidadeMat)) {
                             totalCompradoKg.put(material, totalCompradoKg.getOrDefault(material, 0.0) + peso);
                             totalGeralKg += peso;
                         }
-                        // O dinheiro entra independente de ser KG ou UN
                         totalPagoCatadores += valor;
                     }
                 }
@@ -380,6 +387,9 @@ public class TelaController {
             model.addAttribute("lucroDoDia", lucroDoDia);
             model.addAttribute("estoqueReal", estoqueRealKg);
 
+            // 🌟 ENVIA A VARIÁVEL CORRETA DO PESO DE HOJE PARA O HTML 🌟
+            model.addAttribute("pesoCompradoHoje", pesoCompradoHoje);
+
             model.addAttribute("rankingMaisColetados", rankingMaisColetados);
             model.addAttribute("baixaColeta", baixaColeta);
             model.addAttribute("totalGeralKg", totalGeralKg);
@@ -394,7 +404,6 @@ public class TelaController {
             model.addAttribute("totalExpedicoes", totalExpedicoes);
             model.addAttribute("dadosRoscaKg", estoqueRealKg);
 
-            // 👇 LINHAS CORRIGIDAS: Agora estão dentro do try, onde a "dataHoje" existe! 👇
             List<Map<String, String>> historicoCaixa = googleSheetsService.listarFechamentosCaixa();
             model.addAttribute("historicoCaixa", historicoCaixa);
             model.addAttribute("dataHojeString", dataHoje);
