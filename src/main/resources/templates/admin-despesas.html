@@ -55,9 +55,17 @@
                         <td class="text-end fw-bold text-danger fs-5">
                             - R$ <span th:text="${d.valor}">150,00</span>
                         </td>
+                        <!-- 🌟 NOVO BOTÃO DE EXCLUIR 🌟 -->
+                        <td class="text-end" style="width: 50px;">
+                            <a th:href="@{'/admin/despesas/deletar/' + ${d.id}}"
+                               class="btn btn-sm btn-outline-danger shadow-sm"
+                               onclick="return confirm('Tem certeza que deseja excluir este registro de despesa do seu financeiro?')">
+                                <i class="bi bi-trash3-fill"></i>
+                            </a>
+                        </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(despesas)}">
-                        <td colspan="2" class="text-center text-muted py-4">Nenhuma despesa registrada ainda.</td>
+                        <td colspan="3" class="text-center text-muted py-4">Nenhuma despesa registrada ainda.</td>
                     </tr>
                     </tbody>
                 </table>

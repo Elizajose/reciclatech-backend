@@ -314,11 +314,15 @@ public class TelaController {
             List<Oferta> historico = googleSheetsService.getHistoricoCompleto();
             String dataHoje = LocalDate.now(ZoneId.of("America/Recife")).toString();
 
+            // 🌟 Mapeando as unidades para o HTML saber quem é KG e quem é UN 🌟
+            List<Material> todosMateriais = googleSheetsService.listarMateriais();
+            Map<String, String> mapaUnidades = todosMateriais.stream().collect(Collectors.toMap(Material::getNome, Material::getUnidade));
+            model.addAttribute("mapaUnidades", mapaUnidades);
+
             Double caixaEntradaHoje = 0.0;
             Double caixaSaidaHoje = 0.0;
             Map<String, Double> estoqueRealKg = new HashMap<>();
 
-            // 🌟 VARIÁVEIS PARA OS NOVOS CARDS E CORREÇÕES DO RANKING 🌟
             Map<String, Double> totalCompradoKg = new HashMap<>();
             Double totalGeralKg = 0.0;
             Double totalPagoCatadores = 0.0;
@@ -337,10 +341,14 @@ public class TelaController {
                     estoqueRealKg.put(material, estoqueRealKg.getOrDefault(material, 0.0) + peso);
                     if (isHoje && status.equals("VENDIDO")) caixaSaidaHoje += valor;
 
-                    // Lógica para preencher o Top 3, Baixa Coleta e Reciclômetro
                     if (status.equals("VENDIDO")) {
-                        totalCompradoKg.put(material, totalCompradoKg.getOrDefault(material, 0.0) + peso);
-                        totalGeralKg += peso;
+                        // 🌟 TRAVA: Só entra no Reciclômetro e no Top/Baixa se for KG 🌟
+                        String unidadeMat = mapaUnidades.getOrDefault(material, "KG");
+                        if ("KG".equalsIgnoreCase(unidadeMat)) {
+                            totalCompradoKg.put(material, totalCompradoKg.getOrDefault(material, 0.0) + peso);
+                            totalGeralKg += peso;
+                        }
+                        // O dinheiro entra independente de ser KG ou UN
                         totalPagoCatadores += valor;
                     }
                 }
@@ -351,19 +359,16 @@ public class TelaController {
             Double totalDespesasHoje = googleSheetsService.calcularDespesasDoDia(dataHoje);
             Double lucroDoDia = caixaEntradaHoje - caixaSaidaHoje - totalDespesasHoje;
 
-            // 🌟 RESTAURANDO O RANKING TOP 3 🌟
             Map<String, Double> rankingMaisColetados = totalCompradoKg.entrySet().stream()
                     .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
                     .limit(3)
                     .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
 
-            // 🌟 RESTAURANDO A BAIXA COLETA (< 50kg) 🌟
             Map<String, Double> baixaColeta = totalCompradoKg.entrySet().stream()
                     .filter(e -> e.getValue() < 50.0)
                     .sorted(Map.Entry.comparingByValue())
                     .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
 
-            // 🌟 TOP 5 PARA O RECICLÔMETRO 🌟
             Map<String, Double> top5Reciclometro = totalCompradoKg.entrySet().stream()
                     .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
                     .limit(5)
@@ -375,7 +380,6 @@ public class TelaController {
             model.addAttribute("lucroDoDia", lucroDoDia);
             model.addAttribute("estoqueReal", estoqueRealKg);
 
-            // Enviando as correções para o HTML
             model.addAttribute("rankingMaisColetados", rankingMaisColetados);
             model.addAttribute("baixaColeta", baixaColeta);
             model.addAttribute("totalGeralKg", totalGeralKg);
@@ -568,5 +572,14 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser")) || session.getAttribute("gestorAutorizado") == null) return "redirect:/admin/analises/autenticar";
         try { googleSheetsService.salvarAjusteEstoque(material, peso, tipoAjuste, motivo); } catch (Exception e) {}
         return "redirect:/admin/analises";
+    }
+
+    @GetMapping("/admin/despesas/deletar/{id}")
+    public String deletarDespesa(@PathVariable String id, HttpSession session) {
+        if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser")) || session.getAttribute("gestorAutorizado") == null) {
+            return "redirect:/admin/analises/autenticar";
+        }
+        try { googleSheetsService.deletarDespesa(id); } catch (Exception e) {}
+        return "redirect:/admin/despesas";
     }
 }

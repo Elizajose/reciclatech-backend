@@ -632,4 +632,21 @@ public class GoogleSheetsService {
             sheetsService.spreadsheets().values().append(spreadsheetId, "Ofertas!A1", body).setValueInputOption("USER_ENTERED").execute();
         }
     }
+    public void deletarDespesa(String id) throws IOException {
+        String spreadsheetId = getSpreadsheetIdAtivo();
+        ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Despesas!A:A").execute();
+        List<List<Object>> values = response.getValues();
+        int rowIndex = -1;
+        if (values != null) {
+            for (int i = 0; i < values.size(); i++) {
+                if (!values.get(i).isEmpty() && values.get(i).get(0).toString().equals(id)) {
+                    rowIndex = i;
+                    break;
+                }
+            }
+        }
+        if (rowIndex != -1) {
+            sheetsService.spreadsheets().values().clear(spreadsheetId, "Despesas!A" + (rowIndex + 1) + ":D" + (rowIndex + 1), new ClearValuesRequest()).execute();
+        }
+    }
 }
