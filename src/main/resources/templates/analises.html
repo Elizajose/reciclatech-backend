@@ -11,6 +11,7 @@
     <style>
         .card { border-radius: 12px; border: none; transition: transform 0.2s; }
         .chart-container { height: 350px; position: relative; }
+        .table-historico th { background-color: var(--bs-tertiary-bg); font-size: 0.85rem; text-transform: uppercase; }
 
         @media print {
             .no-print, .btn, hr, canvas { display: none !important; }
@@ -21,11 +22,6 @@
             .print-only { display: block !important; }
             table { width: 100% !important; border-collapse: collapse !important; }
             th, td { border: 1px solid #333 !important; padding: 5px !important; }
-
-            .card, .card h6, .card h3, .card span, .card-header,
-            .text-white, .text-muted, .text-success, .text-danger, .text-primary {
-                color: #000 !important;
-            }
         }
         .print-only { display: none; }
     </style>
@@ -45,8 +41,24 @@
         </div>
     </div>
 
-    <!-- CAIXA DO DIA -->
-    <h5 class="fw-bold mb-3 no-print"><i class="bi bi-cash-coin"></i> Fluxo de Caixa Diário</h5>
+    <!-- CAIXA DO DIA E BOTÃO DE FECHAMENTO -->
+    <div class="d-flex justify-content-between align-items-end mb-3 no-print">
+        <h5 class="fw-bold m-0"><i class="bi bi-cash-coin"></i> Fluxo de Caixa (Hoje)</h5>
+
+        <!-- Formulário para Encerrar o Dia -->
+        <form action="/admin/fechar-caixa" method="post" onsubmit="return confirm('Deseja realmente travar o caixa de hoje? Isso salvará o resumo para o histórico de comparação.')">
+            <input type="hidden" name="dataHoje" th:value="${dataHojeString}">
+            <input type="hidden" name="entradas" th:value="${caixaEntradaHoje}">
+            <input type="hidden" name="saidas" th:value="${caixaSaidaHoje}">
+            <input type="hidden" name="despesas" th:value="${totalDespesasHoje}">
+            <input type="hidden" name="lucro" th:value="${lucroDoDia}">
+            <input type="hidden" name="pesoTotal" th:value="${totalGeralKg}">
+            <button type="submit" class="btn btn-outline-danger btn-sm fw-bold shadow-sm">
+                <i class="bi bi-lock"></i> Encerrar Dia
+            </button>
+        </form>
+    </div>
+
     <div class="row g-3 mb-4 no-print">
         <div class="col-md-3">
             <div class="card shadow-sm p-3 bg-primary bg-opacity-75 text-white text-center h-100">
@@ -74,8 +86,43 @@
         </div>
     </div>
 
+    <!-- 🌟 NOVA SEÇÃO: HISTÓRICO DE FECHAMENTOS (COMPARAÇÃO) 🌟 -->
+    <h5 class="fw-bold mb-3 mt-4 no-print"><i class="bi bi-calendar-check"></i> Histórico de Fechamentos (Comparação)</h5>
+    <div class="card shadow-sm border-0 mb-4 bg-body no-print">
+        <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                <table class="table table-hover align-middle m-0 table-historico">
+                    <thead class="sticky-top">
+                    <tr>
+                        <th class="ps-4">Data</th>
+                        <th>KG Comprado</th>
+                        <th class="text-success">Vendas (Entrada)</th>
+                        <th class="text-warning">Compras (Saída)</th>
+                        <th class="text-danger">Despesas</th>
+                        <th class="text-end pe-4">Lucro Líquido</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="hist : ${historicoCaixa}">
+                        <td class="ps-4 fw-bold text-body-secondary" th:text="${hist.data}"></td>
+                        <td class="fw-bold" th:text="${hist.peso} + ' KG'"></td>
+                        <td class="text-success">R$ <span th:text="${hist.entradas}"></span></td>
+                        <td class="text-warning text-dark">R$ <span th:text="${hist.saidas}"></span></td>
+                        <td class="text-danger">R$ <span th:text="${hist.despesas}"></span></td>
+                        <td class="text-end pe-4 fw-bold" th:classappend="${!#strings.startsWith(hist.lucro, '-')} ? 'text-success' : 'text-danger'">
+                            R$ <span th:text="${hist.lucro}"></span>
+                        </td>
+                    </tr>
+                    <tr th:if="${historicoCaixa == null || historicoCaixa.isEmpty()}">
+                        <td colspan="6" class="text-center py-4 text-muted fst-italic">Nenhum dia encerrado no histórico ainda.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- ESTOQUE REAL NO PÁTIO -->
-    <!-- 🌟 Agora ele puxa UN ou KG com base no mapaUnidades 🌟 -->
     <h5 class="fw-bold mb-3 mt-4 no-print"><i class="bi bi-box-seam"></i> Estoque Real no Pátio</h5>
     <div class="row mb-4 no-print">
         <div class="col-md-12">
@@ -99,7 +146,6 @@
     <h5 class="fw-bold mb-3 mt-4 no-print"><i class="bi bi-graph-up-arrow"></i> Desempenho e Indicadores Sociais</h5>
 
     <div class="row no-print mb-4 align-items-stretch">
-
         <div class="col-md-4 mb-3 mb-md-0">
             <div class="card shadow-sm p-4 bg-dark text-white text-center h-100 d-flex justify-content-center align-items-center">
                 <h5 class="fw-bold text-warning mb-3"><i class="bi bi-people-fill fs-1 d-block mb-2"></i> Clientes Atendidos</h5>
@@ -112,7 +158,6 @@
             <div class="card shadow-sm border-0 h-100 bg-success text-white" id="cardReciclometro">
                 <div class="card-body d-flex flex-column">
                     <h5 class="fw-bold mb-3 text-center"><i class="bi bi-recycle fs-4 me-2"></i> Reciclômetro</h5>
-                    <!-- O total geral agora só tem itens pesados em KG -->
                     <h2 class="fw-bold mb-1 text-center" th:text="${#numbers.formatDecimal(totalGeralKg, 1, 'POINT', 1, 'COMMA')} + ' KG'"></h2>
                     <p class="small opacity-75 mb-4 text-center">Total retirado das ruas (Histórico)</p>
 
@@ -133,14 +178,13 @@
             <div class="card shadow-sm p-4 bg-primary text-white text-center h-100 d-flex justify-content-center align-items-center">
                 <h5 class="fw-bold text-light mb-3"><i class="bi bi-cash-stack fs-1 d-block mb-2"></i> Economia Local</h5>
                 <h2 class="display-5 fw-bold m-0">R$ <span th:text="${#numbers.formatDecimal(totalPagoCatadores, 1, 'POINT', 2, 'COMMA')}"></span></h2>
-                <p class="mb-0 mt-3 opacity-75 small">Valor total injetado na comunidade através dos pagamentos aos catadores.</p>
+                <p class="mb-0 mt-3 opacity-75 small">Valor injetado na comunidade através dos catadores.</p>
             </div>
         </div>
     </div>
 
     <!-- SEÇÃO DE PROPORÇÕES E RANKINGS -->
     <div class="row no-print mb-4 align-items-stretch">
-
         <div class="col-md-4 mb-3 mb-md-0" th:if="${dadosRoscaKg != null}">
             <div class="card shadow-sm p-3 h-100 border-0">
                 <h5 class="text-center fw-bold text-body-secondary">Proporção Atual do Estoque</h5>
@@ -176,40 +220,6 @@
                     </li>
                     <li th:if="${baixaColeta == null || baixaColeta.isEmpty()}" class="list-group-item bg-body text-body-secondary fst-italic small">Nenhum material em baixa</li>
                 </ul>
-            </div>
-        </div>
-    </div>
-
-    <!-- ÁREA DE IMPRESSÃO -->
-    <div class="print-only mt-2">
-        <div class="text-center mb-4" style="border-bottom: 2px solid #000; padding-bottom: 10px;">
-            <h2 class="fw-bold m-0">BALANÇO FINANCEIRO E ESTOQUE - COLETÂE</h2>
-            <p class="m-0 small">Relatório gerado em: <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy HH:mm')}"></span></p>
-        </div>
-
-        <table class="table table-bordered border-dark mt-3">
-            <thead class="table-dark text-center"><tr><th colspan="4">FECHAMENTO DO CAIXA DE HOJE</th></tr></thead>
-            <tbody>
-            <tr class="text-center">
-                <td><strong>Entradas (Vendas):</strong><br>R$ <span th:text="${caixaEntradaHoje != null ? #numbers.formatDecimal(caixaEntradaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></td>
-                <td><strong>Saídas (Compras):</strong><br>R$ <span th:text="${caixaSaidaHoje != null ? #numbers.formatDecimal(caixaSaidaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></td>
-                <td><strong>Despesas:</strong><br>R$ <span th:text="${totalDespesasHoje != null ? #numbers.formatDecimal(totalDespesasHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></td>
-                <td><strong>Lucro Líquido:</strong><br>R$ <span th:text="${lucroDoDia != null ? #numbers.formatDecimal(lucroDoDia, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></td>
-            </tr>
-            </tbody>
-        </table>
-
-        <div class="row mt-4">
-            <div style="width: 100%;">
-                <table class="table table-sm table-bordered">
-                    <thead class="table-secondary text-center"><tr><th>ESTOQUE FÍSICO NO PÁTIO (Material)</th><th>Peso/Qtd Total</th></tr></thead>
-                    <tbody>
-                    <tr th:each="entry : ${estoqueReal}">
-                        <td th:text="${entry.key}"></td>
-                        <td class="text-center" th:text="${#numbers.formatDecimal(entry.value, 1, 'POINT', 2, 'COMMA')} + ' ' + ${mapaUnidades != null && mapaUnidades.containsKey(entry.key) ? mapaUnidades[entry.key] : 'KG'}"></td>
-                    </tr>
-                    </tbody>
-                </table>
             </div>
         </div>
     </div>

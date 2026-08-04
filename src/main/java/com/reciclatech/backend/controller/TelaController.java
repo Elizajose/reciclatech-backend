@@ -394,8 +394,16 @@ public class TelaController {
             model.addAttribute("totalExpedicoes", totalExpedicoes);
             model.addAttribute("dadosRoscaKg", estoqueRealKg);
 
-        } catch (Exception e) { return "redirect:/admin/coletas?erro=analises"; }
-        return "analises";
+            // 👇 LINHAS CORRIGIDAS: Agora estão dentro do try, onde a "dataHoje" existe! 👇
+            List<Map<String, String>> historicoCaixa = googleSheetsService.listarFechamentosCaixa();
+            model.addAttribute("historicoCaixa", historicoCaixa);
+            model.addAttribute("dataHojeString", dataHoje);
+
+            return "analises";
+
+        } catch (Exception e) {
+            return "redirect:/admin/coletas?erro=analises";
+        }
     }
 
     @GetMapping("/admin/analises/autenticar")
@@ -581,5 +589,23 @@ public class TelaController {
         }
         try { googleSheetsService.deletarDespesa(id); } catch (Exception e) {}
         return "redirect:/admin/despesas";
+    }
+
+    @PostMapping("/admin/fechar-caixa")
+    public String fecharCaixaDiario(
+            @RequestParam String dataHoje, @RequestParam Double entradas,
+            @RequestParam Double saidas, @RequestParam Double despesas,
+            @RequestParam Double lucro, @RequestParam Double pesoTotal,
+            HttpSession session) {
+
+        if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser")) || session.getAttribute("gestorAutorizado") == null) {
+            return "redirect:/admin/analises/autenticar";
+        }
+
+        try {
+            googleSheetsService.fecharCaixaDoDia(dataHoje, BigDecimal.valueOf(entradas), BigDecimal.valueOf(saidas), BigDecimal.valueOf(despesas), BigDecimal.valueOf(lucro), pesoTotal);
+        } catch (Exception e) { System.err.println("Erro ao fechar caixa: " + e.getMessage()); }
+
+        return "redirect:/admin/analises";
     }
 }
