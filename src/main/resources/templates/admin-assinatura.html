@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
+<head>
+    <title>Meu Plano - Coletaê</title>
+    <meta charset="UTF-8">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
+    <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        .card { border-radius: 15px; border: none; }
+    </style>
+</head>
+<body class="bg-body-tertiary p-3 p-md-5">
+
+<div class="container-lg" style="max-width: 900px;">
+
+    <!-- CABEÇALHO -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-body-emphasis m-0"><i class="bi bi-star-fill text-warning me-2"></i> Minha Assinatura</h3>
+        <a href="/admin/analises" class="btn btn-secondary shadow-sm"><i class="bi bi-arrow-left"></i> Voltar ao Painel</a>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- STATUS DO PLANO -->
+        <div class="col-md-7">
+            <div class="card shadow-sm h-100 bg-body">
+                <div class="card-body p-4 d-flex flex-column justify-content-center">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="fw-bold text-muted text-uppercase mb-1">Plano Atual</h5>
+                            <h2 class="fw-bold text-primary mb-0" th:text="${planoNome}">Coletaê Pro</h2>
+                        </div>
+                        <span class="badge fs-6 rounded-pill" th:classappend="${statusAssinatura == 'ATIVO'} ? 'bg-success' : 'bg-danger'">
+                            <i class="bi" th:classappend="${statusAssinatura == 'ATIVO'} ? 'bi-check-circle-fill' : 'bi-x-circle-fill'"></i>
+                            <span th:text="${statusAssinatura}">ATIVO</span>
+                        </span>
+                    </div>
+
+                    <hr class="text-muted opacity-25">
+
+                    <div class="row text-center mt-2">
+                        <div class="col-6 border-end">
+                            <span class="d-block text-muted small fw-bold">Valor da Mensalidade</span>
+                            <span class="fs-4 fw-bold">R$ <span th:text="${#numbers.formatDecimal(valorMensalidade, 1, 'POINT', 2, 'COMMA')}">97,00</span></span>
+                        </div>
+                        <div class="col-6">
+                            <span class="d-block text-muted small fw-bold">Próximo Vencimento</span>
+                            <span class="fs-4 fw-bold text-dark" th:text="${proximoVencimento}">15/08/2026</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AÇÕES RÁPIDAS E PAGAMENTO -->
+        <div class="col-md-5">
+            <div class="card shadow-sm h-100 bg-primary text-white">
+                <div class="card-body p-4 d-flex flex-column">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-credit-card-2-front"></i> Método de Pagamento</h5>
+                    <p class="small opacity-75 mb-4">Mantenha sua assinatura em dia para não perder o acesso ao sistema e ao histórico do seu armazém.</p>
+
+                    <div class="mt-auto d-grid gap-2">
+                        <button class="btn btn-light fw-bold text-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalPagamento">
+                            <i class="bi bi-qr-code-scan"></i> Pagar Fatura Aberta via PIX
+                        </button>
+                        <button class="btn btn-outline-light fw-bold shadow-sm" onclick="alert('Funcionalidade de troca de cartão será liberada via Gateway de Pagamento na VPS.')">
+                            <i class="bi bi-credit-card"></i> Atualizar Cartão
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HISTÓRICO DE FATURAS -->
+    <div class="card shadow-sm border-0 bg-body">
+        <div class="card-header bg-body border-bottom-0 pt-4 pb-2 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold m-0"><i class="bi bi-receipt"></i> Histórico de Faturas</h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle m-0 bg-body">
+                <thead class="table-light">
+                <tr>
+                    <th class="ps-4">Mês de Referência</th>
+                    <th>Valor</th>
+                    <th>Status</th>
+                    <th class="text-end pe-4">Ação</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="fat : ${faturas}">
+                    <td class="ps-4 fw-bold text-body-secondary" th:text="${fat.mes}">Agosto/2026</td>
+                    <td class="fw-bold">R$ <span th:text="${fat.valor}">97,00</span></td>
+                    <td>
+                        <span class="badge" th:classappend="${fat.status == 'PAGO'} ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning fw-bold'" th:text="${fat.status}">PAGO</span>
+                    </td>
+                    <td class="text-end pe-4">
+                        <button class="btn btn-sm btn-outline-secondary shadow-sm" th:disabled="${fat.status == 'PENDENTE'}" onclick="alert('Download do recibo gerado pelo Gateway.')">
+                            <i class="bi bi-download"></i> Recibo
+                        </button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer bg-body-tertiary border-top p-3 text-center">
+            <a href="#" class="text-danger small fw-bold text-decoration-none" onclick="confirmarCancelamento()">Solicitar cancelamento da assinatura</a>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Fake de PIX (Preparado para receber o QR Code do Banco de Dados depois) -->
+<div class="modal fade" id="modalPagamento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white border-0">
+                <h1 class="modal-title fs-5 fw-bold"><i class="bi bi-qr-code"></i> Pagamento via PIX</h1>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <p class="text-muted fw-bold mb-4">Escaneie o QR Code abaixo no app do seu banco:</p>
+                <div class="bg-light p-3 d-inline-block rounded-3 border mb-4">
+                    <!-- Placeholder para a imagem real do QR Code gerada pelo Gateway -->
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=00020126360014BR.GOV.BCB.PIX0114000000000000005204000053039865802BR5913MOCKPAYMENT600897.006207BRASIL630466F0" alt="QR Code Pix" width="200" height="200" class="img-fluid">
+                </div>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control text-center text-muted" value="00020126360014BR.GOV.BCB.PIX..." readonly id="pixCopiaCola">
+                    <button class="btn btn-outline-primary fw-bold" onclick="copiarPix()"><i class="bi bi-clipboard"></i> Copiar</button>
+                </div>
+                <small class="text-success fw-bold"><i class="bi bi-shield-check"></i> Liberação automática em até 5 minutos após o pagamento.</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-bs-theme', currentTheme);
+    });
+
+    function copiarPix() {
+        let input = document.getElementById("pixCopiaCola");
+        input.select();
+        document.execCommand("copy");
+        alert("Código PIX copiado com sucesso!");
+    }
+
+    function confirmarCancelamento() {
+        if(confirm("Tem certeza que deseja cancelar sua assinatura? O acesso ao sistema será suspenso no fim do ciclo vigente e todos os painéis ficarão bloqueados. Deseja continuar?")) {
+            alert("Solicitação registrada. (Esta ação será interligada com a API do Stripe/Asaas)");
+        }
+    }
+</script>
+</body>
+</html>

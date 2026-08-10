@@ -613,8 +613,47 @@ public class TelaController {
 
         try {
             googleSheetsService.fecharCaixaDoDia(dataHoje, BigDecimal.valueOf(entradas), BigDecimal.valueOf(saidas), BigDecimal.valueOf(despesas), BigDecimal.valueOf(lucro), pesoTotal);
-        } catch (Exception e) { System.err.println("Erro ao fechar caixa: " + e.getMessage()); }
+
+            //Pausa de 1 segundo para o Google Sheets sincronizar os dados.
+            Thread.sleep(1000);
+
+        } catch (Exception e) {
+            System.err.println("Erro ao fechar caixa: " + e.getMessage());
+        }
 
         return "redirect:/admin/analises";
+    }
+
+    //ROTA DE ASSINATURA (PRÉ-MIGRAÇÃO PARA VPS)
+    @GetMapping("/admin/assinatura")
+    public String telaAssinaturaSaaS(Model model, HttpSession session, HttpServletResponse response) {
+        if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
+
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
+        // -------------------------------------------------------------
+        // DADOS FALSOS (MOCK) - PRONTOS PARA SEREM SUBSTITUÍDOS PELO DB
+        // -------------------------------------------------------------
+        model.addAttribute("planoNome", "Coletaê SaaS Pro");
+        model.addAttribute("valorMensalidade", 97.00);
+        model.addAttribute("statusAssinatura", "ATIVO");
+        model.addAttribute("proximoVencimento", LocalDate.now(ZoneId.of("America/Recife")).plusDays(10).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+
+        // Lista de Faturas Fake para o HTML desenhar a tabela
+        List<Map<String, String>> faturas = new ArrayList<>();
+
+        Map<String, String> fat1 = new HashMap<>();
+        fat1.put("mes", "Agosto/2026"); fat1.put("valor", "97,00"); fat1.put("status", "PENDENTE");
+
+        Map<String, String> fat2 = new HashMap<>();
+        fat2.put("mes", "Julho/2026"); fat2.put("valor", "97,00"); fat2.put("status", "PAGO");
+
+        faturas.add(fat1);
+        faturas.add(fat2);
+
+        model.addAttribute("faturas", faturas);
+
+        return "admin-assinatura";
     }
 }

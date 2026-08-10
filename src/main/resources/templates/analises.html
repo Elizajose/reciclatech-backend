@@ -22,6 +22,11 @@
             .print-only { display: block !important; }
             table { width: 100% !important; border-collapse: collapse !important; }
             th, td { border: 1px solid #333 !important; padding: 5px !important; }
+
+            .card, .card h6, .card h3, .card span, .card-header,
+            .text-white, .text-muted, .text-success, .text-danger, .text-primary {
+                color: #000 !important;
+            }
         }
         .print-only { display: none; }
     </style>
@@ -43,7 +48,7 @@
 
     <!-- CAIXA DO DIA E BOTÃO DE FECHAMENTO -->
     <div class="d-flex justify-content-between align-items-end mb-3 no-print">
-        <h5 class="fw-bold m-0"><i class="bi bi-cash-coin"></i> Fluxo de Caixa (Hoje)</h5>
+        <h5 class="fw-bold m-0"><i class="bi bi-cash-coin"></i> Movimentação da Gaveta (Hoje)</h5>
 
         <!-- Formulário para Encerrar o Dia -->
         <form action="/admin/fechar-caixa" method="post" onsubmit="return confirm('Deseja realmente travar o caixa de hoje? Isso salvará o resumo para o histórico de comparação.')">
@@ -53,7 +58,7 @@
             <input type="hidden" name="despesas" th:value="${totalDespesasHoje}">
             <input type="hidden" name="lucro" th:value="${lucroDoDia}">
 
-            <!-- 🌟 AGORA PUXA SÓ O QUE FOI COMPRADO HOJE E NÃO O HISTÓRICO TODO 🌟 -->
+            <!-- 🌟 PUXA SÓ O QUE FOI COMPRADO HOJE E NÃO O HISTÓRICO TODO 🌟 -->
             <input type="hidden" name="pesoTotal" th:value="${pesoCompradoHoje}">
 
             <button type="submit" class="btn btn-outline-danger btn-sm fw-bold shadow-sm">
@@ -62,34 +67,39 @@
         </form>
     </div>
 
+    <!-- 🌟 CARTÕES COM NOMES CORRIGIDOS E SALDO SEMPRE VERDE 🌟 -->
     <div class="row g-3 mb-4 no-print">
         <div class="col-md-3">
             <div class="card shadow-sm p-3 bg-primary bg-opacity-75 text-white text-center h-100">
-                <h6 class="opacity-75">VENDAS (ENTROU)</h6>
+                <h6 class="opacity-75 fw-bold">VENDAS P/ INDÚSTRIA</h6>
                 <h3 class="fw-bold m-0">R$ <span th:text="${caixaEntradaHoje != null ? #numbers.formatDecimal(caixaEntradaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
+                <small class="opacity-75" style="font-size: 0.75rem;">Dinheiro que entrou (Expedição)</small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card shadow-sm p-3 bg-warning text-dark text-center h-100">
-                <h6 class="opacity-75">COMPRAS (SAIU)</h6>
+                <h6 class="opacity-75 fw-bold">PAGO AOS CATADORES</h6>
                 <h3 class="fw-bold m-0">R$ <span th:text="${caixaSaidaHoje != null ? #numbers.formatDecimal(caixaSaidaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
+                <small class="opacity-75" style="font-size: 0.75rem;">Investido na compra de material</small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card shadow-sm p-3 bg-danger text-white text-center h-100">
-                <h6 class="opacity-75">DESPESAS GERAIS</h6>
+                <h6 class="opacity-75 fw-bold">DESPESAS DO GALPÃO</h6>
                 <h3 class="fw-bold m-0">R$ <span th:text="${totalDespesasHoje != null ? #numbers.formatDecimal(totalDespesasHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
+                <small class="opacity-75" style="font-size: 0.75rem;">Contas pagas no dia</small>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card shadow-sm p-3 text-white text-center h-100" th:classappend="${lucroDoDia != null && lucroDoDia >= 0} ? 'bg-success' : 'bg-secondary'">
-                <h6 class="opacity-75">LUCRO LÍQUIDO</h6>
+            <div class="card shadow-sm p-3 bg-success text-white text-center h-100">
+                <h6 class="opacity-75 fw-bold">SALDO DO CAIXA</h6>
                 <h3 class="fw-bold m-0">R$ <span th:text="${lucroDoDia != null ? #numbers.formatDecimal(lucroDoDia, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
+                <small class="opacity-75" style="font-size: 0.75rem;">Dinheiro que sobrou/faltou hoje</small>
             </div>
         </div>
     </div>
 
-    <!-- 🌟 NOVA SEÇÃO: HISTÓRICO DE FECHAMENTOS (COMPARAÇÃO) 🌟 -->
+    <!-- 🌟 TABELA DO HISTÓRICO ATUALIZADA 🌟 -->
     <h5 class="fw-bold mb-3 mt-4 no-print"><i class="bi bi-calendar-check"></i> Histórico de Fechamentos (Comparação)</h5>
     <div class="card shadow-sm border-0 mb-4 bg-body no-print">
         <div class="card-body p-0">
@@ -99,20 +109,20 @@
                     <tr>
                         <th class="ps-4">Data</th>
                         <th>KG Comprado</th>
-                        <th class="text-success">Vendas (Entrada)</th>
-                        <th class="text-warning">Compras (Saída)</th>
-                        <th class="text-danger">Despesas</th>
-                        <th class="text-end pe-4">Lucro Líquido</th>
+                        <th class="text-primary">Vendas (Entrou)</th>
+                        <th class="text-warning">Catadores (Saiu)</th>
+                        <th class="text-danger">Despesas (Saiu)</th>
+                        <th class="text-end pe-4">Saldo do Caixa</th>
                     </tr>
                     </thead>
                     <tbody>
                     <tr th:each="hist : ${historicoCaixa}">
                         <td class="ps-4 fw-bold text-body-secondary" th:text="${hist.data}"></td>
                         <td class="fw-bold" th:text="${hist.peso} + ' KG'"></td>
-                        <td class="text-success">R$ <span th:text="${hist.entradas}"></span></td>
-                        <td class="text-warning text-dark">R$ <span th:text="${hist.saidas}"></span></td>
-                        <td class="text-danger">R$ <span th:text="${hist.despesas}"></span></td>
-                        <td class="text-end pe-4 fw-bold" th:classappend="${!#strings.startsWith(hist.lucro, '-')} ? 'text-success' : 'text-danger'">
+                        <td class="text-primary fw-bold">R$ <span th:text="${hist.entradas}"></span></td>
+                        <td class="text-warning text-dark fw-bold">R$ <span th:text="${hist.saidas}"></span></td>
+                        <td class="text-danger fw-bold">R$ <span th:text="${hist.despesas}"></span></td>
+                        <td class="text-end pe-4 fw-bold" th:classappend="${!#strings.startsWith(hist.lucro, '-')} ? 'text-success' : 'text-secondary'">
                             R$ <span th:text="${hist.lucro}"></span>
                         </td>
                     </tr>

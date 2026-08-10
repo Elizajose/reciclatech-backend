@@ -650,11 +650,10 @@ public class GoogleSheetsService {
         }
     }
 
-    // 🌟 SALVA O RESUMO DO DIA NA ABA Caixa_Diario 🌟
+    // SALVA O RESUMO DO DIA NA ABA Caixa_Diario (COM TRAVA ANTI-DUPLICAÇÃO)
     public void fecharCaixaDoDia(String data, BigDecimal entradas, BigDecimal saidas, BigDecimal despesas, BigDecimal lucro, Double pesoComprado) throws IOException {
         String spreadsheetId = getSpreadsheetIdAtivo();
 
-        // Formata os números para o padrão brasileiro
         String entStr = String.format("%.2f", entradas).replace(".", ",");
         String saiStr = String.format("%.2f", saidas).replace(".", ",");
         String despStr = String.format("%.2f", despesas).replace(".", ",");
@@ -664,15 +663,39 @@ public class GoogleSheetsService {
         List<Object> row = Arrays.asList(data, entStr, saiStr, despStr, lucroStr, pesoStr, "FECHADO");
 
         synchronized (getLock(spreadsheetId)) {
+            // 1. Verifica se já existe um fechamento com a data de hoje
+            ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, "Caixa_Diario!A:A").execute();
+            List<List<Object>> values = response.getValues();
+            int rowIndex = -1;
+
+            if (values != null) {
+                for (int i = 0; i < values.size(); i++) {
+                    if (!values.get(i).isEmpty() && values.get(i).get(0).toString().equals(data)) {
+                        rowIndex = i + 1; // +1 porque a planilha começa no índice 1
+                        break;
+                    }
+                }
+            }
+
             ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
-            sheetsService.spreadsheets().values()
-                    .append(spreadsheetId, "Caixa_Diario!A1", body)
-                    .setValueInputOption("USER_ENTERED")
-                    .execute();
+
+            if (rowIndex != -1) {
+                // 2. Se já existe, ATUALIZA a linha daquele dia
+                sheetsService.spreadsheets().values()
+                        .update(spreadsheetId, "Caixa_Diario!A" + rowIndex, body)
+                        .setValueInputOption("USER_ENTERED")
+                        .execute();
+            } else {
+                // 3. Se não existe, CRIA uma linha nova
+                sheetsService.spreadsheets().values()
+                        .append(spreadsheetId, "Caixa_Diario!A1", body)
+                        .setValueInputOption("USER_ENTERED")
+                        .execute();
+            }
         }
     }
 
-    // 🌟 LISTA OS FECHAMENTOS ANTERIORES PARA COMPARAÇÃO 🌟
+    // LISTA OS FECHAMENTOS ANTERIORES PARA COMPARAÇÃO
     public List<Map<String, String>> listarFechamentosCaixa() {
         List<Map<String, String>> lista = new ArrayList<>();
         try {
