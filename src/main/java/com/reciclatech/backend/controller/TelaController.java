@@ -326,7 +326,7 @@ public class TelaController {
             Double totalGeralKg = 0.0;
             Double totalPagoCatadores = 0.0;
 
-            // 🌟 NOVA VARIÁVEL: Guarda apenas o peso comprado HOJE 🌟
+            //NOVA VARIÁVEL: Guarda apenas o peso comprado HOJE
             Double pesoCompradoHoje = 0.0;
 
             for (Oferta o : historico) {
@@ -387,7 +387,7 @@ public class TelaController {
             model.addAttribute("lucroDoDia", lucroDoDia);
             model.addAttribute("estoqueReal", estoqueRealKg);
 
-            // 🌟 ENVIA A VARIÁVEL CORRETA DO PESO DE HOJE PARA O HTML 🌟
+            //ENVIA A VARIÁVEL CORRETA DO PESO DE HOJE PARA O HTML
             model.addAttribute("pesoCompradoHoje", pesoCompradoHoje);
 
             model.addAttribute("rankingMaisColetados", rankingMaisColetados);
@@ -544,7 +544,7 @@ public class TelaController {
         }
     }
 
-    // 🌟 ROTA: FORNECEDORES VIP 🌟
+    // ROTA: FORNECEDORES VIP
     @GetMapping("/admin/fornecedores-vip")
     public String telaFornecedoresVip(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
@@ -572,7 +572,7 @@ public class TelaController {
         return "redirect:/admin/fornecedores-vip";
     }
 
-    // 🌟 ROTA: AJUSTE DE ESTOQUE (DETALHADO) 🌟
+    // ROTA: AJUSTE DE ESTOQUE (DETALHADO)
     @GetMapping("/admin/ajuste-estoque")
     public String telaAjusteEstoque(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
@@ -624,33 +624,30 @@ public class TelaController {
         return "redirect:/admin/analises";
     }
 
-    //ROTA DE ASSINATURA (PRÉ-MIGRAÇÃO PARA VPS)
+    // ROTA DE ASSINATURA (COM TRAVA DE SENHA FINANCEIRA)
     @GetMapping("/admin/assinatura")
     public String telaAssinaturaSaaS(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
 
+        // A TRAVA DE SEGURANÇA ADICIONADA AQUI
+        if (session.getAttribute("gestorAutorizado") == null) return "redirect:/admin/analises/autenticar";
+
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 
-        // -------------------------------------------------------------
         // DADOS FALSOS (MOCK) - PRONTOS PARA SEREM SUBSTITUÍDOS PELO DB
-        // -------------------------------------------------------------
         model.addAttribute("planoNome", "Coletaê SaaS Pro");
-        model.addAttribute("valorMensalidade", 97.00);
+        model.addAttribute("valorMensalidade", 149.90);
         model.addAttribute("statusAssinatura", "ATIVO");
         model.addAttribute("proximoVencimento", LocalDate.now(ZoneId.of("America/Recife")).plusDays(10).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
 
-        // Lista de Faturas Fake para o HTML desenhar a tabela
+        // Lista de Faturas Fake
         List<Map<String, String>> faturas = new ArrayList<>();
-
         Map<String, String> fat1 = new HashMap<>();
         fat1.put("mes", "Agosto/2026"); fat1.put("valor", "97,00"); fat1.put("status", "PENDENTE");
-
         Map<String, String> fat2 = new HashMap<>();
         fat2.put("mes", "Julho/2026"); fat2.put("valor", "97,00"); fat2.put("status", "PAGO");
-
-        faturas.add(fat1);
-        faturas.add(fat2);
+        faturas.add(fat1); faturas.add(fat2);
 
         model.addAttribute("faturas", faturas);
 

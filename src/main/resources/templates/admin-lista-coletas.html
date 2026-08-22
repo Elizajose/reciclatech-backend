@@ -62,18 +62,10 @@
                 <span class="fw-bold d-none d-sm-inline">Meu Perfil</span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
-                <li><h6 class="dropdown-header">Configurações da Conta</h6></li>
-
-                <!-- BOTÃO DE ASSINATURA AQUI (TRAVADO PARA O GESTOR)  -->
-                <li th:if="${session.perfilUser == 'GESTOR'}">
-                    <a class="dropdown-item d-flex justify-content-between align-items-center fw-bold text-warning" href="/admin/assinatura">
-                        Meu Plano <i class="bi bi-star-fill"></i>
-                    </a>
-                </li>
-
+                <li><h6 class="dropdown-header">Configurações</h6></li>
                 <li>
                     <!-- BOTÃO DARK MODE DENTRO DO MENU -->
-                    <button class="dropdown-item d-flex justify-content-between align-items-center mt-1" id="themeToggleBtn">
+                    <button class="dropdown-item d-flex justify-content-between align-items-center" id="themeToggleBtn">
                         Modo Escuro <i id="themeIcon" class="bi bi-moon-fill text-secondary"></i>
                     </button>
                 </li>
