@@ -597,11 +597,14 @@
 
     // Leitura do Cookie para atualizar a bandeira ao carregar a página
     document.addEventListener("DOMContentLoaded", () => {
-        let match = document.cookie.match(/googtrans=\/pt\/([a-z]{2})/);
+        // 🌟 CORREÇÃO 1: O Regex agora aceita traços e letras maiúsculas/minúsculas (ex: pt-PT) 🌟
+        let match = document.cookie.match(/googtrans=\/pt\/([a-zA-Z\-]+)/);
         let currentLang = match ? match[1] : 'pt';
 
+        // 🌟 CORREÇÃO 2: Mapeamento da sigla 'pt-PT' adicionada corretamente 🌟
         const flags = {
-            'pt': { img: 'https://flagcdn.com/w20/br.png', text: 'PT' },
+            'pt': { img: 'https://flagcdn.com/w20/br.png', text: 'PT (BR)' },
+            'pt-PT': { img: 'https://flagcdn.com/w20/pt.png', text: 'PT (PT)' },
             'en': { img: 'https://flagcdn.com/w20/us.png', text: 'EN' },
             'es': { img: 'https://flagcdn.com/w20/es.png', text: 'ES' },
             'fr': { img: 'https://flagcdn.com/w20/fr.png', text: 'FR' }
