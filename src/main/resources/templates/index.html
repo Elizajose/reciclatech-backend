@@ -28,7 +28,7 @@
             scroll-behavior: smooth;
         }
 
-        /* 🌟 CSS DO TRADUTOR INVISÍVEL 🌟 */
+        /* CSS DO TRADUTOR INVISÍVEL */
         .VIpgJd-ZVi9od-ORHb-OEVmcd { display: none !important; }
         .goog-te-banner-frame { display: none !important; }
         body { top: 0px !important; }
@@ -404,9 +404,13 @@
         <div class="row align-items-center g-5">
             <div class="col-lg-6">
                 <div class="video-container">
-                    <iframe src="https://www.youtube.com/embed/qmotOVjAWS8?autoplay=1&mute=1&loop=1&playlist=qmotOVjAWS8"
-                            title="Como reciclar" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
-                    </iframe>
+                    <!-- VÍDEO EXPLICATIVO NATIVO (SEM YOUTUBE) -->
+                    <div class="ratio ratio-16x9 shadow-sm rounded-4 overflow-hidden border">
+                        <video controls preload="metadata" poster="/img/capa-do-video.jpg">
+                            <source src="/video/video_explicativo.mp4" type="video/mp4">
+                            Seu navegador não suporta a exibição deste vídeo.
+                        </video>
+                    </div>
                 </div>
             </div>
             <div class="col-lg-6">
@@ -513,7 +517,7 @@
     </div>
 </footer>
 
-<!-- 🌟 MODAL DE TERMOS E PRIVACIDADE (NOVO E COMPLETO) 🌟 -->
+<!-- MODAL DE TERMOS E PRIVACIDADE (NOVO E COMPLETO) -->
 <div class="modal fade" id="modalTermos" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable modal-lg">
         <div class="modal-content">
@@ -625,7 +629,7 @@
         let combo = document.getElementById("armazemDestino");
         let nomeArmazem = combo.options[combo.selectedIndex].text;
 
-        // 🌟 PUXA O TELEFONE DO ARMAZÉM SELECIONADO NA LISTA 🌟
+        // PUXA O TELEFONE DO ARMAZÉM SELECIONADO NA LISTA
         let telefoneArmazem = combo.options[combo.selectedIndex].getAttribute("data-telefone");
 
         let msg = `Olá! Me chamo *${nome}* e desejo agendar uma coleta em *${end}* para o armazém *${nomeArmazem}*. Vi os preços no site!`;
