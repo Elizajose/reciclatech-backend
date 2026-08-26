@@ -1,0 +1,31 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bs-tertiary-bg);
+}
+
+.container-revisao {
+    max-width: 850px;
+}
+
+.card {
+    border-radius: 16px;
+    border: none;
+}
+
+.table-revisao th {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--bs-border-color);
+}
+
+.table-revisao td {
+    vertical-align: middle;
+    padding: 15px 10px;
+}
+
+.form-control:focus {
+    box-shadow: none;
+    border-color: #198754;
+}

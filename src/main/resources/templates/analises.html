@@ -7,29 +7,12 @@
     <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <!-- Script do Chart.js mantido no head ele precisa carregar antes do seu script de gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        .card { border-radius: 12px; border: none; transition: transform 0.2s; }
-        .chart-container { height: 350px; position: relative; }
-        .table-historico th { background-color: var(--bs-tertiary-bg); font-size: 0.85rem; text-transform: uppercase; }
 
-        @media print {
-            .no-print, .btn, hr, canvas { display: none !important; }
-            body { background-color: white !important; font-size: 11pt; }
-            .container { width: 100% !important; max-width: none !important; margin: 0 !important; }
-            .row { display: flex !important; flex-wrap: nowrap !important; }
-            .col-md-3, .col-md-4, .col-md-6 { width: 50% !important; border: 1px solid #eee !important; padding: 10px !important; }
-            .print-only { display: block !important; }
-            table { width: 100% !important; border-collapse: collapse !important; }
-            th, td { border: 1px solid #333 !important; padding: 5px !important; }
-
-            .card, .card h6, .card h3, .card span, .card-header,
-            .text-white, .text-muted, .text-success, .text-danger, .text-primary {
-                color: #000 !important;
-            }
-        }
-        .print-only { display: none; }
-    </style>
+    <!-- CSS EXTERNO -->
+    <link rel="stylesheet" th:href="@{/css/admin-analises.css}">
 </head>
 <body class="bg-body-tertiary">
 <div class="container mt-4">
@@ -59,7 +42,6 @@
             <input type="hidden" name="despesas" th:value="${totalDespesasHoje}">
             <input type="hidden" name="lucro" th:value="${lucroDoDia}">
 
-            <!-- 🌟 PUXA SÓ O QUE FOI COMPRADO HOJE E NÃO O HISTÓRICO TODO 🌟 -->
             <input type="hidden" name="pesoTotal" th:value="${pesoCompradoHoje}">
 
             <button type="submit" class="btn btn-outline-danger btn-sm fw-bold shadow-sm">
@@ -68,45 +50,45 @@
         </form>
     </div>
 
-    <!-- 🌟 CARTÕES COM NOMES CORRIGIDOS E SALDO SEMPRE VERDE 🌟 -->
+    <!-- CARTÕES COM NOMES CORRIGIDOS E SALDO SEMPRE VERDE -->
     <div class="row g-3 mb-4 no-print">
         <div class="col-md-3">
             <div class="card shadow-sm p-3 bg-primary bg-opacity-75 text-white text-center h-100">
                 <h6 class="opacity-75 fw-bold">VENDAS P/ INDÚSTRIA</h6>
                 <h3 class="fw-bold m-0">R$ <span th:text="${caixaEntradaHoje != null ? #numbers.formatDecimal(caixaEntradaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
-                <small class="opacity-75" style="font-size: 0.75rem;">Dinheiro que entrou (Expedição)</small>
+                <small class="opacity-75 card-small-text">Dinheiro que entrou (Expedição)</small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card shadow-sm p-3 bg-warning text-dark text-center h-100">
                 <h6 class="opacity-75 fw-bold">PAGO AOS CATADORES</h6>
                 <h3 class="fw-bold m-0">R$ <span th:text="${caixaSaidaHoje != null ? #numbers.formatDecimal(caixaSaidaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
-                <small class="opacity-75" style="font-size: 0.75rem;">Investido na compra de material</small>
+                <small class="opacity-75 card-small-text">Investido na compra de material</small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card shadow-sm p-3 bg-danger text-white text-center h-100">
                 <h6 class="opacity-75 fw-bold">DESPESAS DO GALPÃO</h6>
                 <h3 class="fw-bold m-0">R$ <span th:text="${totalDespesasHoje != null ? #numbers.formatDecimal(totalDespesasHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
-                <small class="opacity-75" style="font-size: 0.75rem;">Contas pagas no dia</small>
+                <small class="opacity-75 card-small-text">Contas pagas no dia</small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card shadow-sm p-3 bg-success text-white text-center h-100">
                 <h6 class="opacity-75 fw-bold">SALDO DO CAIXA</h6>
                 <h3 class="fw-bold m-0">R$ <span th:text="${lucroDoDia != null ? #numbers.formatDecimal(lucroDoDia, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
-                <small class="opacity-75" style="font-size: 0.75rem;">Dinheiro que sobrou/faltou hoje</small>
+                <small class="opacity-75 card-small-text">Dinheiro que sobrou/faltou hoje</small>
             </div>
         </div>
     </div>
 
-    <!-- 🌟 TABELA DO HISTÓRICO ATUALIZADA 🌟 -->
+    <!-- TABELA DO HISTÓRICO ATUALIZADA -->
     <h5 class="fw-bold mb-3 mt-4 no-print"><i class="bi bi-calendar-check"></i> Histórico de Fechamentos (Comparação)</h5>
     <div class="card shadow-sm border-0 mb-4 bg-body no-print">
         <div class="card-body p-0">
-            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
-                <table class="table table-hover align-middle m-0 table-historico">
-                    <thead class="sticky-top">
+            <div class="table-responsive table-wrapper-historico">
+                <table class="table table-hover align-middle m-0 table-historico bg-body">
+                    <thead class="sticky-top bg-body">
                     <tr>
                         <th class="ps-4">Data</th>
                         <th>KG Comprado</th>
@@ -140,10 +122,10 @@
     <h5 class="fw-bold mb-3 mt-4 no-print"><i class="bi bi-box-seam"></i> Estoque Real no Pátio</h5>
     <div class="row mb-4 no-print">
         <div class="col-md-12">
-            <div class="card shadow-sm border-0">
+            <div class="card shadow-sm border-0 bg-body">
                 <div class="card-body">
                     <div class="d-flex flex-wrap gap-3">
-                        <div th:each="item : ${estoqueReal}" class="border rounded p-3 text-center bg-body shadow-sm" style="min-width: 150px;">
+                        <div th:each="item : ${estoqueReal}" class="border rounded p-3 text-center bg-body shadow-sm card-estoque">
                             <h6 class="text-body-secondary mb-1 fw-bold text-uppercase" th:text="${item.key}"></h6>
                             <h4 class="text-body-emphasis m-0" th:text="${#numbers.formatDecimal(item.value, 1, 'POINT', 1, 'COMMA')} + ' ' + ${mapaUnidades != null && mapaUnidades.containsKey(item.key) ? mapaUnidades[item.key] : 'KG'}"></h4>
                         </div>
@@ -200,7 +182,7 @@
     <!-- SEÇÃO DE PROPORÇÕES E RANKINGS -->
     <div class="row no-print mb-4 align-items-stretch">
         <div class="col-md-4 mb-3 mb-md-0" th:if="${dadosRoscaKg != null}">
-            <div class="card shadow-sm p-3 h-100 border-0">
+            <div class="card shadow-sm p-3 h-100 border-0 bg-body">
                 <h5 class="text-center fw-bold text-body-secondary">Proporção Atual do Estoque</h5>
                 <hr>
                 <div class="chart-container"><canvas id="graficoKg"></canvas></div>
@@ -208,7 +190,7 @@
         </div>
 
         <div class="col-md-4 mb-3 mb-md-0">
-            <div class="card shadow-sm border-0 h-100">
+            <div class="card shadow-sm border-0 h-100 bg-body">
                 <div class="card-header bg-body fw-bold text-success border-bottom-0 pt-3">
                     <i class="bi bi-arrow-up-circle-fill"></i> Mais Comprados (Top 3)
                 </div>
@@ -223,7 +205,7 @@
         </div>
 
         <div class="col-md-4">
-            <div class="card shadow-sm border-0 h-100">
+            <div class="card shadow-sm border-0 h-100 bg-body">
                 <div class="card-header bg-body fw-bold text-danger border-bottom-0 pt-3">
                     <i class="bi bi-arrow-down-circle-fill"></i> Baixa Coleta (< 50kg/un)
                 </div>
@@ -239,42 +221,13 @@
     </div>
 </div>
 
+<!-- INJETOR DOS DADOS DO GRÁFICO (Este script PRECISA ficar no HTML) -->
 <script th:inline="javascript">
-    document.addEventListener('DOMContentLoaded', () => {
-        const currentTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-bs-theme', currentTheme);
-
-        Chart.defaults.color = currentTheme === 'dark' ? '#dee2e6' : '#212529';
-        Chart.defaults.borderColor = currentTheme === 'dark' ? '#495057' : '#e9ecef';
-
-        const cores = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6610f2', '#fd7e14', '#20c997', '#adb5bd'];
-
-        const dataKg = /*[[${dadosRoscaKg}]]*/ null;
-        if(dataKg && Object.keys(dataKg).length > 0) {
-            new Chart(document.getElementById('graficoKg').getContext('2d'), {
-                type: 'doughnut',
-                data: { labels: Object.keys(dataKg), datasets: [{ data: Object.values(dataKg), backgroundColor: cores }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
-            });
-        }
-    });
-
-    function compartilharReciclometro() {
-        let total = document.querySelector('#cardReciclometro h2').innerText;
-        let msg = `♻️ *O Armazém Coletaê já retirou ${total} de materiais das ruas!*\n\n🏆 *Nosso Top 5 Histórico:* \n`;
-
-        let items = document.querySelectorAll('#cardReciclometro li');
-        items.forEach(li => {
-            let nome = li.children[0].innerText.trim();
-            let peso = li.children[1].innerText.trim();
-            msg += `- ${nome}: ${peso}\n`;
-        });
-
-        msg += `\nFaça sua parte! Traga sua reciclagem para nós e ajude a limpar o mundo. 🌍💚`;
-
-        let zapUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
-        window.open(zapUrl, '_blank');
-    }
+    const dataKgFromServer = /*[[${dadosRoscaKg}]]*/ null;
 </script>
+
+<!-- SCRIPT EXTERNO -->
+<script th:src="@{/js/admin-analises.js}"></script>
+
 </body>
 </html>

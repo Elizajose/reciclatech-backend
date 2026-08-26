@@ -8,71 +8,19 @@
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <!-- Biblioteca do QR Code (Mantida no HTML) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-    <style>
-        body { font-family: 'Courier New', Courier, monospace; background-color: #555; padding: 40px; }
-
-        .folha {
-            background: white;
-            max-width: 850px;
-            margin: 0 auto;
-            padding: 40px;
-            position: relative;
-            border-radius: 4px;
-            min-height: 1000px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
-
-        .header-box { border: 2px solid #212529; padding: 20px; margin-bottom: 20px; text-align: center; }
-        .info-box { border: 1px solid #212529; padding: 15px; margin-bottom: 20px; }
-
-        .table-custom { border: 1px solid #212529; margin-bottom: 20px; width: 100%; }
-        .table-custom th { border: 1px solid #212529; padding: 10px; background-color: #f8f9fa; text-align: center; }
-        .table-custom td { border: 1px solid #212529; padding: 10px; vertical-align: middle; }
-
-        .total-box { border: 2px solid #212529; padding: 15px; font-size: 1.3rem; font-weight: bold; text-align: right; background-color: #f8f9fa; }
-
-        .linha-assinatura {
-            border-top: 1px solid #212529;
-            width: 90%;
-            margin: 0 auto;
-            text-align: center;
-            padding-top: 5px;
-            font-size: 0.9rem;
-            font-weight: bold;
-        }
-
-        .logo-footer-ajustada { width: 85px; height: 85px; object-fit: contain; }
-        #qrcode { display: inline-block; }
-        #qrcode img { width: 85px; height: 85px; }
-
-        @media (max-width: 768px) {
-            body { padding: 10px; background: #f8f9fa; }
-            .folha { padding: 20px; width: 100%; max-width: 100%; min-height: auto; box-shadow: none; }
-            .row.assinaturas .col-6 { width: 100% !important; margin-bottom: 30px; }
-            .info-box .col-8, .info-box .col-4 { width: 100% !important; margin-bottom: 10px; }
-        }
-
-        body.modo-cliente .no-print,
-        body.modo-cliente .botoes-topo {
-            display: none !important;
-        }
-        body.modo-cliente { background: #f8f9fa; padding: 20px 10px; }
-
-        @media print {
-            body { background: white; padding: 0; }
-            .no-print { display: none !important; }
-            .folha { box-shadow: none !important; margin: 0; width: 100%; max-width: 100%; padding: 30px; border: none; }
-        }
-    </style>
+    <!-- CSS EXTERNO -->
+    <link rel="stylesheet" th:href="@{/css/admin-documento.css}">
 </head>
 <body th:classappend="${param.view != null && param.view[0] == 'resumo'} ? 'modo-cliente' : ''"
       th:with="isSaida=${vendedor.nome != null && vendedor.nome.contains('(SAÍDA)')}">
 
 <!-- Botões do seu sistema (WhatsApp, Voltar, Imprimir) -->
 <div class="text-center mb-4 no-print d-flex flex-wrap justify-content-center gap-2 botoes-topo mt-2">
-    <!-- CORREÇÃO AQUI: Botão voltar vai para a Home do Administrador /admin/coletas -->
+    <!-- CORREÇÃO AQUI: Botão voltar vai para a Home do Administrador -->
     <a href="/admin/coletas" class="btn btn-outline-light fw-bold">
         <i class="bi bi-arrow-left"></i> Voltar
     </a>
@@ -192,51 +140,13 @@
     </div>
 </div>
 
-<!-- Inputs Ocultos para o WhatsApp funcionar -->
+<!-- Inputs Ocultos para o JavaScript funcionar -->
 <input type="hidden" id="jsNome" th:value="${vendedor.nome.replace('(SAÍDA)', '')}">
 <input type="hidden" id="jsTelefone" th:value="${vendedor.telefone}">
 <input type="hidden" id="jsTotal" th:value="${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}">
 
-<script>
-    function gerarQRCode() {
-        const urlBase = window.location.origin + window.location.pathname;
-        const linkResumo = urlBase + "?view=resumo";
+<!-- SCRIPT EXTERNO -->
+<script th:src="@{/js/admin-documento.js}"></script>
 
-        new QRCode(document.getElementById("qrcode"), {
-            text: linkResumo,
-            width: 85,
-            height: 85,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
-        });
-    }
-
-    function enviarZap(destino) {
-        let nome = document.getElementById("jsNome").value;
-        let total = document.getElementById("jsTotal").value;
-        let telefoneCliente = document.getElementById("jsTelefone").value;
-        const urlBase = window.location.origin + window.location.pathname;
-        let linkRecibo = urlBase + "?view=resumo";
-
-        let msg = `🧾 *DOCUMENTO COLETAÊ SALGUEIRO*\n\nOlá *${nome}*,\nO registro no valor de *R$ ${total}* foi processado.\n\n🔗 *Documento Digital:* ${linkRecibo}\n\n_Obrigado por usar a nossa plataforma!_`;
-        let numeroDestino = (destino === 'empresa') ? "5587991919496" : "55" + telefoneCliente;
-        window.open(`https://wa.me/${numeroDestino}?text=${encodeURIComponent(msg)}`, '_blank');
-    }
-
-    window.onload = function() {
-        gerarQRCode();
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('autoPrint') === 'true' && params.get('view') !== 'resumo') {
-            setTimeout(() => { window.print(); }, 800);
-        }
-    };
-</script>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const currentTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-bs-theme', currentTheme);
-    });
-</script>
 </body>
 </html>

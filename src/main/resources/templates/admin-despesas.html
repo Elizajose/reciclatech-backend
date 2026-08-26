@@ -1,11 +1,16 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
 <head>
     <title>Contas a Pagar - Coletaê</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <!-- SEU CSS EXTERNO -->
+    <link rel="stylesheet" th:href="@{/css/admin-despesas.css}">
 </head>
-<body class="bg-light">
+<body class="bg-body-tertiary">
 
 <nav class="navbar navbar-dark bg-danger shadow-sm mb-4">
     <div class="container-fluid px-4">
@@ -14,19 +19,19 @@
     </div>
 </nav>
 
-<div class="container" style="max-width: 800px;">
+<div class="container container-despesas">
 
     <!-- Formulário para Nova Despesa -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-body">
         <div class="card-body p-4">
-            <h5 class="fw-bold mb-3 text-dark">Registrar Nova Despesa (Luz, Água, Frete, etc)</h5>
+            <h5 class="fw-bold mb-3 text-body-emphasis">Registrar Nova Despesa (Luz, Água, Frete, etc)</h5>
             <form action="/admin/despesas/nova" method="post" class="row g-3">
                 <div class="col-md-8">
                     <input type="text" name="descricao" class="form-control" placeholder="Descrição (Ex: Conta de Energia)" required>
                 </div>
                 <div class="col-md-4">
                     <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0">R$</span>
+                        <span class="input-group-text bg-body-secondary border-end-0">R$</span>
                         <input type="number" step="0.01" name="valor" class="form-control border-start-0" placeholder="0.00" required>
                     </div>
                 </div>
@@ -38,28 +43,27 @@
     </div>
 
     <!-- Lista de Despesas -->
-    <div class="card border-0 shadow-sm rounded-4">
+    <div class="card border-0 shadow-sm rounded-4 bg-body">
         <div class="card-body p-4">
             <h6 class="text-muted fw-bold text-uppercase mb-3">Despesas Registradas</h6>
             <div class="table-responsive">
-                <table class="table align-middle">
+                <table class="table align-middle bg-body">
                     <tbody>
                     <tr th:each="d : ${despesas}">
                         <td>
                             <div class="bg-danger bg-opacity-10 text-danger rounded p-2 text-center d-inline-block me-3">
                                 <i class="bi bi-receipt"></i>
                             </div>
-                            <span class="fw-bold text-dark" th:text="${d.descricao}">Conta de Luz</span>
+                            <span class="fw-bold text-body-emphasis" th:text="${d.descricao}">Conta de Luz</span>
                             <div class="text-muted small" th:text="${d.data}">20/10/2026</div>
                         </td>
                         <td class="text-end fw-bold text-danger fs-5">
                             - R$ <span th:text="${d.valor}">150,00</span>
                         </td>
-                        <!-- 🌟 NOVO BOTÃO DE EXCLUIR 🌟 -->
-                        <td class="text-end" style="width: 50px;">
+                        <td class="text-end coluna-acao">
                             <a th:href="@{'/admin/despesas/deletar/' + ${d.id}}"
                                class="btn btn-sm btn-outline-danger shadow-sm"
-                               onclick="return confirm('Tem certeza que deseja excluir este registro de despesa do seu financeiro?')">
+                               onclick="confirmarExclusao(event)">
                                 <i class="bi bi-trash3-fill"></i>
                             </a>
                         </td>
@@ -74,5 +78,9 @@
     </div>
 
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- SCRIPT EXTERNO -->
+<script th:src="@{/js/admin-despesas.js}"></script>
 </body>
 </html>

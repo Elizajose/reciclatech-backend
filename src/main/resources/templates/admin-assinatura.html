@@ -7,10 +7,9 @@
     <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>
-        .card { border-radius: 12px; border: none; }
-        .info-box { border-radius: 10px; border: 1px solid var(--bs-border-color-translucent); }
-    </style>
+
+    <!--  CSS EXTERNO -->
+    <link rel="stylesheet" th:href="@{/css/admin-assinatura.css}">
 </head>
 <body class="bg-body-tertiary p-3 p-md-5">
 
@@ -19,7 +18,6 @@
     <!-- CABEÇALHO -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold text-body-emphasis m-0"><i class="bi bi-star-fill text-warning me-2"></i> Minha Assinatura</h3>
-        <!-- 👇 ROTA CORRIGIDA PARA A TELA DE COLETAS 👇 -->
         <a href="/admin/analises" class="btn btn-secondary shadow-sm"><i class="bi bi-arrow-left"></i> Voltar ao Financeiro</a>
     </div>
 
@@ -40,7 +38,7 @@
                         </span>
                     </div>
 
-                    <!-- Blocos de Informação (Mais Profissionais que texto solto) -->
+                    <!-- Blocos de Informação -->
                     <div class="row g-3 mt-auto">
                         <div class="col-sm-6">
                             <div class="bg-body-tertiary p-3 info-box h-100">
@@ -145,24 +143,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const currentTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-bs-theme', currentTheme);
-    });
 
-    function copiarPix() {
-        let input = document.getElementById("pixCopiaCola");
-        input.select();
-        document.execCommand("copy");
-        alert("Código PIX copiado com sucesso!");
-    }
-
-    function confirmarCancelamento() {
-        if(confirm("Tem certeza que deseja cancelar sua assinatura? O acesso ao sistema será suspenso no fim do ciclo vigente e todos os painéis ficarão bloqueados. Deseja continuar?")) {
-            alert("Solicitação registrada. (Esta ação será interligada com a API do Stripe/Asaas)");
-        }
-    }
-</script>
+<!-- SCRIPT EXTERNO -->
+<script th:src="@{/js/admin-assinatura.js}"></script>
 </body>
 </html>

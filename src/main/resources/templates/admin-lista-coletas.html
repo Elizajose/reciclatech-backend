@@ -13,37 +13,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <meta http-equiv="refresh" content="30">
 
-    <style>
-        /* Estilos para os Cards do Menu */
-        .module-card {
-            transition: all 0.2s ease-in-out;
-            border-radius: 12px;
-            cursor: pointer;
-            text-decoration: none;
-            display: block;
-        }
-        .module-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important;
-        }
-        .icon-box {
-            width: 45px;
-            height: 45px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 10px;
-            font-size: 1.5rem;
-        }
-
-        /* Ajuste do dropdown no modo escuro */
-        [data-bs-theme="dark"] .dropdown-menu {
-            background-color: #2b3035;
-            border-color: #495057;
-        }
-        [data-bs-theme="dark"] .dropdown-item { color: #dee2e6; }
-        [data-bs-theme="dark"] .dropdown-item:hover { background-color: #343a40; color: #fff; }
-    </style>
+    <!-- CSS EXTERNO -->
+    <link rel="stylesheet" th:href="@{/css/admin-lista-coletas.css}">
 </head>
 <body class="bg-body-tertiary pb-5">
 
@@ -81,7 +52,6 @@
     <!-- MÓDULOS DO SISTEMA (GRID COM CARDS) -->
     <div class="row g-3 mb-4 justify-content-center">
 
-        <!-- 👇 TRAVA AQUI: Card 1 só aparece se for GESTOR 👇 -->
         <!-- Card 1: Análises / Financeiro -->
         <div class="col-12 col-sm-4" th:if="${session.perfilUser == 'GESTOR'}">
             <a href="/admin/analises" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none">
@@ -93,7 +63,7 @@
             </a>
         </div>
 
-        <!-- Card 2: Extratos/Recibos (LIVRE PARA TODOS - SEM TRAVA) -->
+        <!-- Card 2: Extratos/Recibos -->
         <div class="col-12 col-sm-4">
             <a href="/meus-extratos" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none">
                 <div class="card-body text-center p-3 d-flex flex-column justify-content-center">
@@ -104,8 +74,7 @@
             </a>
         </div>
 
-        <!-- 👇 TRAVA AQUI: Card 3 só aparece se for GESTOR 👇 -->
-        <!-- Card 3: Tabela de Preços Padronizada -->
+        <!-- Card 3: Tabela de Preços -->
         <div class="col-12 col-sm-4" th:if="${session.perfilUser == 'GESTOR'}">
             <a href="/admin/precos" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none border-start border-success border-4">
                 <div class="card-body text-center p-3 d-flex flex-column justify-content-center">
@@ -195,39 +164,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- SCRIPT DO DARK MODE ATUALIZADO PARA O MENU DROPDOWN -->
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const htmlElement = document.documentElement;
-        const themeToggleBtn = document.getElementById('themeToggleBtn');
-        const themeIcon = document.getElementById('themeIcon');
-
-        const currentTheme = localStorage.getItem('theme') || 'light';
-
-        htmlElement.setAttribute('data-bs-theme', currentTheme);
-        updateIcon(currentTheme);
-
-        themeToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Evita que o menu dropdown feche ao trocar o tema
-            const isDark = htmlElement.getAttribute('data-bs-theme') === 'dark';
-            const newTheme = isDark ? 'light' : 'dark';
-
-            htmlElement.setAttribute('data-bs-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            updateIcon(newTheme);
-        });
-
-        function updateIcon(theme) {
-            if (theme === 'dark') {
-                themeIcon.classList.remove('bi-moon-fill');
-                themeIcon.classList.add('bi-sun-fill', 'text-warning');
-            } else {
-                themeIcon.classList.remove('bi-sun-fill', 'text-warning');
-                themeIcon.classList.add('bi-moon-fill');
-            }
-        }
-    });
-</script>
+<!--  SCRIPT EXTERNO -->
+<script th:src="@{/js/admin-lista-coletas.js}"></script>
 
 </body>
 </html>

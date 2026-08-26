@@ -1,0 +1,38 @@
+/* Estilos para os Cards do Menu */
+.module-card {
+    transition: all 0.2s ease-in-out;
+    border-radius: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    display: block;
+}
+
+.module-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important;
+}
+
+.icon-box {
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-size: 1.5rem;
+}
+
+/* Ajuste do dropdown no modo escuro */
+[data-bs-theme="dark"] .dropdown-menu {
+    background-color: #2b3035;
+    border-color: #495057;
+}
+
+[data-bs-theme="dark"] .dropdown-item {
+    color: #dee2e6;
+}
+
+[data-bs-theme="dark"] .dropdown-item:hover {
+    background-color: #343a40;
+    color: #fff;
+}

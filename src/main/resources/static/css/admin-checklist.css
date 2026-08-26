@@ -1,0 +1,12 @@
+body { font-family: 'Inter', sans-serif; background-color: var(--bs-tertiary-bg); }
+.card-pesagem { max-height: 92vh; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; }
+.area-scroll { overflow-y: auto; flex-grow: 1; padding: 10px 20px; }
+.area-scroll::-webkit-scrollbar { width: 8px; }
+.area-scroll::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.15); border-radius: 10px; }
+[data-bs-theme="dark"] .area-scroll::-webkit-scrollbar-thumb { background-color: rgba(255,255,255,0.2); }
+
+.material-row { transition: background-color 0.2s; border-radius: 8px; }
+.material-row:hover { background-color: rgba(0, 0, 0, 0.02); }
+[data-bs-theme="dark"] .material-row:hover { background-color: rgba(255, 255, 255, 0.05); }
+
+.form-control:focus { box-shadow: none; border-color: #198754; }

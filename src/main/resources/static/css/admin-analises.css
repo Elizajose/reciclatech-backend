@@ -1,0 +1,61 @@
+.card {
+    border-radius: 12px;
+    border: none;
+    transition: transform 0.2s;
+}
+
+.chart-container {
+    height: 350px;
+    position: relative;
+}
+
+.table-historico th {
+    background-color: var(--bs-tertiary-bg);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+.table-wrapper-historico {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.card-small-text {
+    font-size: 0.75rem;
+}
+
+.card-estoque {
+    min-width: 150px;
+}
+
+.print-only {
+    display: none;
+}
+
+/* CONFIGURAÇÕES PARA IMPRESSÃO DO BALANÇO  */
+@media print {
+    .no-print, .btn, hr, canvas { display: none !important; }
+
+    body { background-color: white !important; font-size: 11pt; }
+
+    .container { width: 100% !important; max-width: none !important; margin: 0 !important; }
+
+    .row { display: flex !important; flex-wrap: nowrap !important; }
+
+    .col-md-3, .col-md-4, .col-md-6 {
+        width: 50% !important;
+        border: 1px solid #eee !important;
+        padding: 10px !important;
+    }
+
+    .print-only { display: block !important; }
+
+    table { width: 100% !important; border-collapse: collapse !important; }
+
+    th, td { border: 1px solid #333 !important; padding: 5px !important; }
+
+    .card, .card h6, .card h3, .card span, .card-header,
+    .text-white, .text-muted, .text-success, .text-danger, .text-primary {
+        color: #000 !important;
+    }
+}

@@ -9,18 +9,13 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: var(--bs-tertiary-bg); }
-        .card { border-radius: 16px; border: none; }
-        .table-revisao th { font-size: 0.85rem; text-transform: uppercase; color: var(--bs-secondary-color); letter-spacing: 0.5px; border-bottom: 2px solid var(--bs-border-color); }
-        .table-revisao td { vertical-align: middle; padding: 15px 10px; }
-        .form-control:focus { box-shadow: none; border-color: #198754; }
-    </style>
+
+    <!-- CSS EXTERNO -->
+    <link rel="stylesheet" th:href="@{/css/admin-revisao.css}">
 </head>
 <body class="pb-5 pt-4">
 
-<!-- Aumentei a largura máxima de 600px para 850px -->
-<div class="container" style="max-width: 850px;">
+<div class="container container-revisao">
 
     <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center gap-3 rounded-4 mb-4">
         <i class="bi bi-exclamation-circle-fill fs-2 text-warning"></i>
@@ -38,10 +33,10 @@
         <form action="/admin/confirmar-finalizacao" method="post">
             <input type="hidden" name="idVendedor" th:value="${vendedor.id}">
 
-            <div class="card-body p-4 p-md-5">
+            <div class="card-body p-4 p-md-5 bg-body">
 
                 <!-- Dados do Cliente e CPF -->
-                <div class="row align-items-center bg-light rounded-4 p-4 mb-5 border">
+                <div class="row align-items-center bg-body-tertiary rounded-4 p-4 mb-5 border">
                     <div class="col-md-6 mb-3 mb-md-0">
                         <p class="text-muted small fw-bold mb-1 text-uppercase">Fornecedor / Catador</p>
                         <h4 class="fw-bold text-primary m-0">
@@ -60,11 +55,11 @@
                     </div>
                 </div>
 
-                <h5 class="fw-bold text-dark mb-3">Resumo dos Materiais</h5>
+                <h5 class="fw-bold text-body-emphasis mb-3">Resumo dos Materiais</h5>
 
                 <div class="table-responsive border rounded-4 mb-5">
-                    <table class="table table-revisao table-hover mb-0">
-                        <thead class="bg-light">
+                    <table class="table table-revisao table-hover mb-0 bg-body">
+                        <thead class="table-light">
                         <tr>
                             <th class="ps-4">Material</th>
                             <th class="text-center">Peso Registrado</th>
@@ -76,18 +71,18 @@
                             <input type="hidden" name="idsMateriais" th:value="${item.material.id}">
 
                             <td class="ps-4">
-                                <span class="fw-bold text-dark fs-6" th:text="${item.material.nome}">Material</span>
+                                <span class="fw-bold text-body-emphasis fs-6" th:text="${item.material.nome}">Material</span>
                             </td>
 
                             <td class="text-center">
                                 <input type="hidden" name="pesosFinais" th:value="${item.peso}">
-                                <span class="badge bg-secondary bg-opacity-10 text-dark border border-secondary-subtle px-3 py-2 rounded-pill fs-6"
+                                <span class="badge bg-secondary bg-opacity-10 text-body border border-secondary-subtle px-3 py-2 rounded-pill fs-6"
                                       th:text="${item.peso} + ' ' + ${item.material.unidade}">10 KG</span>
                             </td>
 
                             <td class="pe-4">
                                 <div class="input-group shadow-sm">
-                                    <span class="input-group-text bg-white text-muted border-end-0">R$</span>
+                                    <span class="input-group-text bg-body-tertiary text-muted border-end-0">R$</span>
                                     <input type="number" step="0.01" name="precosFinais"
                                            class="form-control fw-bold text-success border-start-0"
                                            th:value="${item.material.precoPorKg}"
@@ -117,21 +112,7 @@
     </div>
 </div>
 
-<script>
-    function formatarCPF(i) {
-        var v = i.value.replace(/\D/g, "");
-        if (v.length > 11) v = v.slice(0, 11);
-        if (v.length > 9) { v = v.replace(/(\d{3})(\d{3})(\d{3})(\d+)/, "$1.$2.$3-$4"); }
-        else if (v.length > 6) { v = v.replace(/(\d{3})(\d{3})(\d+)/, "$1.$2.$3"); }
-        else if (v.length > 3) { v = v.replace(/(\d{3})(\d+)/, "$1.$2"); }
-        i.value = v;
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const currentTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-bs-theme', currentTheme);
-    });
-</script>
-
+<!-- SCRIPT EXTERNO -->
+<script th:src="@{/js/admin-revisao.js}"></script>
 </body>
 </html>

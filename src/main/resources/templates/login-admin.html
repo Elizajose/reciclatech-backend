@@ -9,41 +9,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
-    <style>
-        /* Fundo com gradiente suave da paleta Coletaê */
-        body {
-            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-        }
-
-        /* Card arredondado com efeito suave */
-        .login-card {
-            border-radius: 20px;
-            background-color: rgba(255, 255, 255, 0.98);
-        }
-
-        /* Círculo do ícone flutuando para fora do card */
-        .icon-circle {
-            width: 80px;
-            height: 80px;
-            background-color: #198754; /* Verde Bootstrap (Success) */
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5rem;
-            margin: -40px auto 20px auto;
-            box-shadow: 0 4px 15px rgba(25, 135, 84, 0.4);
-        }
-
-        .input-group-text, .form-control {
-            border-color: #dee2e6;
-        }
-        .form-control:focus {
-            box-shadow: none;
-            border-color: #198754;
-        }
-    </style>
+    <!-- CSS EXTERNO -->
+    <link rel="stylesheet" th:href="@{/css/admin-login.css}">
 </head>
 <body class="d-flex align-items-center justify-content-center p-3" style="min-height: 100vh;">
 
@@ -101,25 +68,8 @@
     </form>
 </div>
 
-<!-- Script para a funcionalidade de mostrar/ocultar senha -->
-<script>
-    const togglePassword = document.getElementById('togglePassword');
-    const password = document.getElementById('senhaInput');
-    const eyeIcon = document.getElementById('eyeIcon');
-
-    togglePassword.addEventListener('click', function () {
-        const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
-        password.setAttribute('type', type);
-
-        if(type === 'text') {
-            eyeIcon.classList.remove('bi-eye-fill');
-            eyeIcon.classList.add('bi-eye-slash-fill');
-        } else {
-            eyeIcon.classList.remove('bi-eye-slash-fill');
-            eyeIcon.classList.add('bi-eye-fill');
-        }
-    });
-</script>
+<!-- SCRIPT EXTERNO -->
+<script th:src="@{/js/admin-login.js}"></script>
 
 </body>
 </html>

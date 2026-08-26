@@ -1,0 +1,22 @@
+/* Trava o cabeçalho da tabela no topo quando rolar os itens na tela */
+.table-scroll { max-height: 50vh; overflow-y: auto; }
+.table-scroll thead th { position: sticky; top: 0; z-index: 1; background-color: var(--bs-tertiary-bg); }
+
+@media print {
+    body { background: white !important; padding: 0 !important; }
+    .container-lg { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+
+    /* Tira as bordas e sombras do layout do sistema */
+    .card { border: none !important; box-shadow: none !important; background: transparent !important; }
+    .card-body { padding: 0 !important; }
+
+    /* QUEBRA A TRAVA DE SCROLL PARA MOSTRAR TODOS OS ITENS NA FOLHA */
+    .table-scroll { max-height: none !important; overflow: visible !important; }
+
+    /* Tira cores de fundo das linhas para economizar tinta e ficar limpo */
+    .table-light { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; }
+    .bg-body-tertiary, .bg-body { background-color: transparent !important; }
+
+    /* Ajuste de margens */
+    .mb-5 { margin-bottom: 0 !important; }
+}
