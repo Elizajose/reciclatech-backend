@@ -15,6 +15,13 @@
 
     <!-- CSS EXTERNO -->
     <link rel="stylesheet" th:href="@{/css/admin-lista-coletas.css}">
+    <style>
+        .module-disabled {
+            opacity: 0.65;
+            cursor: pointer;
+            border: 1px dashed #cbd5e1 !important;
+        }
+    </style>
 </head>
 <body class="bg-body-tertiary pb-5">
 
@@ -35,6 +42,16 @@
             <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
                 <li><h6 class="dropdown-header">Configurações</h6></li>
                 <li>
+                    <a class="dropdown-item d-flex justify-content-between align-items-center fw-bold text-success" href="/admin/assinatura">
+                        Minha Assinatura <i class="bi bi-star-fill text-warning"></i>
+                    </a>
+                </li>
+                <li>
+                    <button class="dropdown-item d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#modalAlterarSenhas">
+                        Alterar Senhas <i class="bi bi-key-fill text-secondary"></i>
+                    </button>
+                </li>
+                <li>
                     <!-- BOTÃO DARK MODE DENTRO DO MENU -->
                     <button class="dropdown-item d-flex justify-content-between align-items-center" id="themeToggleBtn">
                         Modo Escuro <i id="themeIcon" class="bi bi-moon-fill text-secondary"></i>
@@ -49,16 +66,38 @@
 
 <div class="container px-md-4" style="max-width: 1000px;">
 
+    <!-- Alertas de Confirmação/Erro do Perfil -->
+    <div th:if="${sucessoPerfil != null}" class="alert alert-success alert-dismissible fade show small fw-bold shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i> <span th:text="${sucessoPerfil}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${erroPerfil != null}" class="alert alert-danger alert-dismissible fade show small fw-bold shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> <span th:text="${erroPerfil}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
     <!-- MÓDULOS DO SISTEMA (GRID COM CARDS) -->
     <div class="row g-3 mb-4 justify-content-center">
 
-        <!-- Card 1: Análises / Financeiro -->
-        <div class="col-12 col-sm-4" th:if="${session.perfilUser == 'GESTOR'}">
+        <!-- Card 1: Análises / Financeiro (LIBERADO SE FOR PRO) -->
+        <div class="col-12 col-sm-4" th:if="${session.perfilUser == 'GESTOR' and session.planoAssinatura == 'PRO'}">
             <a href="/admin/analises" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none">
                 <div class="card-body text-center p-3 d-flex flex-column justify-content-center">
                     <div class="icon-box bg-info bg-opacity-10 text-info mx-auto mb-2"><i class="bi bi-bar-chart-fill"></i></div>
                     <h6 class="fw-bold m-0">Financeiro</h6>
                     <small class="text-body-secondary d-none d-sm-block">Lucros e Estoque</small>
+                </div>
+            </a>
+        </div>
+
+        <!-- Card 1 (TRAVA VISUAL): Financeiro BLOQUEADO SE FOR START -->
+        <div class="col-12 col-sm-4" th:if="${session.perfilUser == 'GESTOR' and session.planoAssinatura != 'PRO'}">
+            <a href="/admin/assinatura" class="card shadow-sm border-0 h-100 module-card module-disabled bg-body text-body text-decoration-none" onclick="alert('O módulo Financeiro (DRE, Caixa Diário e Margem de Lucro) é exclusivo do Plano PRO. Acesse Assinatura para fazer o upgrade!');">
+                <div class="card-body text-center p-3 d-flex flex-column justify-content-center position-relative">
+                    <span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2" style="font-size: 0.65rem;">PLANO PRO</span>
+                    <div class="icon-box bg-secondary bg-opacity-10 text-secondary mx-auto mb-2"><i class="bi bi-lock-fill"></i></div>
+                    <h6 class="fw-bold m-0 text-muted">Financeiro</h6>
+                    <small class="text-muted d-none d-sm-block">Recurso Bloqueado</small>
                 </div>
             </a>
         </div>
@@ -162,9 +201,41 @@
     </div>
 </div>
 
+<!-- MODAL DE ALTERAR SENHAS -->
+<div class="modal fade" id="modalAlterarSenhas" tabindex="-1" aria-labelledby="modalAlterarSenhasLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold" id="modalAlterarSenhasLabel"><i class="bi bi-shield-lock me-2"></i> Alterar Credenciais</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/admin/perfil/atualizar-senhas" method="post">
+                <div class="modal-body p-4 text-body">
+                    <p class="small text-muted mb-3">Preencha apenas os campos que você deseja atualizar.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nova Senha de Acesso (Login)</label>
+                        <input type="password" name="novaSenha" class="form-control" placeholder="Deixe em branco se não quiser mudar">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nova Senha Financeira (Acesso aos Relatórios)</label>
+                        <input type="password" name="novaSenhaFinanceira" class="form-control" placeholder="Deixe em branco se não quiser mudar">
+                        <div class="form-text small">Senha usada para abrir o painel Financeiro e Despesas.</div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success btn-sm fw-bold px-3">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!--  SCRIPT EXTERNO -->
+<!-- SCRIPT EXTERNO -->
 <script th:src="@{/js/admin-lista-coletas.js}"></script>
 
 </body>

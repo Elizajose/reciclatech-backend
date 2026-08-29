@@ -333,10 +333,13 @@
     </div>
 </section>
 
+
 <!-- QUEM SOMOS -->
 <section id="quem-somos" class="py-5 bg-white">
     <div class="container py-5">
         <div class="row align-items-center g-5">
+
+            <!-- TEXTO NA ESQUERDA -->
             <div class="col-lg-6 order-2 order-lg-1">
                 <h6 class="text-success fw-bold text-uppercase mb-3">Manifesto Coletaê</h6>
                 <h2 class="fw-bold mb-4">Nossa Origem no Sertão</h2>
@@ -359,16 +362,26 @@
                 </div>
             </div>
 
+            <!-- CARROSSEL NA DIREITA -->
             <div class="col-lg-6 order-1 order-lg-2">
-                <div id="carouselSaaS" class="carousel slide shadow-lg rounded-4 overflow-hidden" data-bs-ride="carousel">
+                <div id="carouselSaaS" class="carousel slide shadow-lg rounded-4 overflow-hidden" data-bs-ride="carousel" data-bs-interval="3000">
                     <div class="carousel-inner">
-                        <div class="carousel-item active"><img src="https://drive.google.com/thumbnail?sz=w1000&id=1qSwtBCdJZnBEuW5kpSLt9VIBBBGaXgzA" class="d-block w-100" style="height: 500px; object-fit: cover;"></div>
-                        <div class="carousel-item"><img src="https://drive.google.com/thumbnail?sz=w1000&id=1UpxV4ey7x3EPBxrylDgmCB6aSR3N_0iv" class="d-block w-100" style="height: 500px; object-fit: cover;"></div>
-                        <div class="carousel-item"><img src="https://drive.google.com/thumbnail?sz=w1000&id=1fAZ6NLq7-L2TcMW5mt1sdZ7t0LJsci4l" class="d-block w-100" style="height: 500px; object-fit: cover;"></div>
-                        <div class="carousel-item"><img src="https://drive.google.com/thumbnail?sz=w1000&id=1O9ANyn5-BtSBZA3wp1PfzhgM3Loa37fd" class="d-block w-100" style="height: 500px; object-fit: cover;"></div>
+                        <div class="carousel-item active">
+                            <img th:src="@{/img/foto1.jpg}" style="width: 100%; height: 500px; object-fit: cover; object-position: center;" alt="Coletaê Imagem 1">
+                        </div>
+                        <div class="carousel-item">
+                            <img th:src="@{/img/foto2.jpg}" style="width: 100%; height: 500px; object-fit: cover; object-position: center;" alt="Coletaê Imagem 2">
+                        </div>
+                        <div class="carousel-item">
+                            <img th:src="@{/img/foto3.jpg}" style="width: 100%; height: 500px; object-fit: cover; object-position: center;" alt="Coletaê Imagem 3">
+                        </div>
+                        <div class="carousel-item">
+                            <img th:src="@{/img/foto4.jpg}" style="width: 100%; height: 500px; object-fit: cover; object-position: center;" alt="Coletaê Imagem 4">
+                        </div>
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 </section>
@@ -388,7 +401,7 @@
                 <ul class="list-unstyled text-secondary small">
                     <li class="mb-2"><i class="bi bi-geo-alt me-2 text-success"></i> Salgueiro, Pernambuco</li>
                     <li class="mb-2"><i class="bi bi-whatsapp me-2 text-success"></i> (87) 9XXXX-94XX</li>
-                    <li class="mb-2"><i class="bi bi-envelope me-2 text-success"></i> contato@coletae.net.br</li>
+                    <li class="mb-2"><i class="bi bi-envelope me-2 text-success"></i> contatocoletae@gmail.com</li>
                 </ul>
             </div>
             <div class="col-lg-2">
@@ -407,7 +420,7 @@
     </div>
 </footer>
 
-<!-- MODAL DE TERMOS E PRIVACIDADE -->
+<!-- MODAL DE TERMOS E PRIVACIDADE COMPLETO -->
 <div class="modal fade" id="modalTermos" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable modal-lg">
         <div class="modal-content">
@@ -417,9 +430,129 @@
             </div>
             <div class="modal-body p-4 text-dark" style="text-align: justify;">
                 <p class="text-muted small text-center mb-4">Versão 1.0 · Atualizado pela última vez em Agosto/2026</p>
-                <p>Termos de serviço ocultados por brevidade...</p>
+                <p class="small">Pelo presente instrumento, o USUÁRIO declara que leu, compreendeu e concorda integralmente com os Termos de Uso abaixo para acesso e utilização do sistema Coletaê.</p>
+
+                <h6 class="fw-bold text-success mt-4">1. OBJETO</h6>
+                <p class="small mb-1"><strong>1.1.</strong> O Coletaê é uma plataforma digital (software como serviço — SaaS) destinada à gestão de operações de depósitos de reciclagem, incluindo registro de materiais e pesagens, pedidos de compra e venda, pagamentos, controle de caixa, gestão de fornecedores e clientes, geração de relatórios, controle de vales, saldos e dívidas e demais funcionalidades disponíveis no sistema.</p>
+                <p class="small mb-1"><strong>1.2.</strong> Estes Termos de Uso regulam o acesso e a utilização do Coletaê por você (o usuário), estabelecendo direitos, deveres e responsabilidades de ambas as partes.</p>
+                <p class="small mb-1"><strong>1.3.</strong> O Coletaê é uma ferramenta de apoio operacional. Ele organiza e armazena as informações que você insere, mas não substitui processos internos, controles fiscais, contábeis, trabalhistas ou a orientação de profissionais habilitados.</p>
+
+                <h6 class="fw-bold text-success mt-4">2. CADASTRO E ACESSO</h6>
+                <p class="small mb-1"><strong>2.1.</strong> Para usar o Coletaê é necessário um cadastro com dados verdadeiros, completos e atualizados. Você é responsável pela veracidade e atualização das informações fornecidas.</p>
+                <p class="small mb-1"><strong>2.2.</strong> O acesso é pessoal e intransferível. Você é responsável por guardar com segurança suas credenciais (e-mail e senha) e por todas as atividades realizadas em sua conta.</p>
+                <p class="small mb-1"><strong>2.3.</strong> Quando a conta da empresa permite múltiplos usuários (operadores, balanceiros, financeiro, gerentes), cabe ao administrador da empresa autorizar quem pode acessar e definir as permissões de cada pessoa. Todo acesso e operação feitos por usuários autorizados pela empresa são de responsabilidade da própria empresa.</p>
+                <p class="small mb-1"><strong>2.4.</strong> Você deve comunicar imediatamente qualquer uso não autorizado da sua conta ou suspeita de violação de segurança.</p>
+
+                <h6 class="fw-bold text-success mt-4">3. RESPONSABILIDADE DO USUÁRIO</h6>
+                <p class="small mb-2"><strong>3.1.</strong> O usuário é integralmente responsável por todas as informações que insere e pelas operações que registra no sistema, incluindo, sem se limitar a:</p>
+                <ul class="small mb-2">
+                    <li>Pesos, valores, tipos de material e demais dados de pesagens, pedidos de compra e de venda;</li>
+                    <li>Lançamentos financeiros, valores, cobranças, pagamentos, recebimentos, vales, saldos, dívidas, depósitos e retiradas de caixa;</li>
+                    <li>Cadastros de clientes, fornecedores, funcionários e tabelas de preço;</li>
+                    <li>Obrigações fiscais, tributárias e trabalhistas relacionadas à sua operação;</li>
+                    <li>Conferência e validação dos valores, cálculos e relatórios gerados.</li>
+                </ul>
+                <p class="small mb-1"><strong>3.2.</strong> O usuário deve utilizar o Coletaê em conformidade com a legislação vigente, abstendo-se de qualquer uso ilícito, fraudulento ou que viole direitos de terceiros.</p>
+                <p class="small mb-1"><strong>3.3.</strong> O Coletaê não valida, não audita e não fiscaliza os dados inseridos manualmente pelo usuário. A correção das informações é responsabilidade exclusiva de quem as registra.</p>
+                <p class="small mb-1"><strong>3.4.</strong> Recomenda-se que o usuário mantenha seus próprios backups e registros das informações essenciais à sua operação, sem prejuízo das rotinas de backup mantidas pelo Coletaê.</p>
+
+                <h6 class="fw-bold text-success mt-4">4. LIMITAÇÃO DE RESPONSABILIDADE DA COLETAÊ</h6>
+                <p class="small mb-1"><strong>4.1.</strong> O Coletaê é fornecido "no estado em que se encontra" (as is), de acordo com as funcionalidades disponíveis no momento do uso, sem garantias de adequação a finalidades específicas além das descritas.</p>
+                <p class="small mb-2"><strong>4.2.</strong> A Coletaê não se responsabiliza por:</p>
+                <ul class="small mb-2">
+                    <li>Decisões tomadas pelo usuário com base nas informações ou relatórios do sistema;</li>
+                    <li>Erros de digitação, registros incorretos ou alterações indevidas feitas pelo usuário ou por seus colaboradores;</li>
+                    <li>Prejuízos, lucros cessantes, perda de receita ou de dados decorrentes do uso ou da impossibilidade de uso da plataforma;</li>
+                    <li>Falhas em equipamentos, celulares, desktops, impressoras, balanças, redes Wi-Fi ou conexão de internet do usuário;</li>
+                    <li>Indisponibilidades ou falhas causadas por serviços de terceiros (provedores de internet, servidores em nuvem, gateways de pagamento, serviços de e-mail e demais integrações).</li>
+                </ul>
+                <p class="small mb-1"><strong>4.3.</strong> Em nenhuma hipótese a responsabilidade da Coletaê excederá os valores efetivamente pagos pelo usuário pela assinatura nos 12 (doze) meses anteriores ao evento que originou a reclamação.</p>
+
+                <h6 class="fw-bold text-success mt-4">5. SEGURANÇA E PRIVACIDADE (LGPD)</h6>
+                <p class="small mb-1"><strong>5.1.</strong> O tratamento de dados pessoais no Coletaê observa a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD).</p>
+                <p class="small mb-1"><strong>5.2.</strong> Em relação aos dados pessoais que o usuário insere na plataforma (de seus clientes, fornecedores, funcionários e demais terceiros), o usuário atua como Controlador desses dados e a Coletaê atua como Operadora, tratando-os conforme as instruções e finalidades definidas pelo próprio usuário. Cabe ao usuário garantir base legal para o tratamento dos dados de terceiros que insere na plataforma.</p>
+                <p class="small mb-2"><strong>5.3.</strong> Proteção de credenciais: o usuário é responsável por manter seguros seus dados de acesso, incluindo:</p>
+                <ul class="small mb-2">
+                    <li>E-mail e senha de acesso à plataforma;</li>
+                    <li>Dispositivos utilizados para acessar o sistema (celulares, computadores, tablets);</li>
+                    <li>Sessões ativas e logout adequado após o uso;</li>
+                    <li>Não compartilhamento de credenciais com terceiros não autorizados.</li>
+                </ul>
+                <p class="small mb-2"><strong>5.4.</strong> Medidas de segurança: a Coletaê adota padrões modernos de segurança da informação, incluindo:</p>
+                <ul class="small mb-2">
+                    <li>Criptografia de dados em trânsito e em repouso;</li>
+                    <li>Autenticação segura com tokens de sessão;</li>
+                    <li>Armazenamento seguro de senhas com algoritmos de hash robustos;</li>
+                    <li>Monitoramento contínuo de acessos e atividades suspeitas;</li>
+                    <li>Backups regulares dos dados armazenados;</li>
+                    <li>Infraestrutura hospedada em servidores de alta disponibilidade.</li>
+                </ul>
+                <p class="small mb-2"><strong>5.5.</strong> Limitações de garantia: apesar das medidas implementadas, a Coletaê não garante proteção absoluta contra:</p>
+                <ul class="small mb-2">
+                    <li>Ataques cibernéticos sofisticados (phishing, ransomware, DDoS);</li>
+                    <li>Vulnerabilidades de dia zero (zero-day) em sistemas de terceiros;</li>
+                    <li>Falhas de segurança em dispositivos do próprio usuário;</li>
+                    <li>Eventos imprevisíveis ou de força maior que estejam fora de seu controle.</li>
+                </ul>
+                <p class="small mb-2"><strong>5.6.</strong> Dados coletados: para o funcionamento do sistema, são coletados e armazenados:</p>
+                <ul class="small mb-2">
+                    <li>Dados cadastrais (nome, e-mail, telefone, CNPJ/CPF);</li>
+                    <li>Dados operacionais (materiais, pedidos, pesagens, transações financeiras, relatórios);</li>
+                    <li>Logs de acesso (IP, dispositivo, horários de login) para fins de segurança;</li>
+                    <li>Preferências de uso e configurações personalizadas.</li>
+                </ul>
+                <p class="small mb-1"><strong>5.7.</strong> Comunicação de incidentes: em caso de incidente de segurança que possa afetar dados do usuário, a Coletaê se compromete a comunicar o ocorrido em prazo razoável, informando a natureza do incidente e as medidas adotadas.</p>
+                <p class="small mb-2"><strong>5.8.</strong> Acesso administrativo para suporte técnico: o usuário reconhece e autoriza que, mediante sua solicitação expressa de suporte técnico, a equipe administrativa da Coletaê poderá acessar temporariamente sua conta para fins exclusivos de:</p>
+                <ul class="small mb-2">
+                    <li>Diagnóstico e resolução de problemas técnicos;</li>
+                    <li>Configuração e ajustes operacionais solicitados pelo usuário;</li>
+                    <li>Verificação de dados para esclarecimento de dúvidas;</li>
+                    <li>Suporte na utilização de funcionalidades do sistema.</li>
+                    <li><strong>Garantias de segurança:</strong> todo acesso administrativo é temporário (token válido por 30 minutos), registrado e auditado (data, hora, dispositivo, IP), realizado somente mediante autorização prévia do usuário, sem alterações financeiras ou exclusão de dados sem consentimento expresso. Os registros de auditoria são mantidos para fins de transparência e conformidade com a LGPD.</li>
+                </ul>
+                <p class="small mb-1"><strong>5.9.</strong> Solicitações relacionadas à privacidade e à proteção de dados podem ser encaminhadas para <strong>contatocoletae@gmail.com</strong>.</p>
+
+                <h6 class="fw-bold text-success mt-4">6. DISPONIBILIDADE DO SISTEMA</h6>
+                <p class="small mb-1"><strong>6.1.</strong> A Coletaê emprega esforços razoáveis para manter a plataforma disponível, mas não garante disponibilidade ininterrupta ou livre de erros (100% de uptime).</p>
+                <p class="small mb-1"><strong>6.2.</strong> O sistema pode passar por manutenções programadas ou emergenciais e por períodos de instabilidade, podendo haver indisponibilidade temporária sem aviso prévio quando necessário para correções urgentes.</p>
+                <p class="small mb-1"><strong>6.3.</strong> O usuário reconhece que a operação do Coletaê depende de serviços de terceiros (hospedagem, banco de dados em nuvem, provedores de internet, serviços de e-mail e gateways de pagamento) e que falhas nesses serviços estão fora do controle da Coletaê.</p>
+
+                <h6 class="fw-bold text-success mt-4">7. PAGAMENTOS E PLANOS</h6>
+                <p class="small mb-1"><strong>7.1.</strong> O uso do Coletaê está sujeito à contratação de um plano de assinatura, com cobrança recorrente conforme o ciclo escolhido (mensal, anual ou outro previsto na contratação).</p>
+                <p class="small mb-1"><strong>7.2.</strong> O não pagamento na data de vencimento poderá acarretar a suspensão automática do acesso até a regularização. Nenhum dado é excluído imediatamente, porém o acesso pode ficar bloqueado. A suspensão por inadimplência não exclui a obrigação de pagar os valores devidos.</p>
+                <p class="small mb-1"><strong>7.3.</strong> Por se tratar de serviço digital de acesso imediato, os valores já pagos relativos a período em curso não são reembolsáveis de forma proporcional, salvo disposição legal em contrário ou acordo específico entre as partes.</p>
+                <p class="small mb-1"><strong>7.4.</strong> O cancelamento da assinatura interrompe as cobranças futuras, mas não gera devolução de valores já pagos pelo período vigente.</p>
+
+                <h6 class="fw-bold text-success mt-4">8. SUPORTE E ATENDIMENTO</h6>
+                <p class="small mb-1"><strong>8.1.</strong> O suporte ao usuário é oferecido pelo canal <strong>contatocoletae@gmail.com</strong>, em horário comercial e conforme a disponibilidade da equipe.</p>
+                <p class="small mb-1"><strong>8.2.</strong> A Coletaê empenha-se em responder com agilidade, mas não garante um tempo de resposta específico, plantão ou atendimento emergencial 24h, salvo se contratado à parte por instrumento próprio.</p>
+
+                <h6 class="fw-bold text-success mt-4">9. PROPRIEDADE INTELECTUAL E TITULARIDADE DOS DADOS</h6>
+                <p class="small mb-1"><strong>9.1.</strong> Todo o software, marca, layout, design, funcionalidades, relatórios e código do Coletaê são de propriedade exclusiva do <strong>Coletaê - Plataforma Inteligente de Reciclagem</strong> ou de seus licenciadores.</p>
+                <p class="small mb-1"><strong>9.2.</strong> O usuário recebe uma licença de uso limitada, não exclusiva, intransferível e revogável, restrita à utilização da plataforma conforme estes Termos, durante a vigência da assinatura.</p>
+                <p class="small mb-1"><strong>9.3.</strong> É proibido copiar, modificar, distribuir, replicar, vender, licenciar, sublicenciar ou fazer engenharia reversa do sistema, no todo ou em parte.</p>
+                <p class="small mb-1"><strong>9.4.</strong> Os dados inseridos pelo usuário permanecem de titularidade do usuário. A licença concedida à Coletaê limita-se ao necessário para operar, manter e melhorar a plataforma.</p>
+
+                <h6 class="fw-bold text-success mt-4">10. ENCERRAMENTO DE CONTA</h6>
+                <p class="small mb-1"><strong>10.1.</strong> O usuário pode solicitar o encerramento de sua conta a qualquer momento, mediante comunicação à Coletaê.</p>
+                <p class="small mb-1"><strong>10.2.</strong> A Coletaê poderá suspender ou encerrar contas em caso de inadimplência, violação destes Termos, uso indevido ou determinação legal.</p>
+                <p class="small mb-1"><strong>10.3.</strong> Após o encerramento, os dados poderão ser mantidos pelo período necessário ao cumprimento de obrigações legais e, em seguida, eliminados ou anonimizados, conforme a LGPD. Cabe ao usuário exportar previamente os dados que deseja preservar.</p>
+
+                <h6 class="fw-bold text-success mt-4">11. DISPOSIÇÕES GERAIS</h6>
+                <p class="small mb-1"><strong>11.1.</strong> A Coletaê poderá atualizar estes Termos periodicamente. O uso continuado da plataforma após a publicação das alterações implica aceite automático da versão atualizada.</p>
+                <p class="small mb-1"><strong>11.2.</strong> Estes Termos de Uso estarão sempre disponíveis para consulta dentro do próprio sistema, podendo o usuário acessá-los a qualquer momento.</p>
+                <p class="small mb-1"><strong>11.3.</strong> Caso qualquer cláusula destes Termos seja considerada inválida ou inexequível, as demais permanecem em pleno vigor (nulidade parcial).</p>
+                <p class="small mb-1"><strong>11.4.</strong> As comunicações entre as partes poderão ser feitas por meios eletrônicos (e-mail e avisos dentro do sistema), que terão plena validade e eficácia.</p>
+                <p class="small mb-1"><strong>11.5.</strong> A tolerância quanto ao descumprimento de qualquer cláusula não significa renúncia ou novação, podendo a Coletaê exigir seu cumprimento a qualquer tempo.</p>
+                <p class="small mb-1"><strong>11.6.</strong> O usuário concorda que todas as ações registradas no sistema têm validade jurídica e operacional.</p>
+
+                <h6 class="fw-bold text-success mt-4">12. FORO</h6>
+                <p class="small mb-1"><strong>12.1.</strong> Fica eleito o foro da <strong>Comarca de Salgueiro — PE</strong> para dirimir quaisquer controvérsias decorrentes destes Termos, com renúncia a qualquer outro, por mais privilegiado que seja.</p>
+
+                <hr class="my-4">
                 <div class="text-center mt-4">
-                    <p class="small text-muted m-0">www.coletae.net.br | Coletaê Plataforma de Reciclagem</p>
+                    <p class="small text-muted m-0"><strong>www.coletae.com.br | Coletaê - Plataforma Inteligente de Reciclagem</strong></p>
+                    <p class="small text-muted m-0">Salgueiro, Pernambuco</p>
                 </div>
             </div>
         </div>

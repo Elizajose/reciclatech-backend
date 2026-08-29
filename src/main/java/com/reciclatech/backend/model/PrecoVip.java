@@ -1,0 +1,33 @@
+package com.reciclatech.backend.model;
+
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+
+@Entity
+public class PrecoVip {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "armazem_id")
+    private Armazem armazem;
+
+    private String telefoneCatador;
+    private String materialNome;
+    private BigDecimal precoEspecial;
+
+    public PrecoVip() {}
+
+    // Getters e Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Armazem getArmazem() { return armazem; }
+    public void setArmazem(Armazem armazem) { this.armazem = armazem; }
+    public String getTelefoneCatador() { return telefoneCatador; }
+    public void setTelefoneCatador(String telefoneCatador) { this.telefoneCatador = telefoneCatador; }
+    public String getMaterialNome() { return materialNome; }
+    public void setMaterialNome(String materialNome) { this.materialNome = materialNome; }
+    public BigDecimal getPrecoEspecial() { return precoEspecial; }
+    public void setPrecoEspecial(BigDecimal precoEspecial) { this.precoEspecial = precoEspecial; }
+}

@@ -1,7 +1,7 @@
 package com.reciclatech.backend.controller;
 
 import com.reciclatech.backend.model.Usuario;
-import com.reciclatech.backend.service.GoogleSheetsService;
+import com.reciclatech.backend.service.DatabaseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,15 +14,15 @@ import java.util.List;
 public class UsuarioController {
 
     @Autowired
-    private GoogleSheetsService googleSheetsService;
+    private DatabaseService googleSheetsService;
 
     @PostMapping
     public ResponseEntity<String> criar(@RequestBody Usuario usuario) {
         try {
             googleSheetsService.salvarUsuario(usuario);
-            return ResponseEntity.ok("Agendamento realizado com sucesso no Google Sheets!");
+            return ResponseEntity.ok("Agendamento realizado com sucesso!");
         } catch (IOException e) {
-            return ResponseEntity.status(500).body("Erro ao salvar na planilha: " + e.getMessage());
+            return ResponseEntity.status(500).body("Erro ao salvar no banco de dados: " + e.getMessage());
         }
     }
 

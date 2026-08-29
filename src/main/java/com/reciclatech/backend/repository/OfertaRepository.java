@@ -1,24 +1,18 @@
 package com.reciclatech.backend.repository;
-
 import com.reciclatech.backend.model.Oferta;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query; // <--- IMPORTANTE
-import org.springframework.data.repository.query.Param; // <--- IMPORTANTE
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
 import java.util.List;
 
+@Repository
 public interface OfertaRepository extends JpaRepository<Oferta, Long> {
+    List<Oferta> findAllByArmazemIdOrderByDataCriacaoDesc(Long armazemId);
+    List<Oferta> findAllByUsuarioIdAndStatusIn(Long usuarioId, List<Oferta.StatusOferta> status);
 
-    List<Oferta> findByStatus(Oferta.StatusOferta status);
+    @Query("SELECT SUM(o.peso) FROM Oferta o WHERE o.armazem.id = :armazemId AND o.material = :nomeMaterial AND o.status IN ('VENDIDO', 'AJUSTE_POSITIVO')")
+    Double somarEntradasPorMaterial(Long armazemId, String nomeMaterial);
 
-    List<Oferta> findByUsuarioIdAndStatus(Long usuarioId, Oferta.StatusOferta status);
-
-    // --- NOVO: RECICLÔMETRO ---
-    // Soma o peso de todas as ofertas que já foram VENDIDAS
-    @Query("SELECT SUM(o.peso) FROM Oferta o WHERE o.status = :status")
-    Double somarPesoTotal(@Param("status") Oferta.StatusOferta status);
-
-    // --- NOVO: RANKING DOS TOP MATERIAIS ---
-    // Retorna uma lista de Arrays: [Nome do Material, Peso Somado]
-    @Query("SELECT o.material, SUM(o.peso) FROM Oferta o WHERE o.status = 'VENDIDO' GROUP BY o.material ORDER BY SUM(o.peso) DESC")
-    List<Object[]> findRankingMateriais();
+    @Query("SELECT SUM(o.peso) FROM Oferta o WHERE o.armazem.id = :armazemId AND o.material = :nomeMaterial AND o.status IN ('SAIDA_INDUSTRIA', 'AJUSTE_NEGATIVO')")
+    Double somarSaidasPorMaterial(Long armazemId, String nomeMaterial);
 }

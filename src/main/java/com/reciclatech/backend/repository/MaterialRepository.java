@@ -1,9 +1,10 @@
 package com.reciclatech.backend.repository;
-
 import com.reciclatech.backend.model.Material;
 import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.Optional;
+import org.springframework.stereotype.Repository;
+import java.util.List;
 
+@Repository
 public interface MaterialRepository extends JpaRepository<Material, Long> {
-    Optional<Material> findByNome(String nome);
+    List<Material> findAllByArmazemIdOrderByNomeAsc(Long armazemId);
 }

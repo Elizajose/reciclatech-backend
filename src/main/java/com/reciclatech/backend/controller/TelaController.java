@@ -1,26 +1,22 @@
 package com.reciclatech.backend.controller;
 
-import com.reciclatech.backend.model.Material;
-import com.reciclatech.backend.model.Oferta;
-import com.reciclatech.backend.model.Usuario;
-import com.reciclatech.backend.repository.MaterialRepository;
-import com.reciclatech.backend.repository.OfertaRepository;
-import com.reciclatech.backend.repository.UsuarioRepository;
-import com.reciclatech.backend.service.GoogleSheetsService;
+import com.reciclatech.backend.model.*;
+import com.reciclatech.backend.repository.*;
+import com.reciclatech.backend.service.DatabaseService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.time.ZoneId;
-import java.util.UUID;
 
 @Controller
 public class TelaController {
@@ -29,7 +25,12 @@ public class TelaController {
     @Autowired(required = false) private UsuarioRepository usuarioRepository;
     @Autowired(required = false) private MaterialRepository materialRepository;
 
-    @Autowired private GoogleSheetsService googleSheetsService;
+    // A MÁGICA AQUI: Conectando com o novo serviço de banco de dados
+    @Autowired private DatabaseService googleSheetsService;
+
+    // VARIÁVEL DE AMBIENTE: Puxa a senha Master do sistema operacional
+    @Value("${SENHA_MASTER:Sertao2026}")
+    private String senhaMasterConfigurada;
 
     @GetMapping("/")
     public String home(Model model) {
@@ -41,50 +42,51 @@ public class TelaController {
         return "index";
     }
 
-    @GetMapping("/admin/precos")
-    public String painelPrecos(Model m, HttpSession s, HttpServletResponse response) {
-        if(s.getAttribute("adminLogado") == null) return "redirect:/login";
-        String perfil = (String) s.getAttribute("perfilUser");
-        if (!"GESTOR".equalsIgnoreCase(perfil)) return "redirect:/admin/coletas";
-
-        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        response.setHeader("Pragma", "no-cache");
-        response.setDateHeader("Expires", 0);
-
-        try { m.addAttribute("materiais", googleSheetsService.listarMateriais()); }
-        catch (Exception e) { m.addAttribute("materiais", new ArrayList<>()); }
-        return "admin-precos";
+    // ==========================================
+    // SISTEMA DE CADASTRO E LOGIN
+    // ==========================================
+    @GetMapping("/cadastro")
+    public String telaCadastro() {
+        return "cadastro";
     }
 
-    @PostMapping("/admin/material/novo")
-    public String novoMaterial(@RequestParam String nome, @RequestParam String unidade, @RequestParam Double preco, HttpSession session) {
-        if(session.getAttribute("adminLogado") == null) return "redirect:/login";
-        if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
+    @PostMapping("/salvar-cadastro")
+    public String salvarNovoCadastro(@RequestParam String nomeArmazem, @RequestParam String nomeProprietario,
+                                     @RequestParam(required = false) String cnpj, @RequestParam String telefone,
+                                     @RequestParam String endereco, @RequestParam String login, @RequestParam String senha,
+                                     @RequestParam(required = false, defaultValue = "START") String planoEscolhido) {
+        try {
+            boolean sucesso = googleSheetsService.cadastrarParceiroSaaS(nomeArmazem, nomeProprietario, cnpj, telefone, endereco, login, senha, planoEscolhido);
 
-        Material m = new Material(); m.setNome(nome); m.setUnidade(unidade); m.setPrecoPorKg(BigDecimal.valueOf(preco));
-        try { googleSheetsService.salvarMaterial(m); } catch (Exception e) { }
-        return "redirect:/admin/precos";
-    }
-
-    @PostMapping("/admin/atualizar")
-    public String upd(@RequestParam Long id, @RequestParam Double novoPreco, HttpSession session) {
-        if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
-        try { googleSheetsService.atualizarPrecoMaterial(id, BigDecimal.valueOf(novoPreco)); } catch (Exception e) { }
-        return "redirect:/admin/precos";
-    }
-
-    @GetMapping("/admin/material/deletar/{id}")
-    public String deletarMaterial(@PathVariable Long id, HttpSession session) {
-        if(session.getAttribute("adminLogado") == null) return "redirect:/login";
-        if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
-        try { googleSheetsService.deletarMaterial(id); } catch (Exception e) { }
-        return "redirect:/admin/precos";
+            if (sucesso) {
+                // Se deu certo, manda pra tela de login com aviso de sucesso
+                return "redirect:/login?sucesso=cadastro";
+            } else {
+                // Se o login já existir, devolve pra tela de cadastro com aviso
+                return "redirect:/cadastro?erro=usuario_existe";
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Se der erro no banco, devolve com erro genérico
+            return "redirect:/cadastro?erro=true";
+        }
     }
 
     @GetMapping("/login") public String telaLogin() { return "login-admin"; }
 
     @PostMapping("/login-admin")
     public String login(@RequestParam String login, @RequestParam String senha, HttpSession session) {
+
+        // ==========================================
+        // INTERCEPTADOR MASTER (Acesso Secreto Seguro)
+        // Usa a variável de ambiente injetada no topo da classe
+        // ==========================================
+        if ("master".equals(login) && senhaMasterConfigurada.equals(senha)) {
+            session.setAttribute("masterLogado", true);
+            return "redirect:/master/painel";
+        }
+        // ==========================================
+
         try {
             Map<String, String> dadosUser = googleSheetsService.autenticarSaaS(login, senha);
             if (dadosUser != null) {
@@ -94,6 +96,34 @@ public class TelaController {
                 session.setAttribute("nomeArmazem", dadosUser.getOrDefault("nomeArmazem", "Armazém Parceiro"));
                 session.setAttribute("cnpjArmazem", dadosUser.getOrDefault("cnpj", ""));
                 session.setAttribute("senhaFinanceira", dadosUser.getOrDefault("senhaFinanceira", "admin123"));
+
+                // DADOS DA ASSINATURA E BLOQUEIO (TRIAL 7 DIAS)
+                String status = dadosUser.getOrDefault("status", "ATIVO");
+                String plano = dadosUser.getOrDefault("plano", "START");
+                String dataCadastroStr = dadosUser.get("data_cadastro");
+
+                session.setAttribute("planoAssinatura", plano);
+                session.setAttribute("statusAssinatura", status);
+
+                if ("BLOQUEADO".equals(status)) {
+                    session.setAttribute("bloqueadoPagamento", true);
+                    return "redirect:/admin/assinatura";
+                }
+
+                if ("TRIAL".equals(status) && dataCadastroStr != null) {
+                    try {
+                        LocalDate dataCadastro = LocalDate.parse(dataCadastroStr);
+                        LocalDate hoje = LocalDate.now(ZoneId.of("America/Recife"));
+                        long diasUso = java.time.temporal.ChronoUnit.DAYS.between(dataCadastro, hoje);
+
+                        if (diasUso > 7) {
+                            session.setAttribute("bloqueadoPagamento", true);
+                            return "redirect:/admin/assinatura";
+                        }
+                    } catch (Exception e) {} // Ignora se a data estiver mal formatada e deixa entrar
+                }
+
+                session.removeAttribute("bloqueadoPagamento"); // Libera acesso se tudo estiver OK
                 return "redirect:/admin/coletas";
             }
         } catch (RuntimeException e) { return "redirect:/login?erro=suspenso"; }
@@ -115,9 +145,14 @@ public class TelaController {
         return "redirect:/?sucesso=true";
     }
 
+    // ==========================================
+    // ROTAS DO SISTEMA (BLOQUEADAS SE VENCIDO)
+    // ==========================================
+
     @GetMapping("/admin/coletas")
     public String telaListaColetas(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
 
         session.removeAttribute("gestorAutorizado");
 
@@ -136,6 +171,7 @@ public class TelaController {
     @GetMapping("/admin/atender/{idUsuario}")
     public String telaChecklist(@PathVariable String idUsuario, Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         response.setHeader("Pragma", "no-cache"); response.setDateHeader("Expires", 0);
         try {
@@ -143,7 +179,7 @@ public class TelaController {
             Usuario vendedor = googleSheetsService.listarUsuarios().stream().filter(u -> u.getTelefone().equals(idUsuario) || u.getId().toString().equals(idUsuario)).findFirst().orElseThrow();
             model.addAttribute("vendedor", vendedor);
             model.addAttribute("todosMateriais", googleSheetsService.listarMateriais());
-            model.addAttribute("precosVip", googleSheetsService.buscarPrecosEspeciais(vendedor.getTelefone()));
+            model.addAttribute("precosVip", googleSheetsService.buscarPrecosEspeciais(vendedor.getTelefone())); // PARÊNTESE CORRIGIDO
         } catch (Exception e) { return "redirect:/admin/coletas?erro=usuario"; }
         return "admin-checklist";
     }
@@ -156,7 +192,8 @@ public class TelaController {
     }
 
     @PostMapping("/admin/revisar-coleta")
-    public String revisarColeta(@RequestParam String idVendedor, @RequestParam Map<String, String> params, Model model) {
+    public String revisarColeta(@RequestParam String idVendedor, @RequestParam Map<String, String> params, Model model, HttpSession session) {
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         try {
             Usuario vendedor = googleSheetsService.listarUsuarios().stream().filter(u -> u.getTelefone().equals(idVendedor) || u.getId().toString().equals(idVendedor)).findFirst().orElseThrow();
             List<PreVendaDTO> itensRevisao = new ArrayList<>();
@@ -190,7 +227,8 @@ public class TelaController {
     @PostMapping("/admin/confirmar-finalizacao")
     public String confirmarFinalizacao(@RequestParam String idVendedor, @RequestParam(required = false) String cpfFinal,
                                        @RequestParam(required = false) List<Long> idsMateriais, @RequestParam(required = false) List<Double> pesosFinais,
-                                       @RequestParam(required = false) List<Double> precosFinais) {
+                                       @RequestParam(required = false) List<Double> precosFinais, HttpSession session) {
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         try {
             if (idsMateriais == null || idsMateriais.isEmpty()) return "redirect:/admin/coletas?erro=sem_materiais";
             List<Material> todosMateriais = googleSheetsService.listarMateriais();
@@ -247,6 +285,7 @@ public class TelaController {
     @GetMapping("/meus-extratos")
     public String listaExtratosDoDia(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         try { model.addAttribute("usuarios", googleSheetsService.buscarUsuariosComVendasHoje()); }
         catch (IOException e) { model.addAttribute("usuarios", new ArrayList<>()); }
@@ -256,6 +295,7 @@ public class TelaController {
     @PostMapping("/admin/pesagem-rapida")
     public String pesagemRapida(@RequestParam String nome, HttpSession session) {
         if(session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         Long idGerado = System.currentTimeMillis();
         Usuario novoAvulso = new Usuario(); novoAvulso.setId(idGerado); novoAvulso.setNome(nome); novoAvulso.setTelefone(idGerado.toString()); novoAvulso.setEndereco("Atendimento Avulso"); novoAvulso.setTipo(Usuario.TipoUsuario.CATADOR);
         try { googleSheetsService.salvarSolicitacaoInicial(novoAvulso, novoAvulso.getEndereco()); return "redirect:/admin/atender/" + idGerado; }
@@ -265,6 +305,7 @@ public class TelaController {
     @GetMapping("/admin/historico")
     public String historicoMovimentacoes(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
         if (session.getAttribute("gestorAutorizado") == null) return "redirect:/admin/analises/autenticar";
 
@@ -279,6 +320,7 @@ public class TelaController {
     @GetMapping("/admin/despesas")
     public String telaDespesas(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
         if (session.getAttribute("gestorAutorizado") == null) return "redirect:/admin/analises/autenticar";
 
@@ -295,15 +337,61 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser")) || session.getAttribute("gestorAutorizado") == null) {
             return "redirect:/admin/analises/autenticar";
         }
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
 
         try { googleSheetsService.salvarDespesa(descricao, BigDecimal.valueOf(valor)); }
         catch (Exception e) { System.err.println("Erro despesa: " + e.getMessage()); }
         return "redirect:/admin/despesas";
     }
 
+    @GetMapping("/admin/precos")
+    public String painelPrecos(Model m, HttpSession s, HttpServletResponse response) {
+        if(s.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (s.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
+        String perfil = (String) s.getAttribute("perfilUser");
+        if (!"GESTOR".equalsIgnoreCase(perfil)) return "redirect:/admin/coletas";
+
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0);
+
+        try { m.addAttribute("materiais", googleSheetsService.listarMateriais()); }
+        catch (Exception e) { m.addAttribute("materiais", new ArrayList<>()); }
+        return "admin-precos";
+    }
+
+    @PostMapping("/admin/material/novo")
+    public String novoMaterial(@RequestParam String nome, @RequestParam String unidade, @RequestParam Double preco, HttpSession session) {
+        if(session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
+        if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
+
+        Material m = new Material(); m.setNome(nome); m.setUnidade(unidade); m.setPrecoPorKg(BigDecimal.valueOf(preco));
+        try { googleSheetsService.salvarMaterial(m); } catch (Exception e) { }
+        return "redirect:/admin/precos";
+    }
+
+    @PostMapping("/admin/atualizar")
+    public String upd(@RequestParam Long id, @RequestParam Double novoPreco, HttpSession session) {
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
+        if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
+        try { googleSheetsService.atualizarPrecoMaterial(id, BigDecimal.valueOf(novoPreco)); } catch (Exception e) { }
+        return "redirect:/admin/precos";
+    }
+
+    @GetMapping("/admin/material/deletar/{id}")
+    public String deletarMaterial(@PathVariable Long id, HttpSession session) {
+        if(session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
+        if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
+        try { googleSheetsService.deletarMaterial(id); } catch (Exception e) { }
+        return "redirect:/admin/precos";
+    }
+
     @GetMapping("/admin/analises")
     public String mostrarAnalises(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
         if (session.getAttribute("gestorAutorizado") == null) return "redirect:/admin/analises/autenticar";
 
@@ -325,8 +413,6 @@ public class TelaController {
             Map<String, Double> totalCompradoKg = new HashMap<>();
             Double totalGeralKg = 0.0;
             Double totalPagoCatadores = 0.0;
-
-            //NOVA VARIÁVEL: Guarda apenas o peso comprado HOJE
             Double pesoCompradoHoje = 0.0;
 
             for (Oferta o : historico) {
@@ -344,7 +430,6 @@ public class TelaController {
 
                     if (isHoje && status.equals("VENDIDO")) {
                         caixaSaidaHoje += valor;
-                        // 🌟 SEPARAÇÃO: Soma o peso apenas para as métricas de HOJE 🌟
                         if ("KG".equalsIgnoreCase(mapaUnidades.getOrDefault(material, "KG"))) {
                             pesoCompradoHoje += peso;
                         }
@@ -386,10 +471,7 @@ public class TelaController {
             model.addAttribute("totalDespesasHoje", totalDespesasHoje);
             model.addAttribute("lucroDoDia", lucroDoDia);
             model.addAttribute("estoqueReal", estoqueRealKg);
-
-            //ENVIA A VARIÁVEL CORRETA DO PESO DE HOJE PARA O HTML
             model.addAttribute("pesoCompradoHoje", pesoCompradoHoje);
-
             model.addAttribute("rankingMaisColetados", rankingMaisColetados);
             model.addAttribute("baixaColeta", baixaColeta);
             model.addAttribute("totalGeralKg", totalGeralKg);
@@ -446,6 +528,7 @@ public class TelaController {
     @GetMapping("/admin/saida")
     public String telaSaida(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
         if (session.getAttribute("gestorAutorizado") == null) return "redirect:/admin/analises/autenticar";
 
@@ -462,9 +545,9 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser")) || session.getAttribute("gestorAutorizado") == null) {
             return "redirect:/admin/analises/autenticar";
         }
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
 
         try {
-            // 1. CALCULANDO ESTOQUE REAL ANTES DE QUALQUER COISA
             List<Oferta> historico = googleSheetsService.getHistoricoCompleto();
             Map<String, Double> estoqueRealKg = new HashMap<>();
 
@@ -482,7 +565,6 @@ public class TelaController {
             List<Material> todosMateriais = googleSheetsService.listarMateriais();
             List<List<Object>> loteDeVendas = new ArrayList<>();
 
-            // 2. VALIDAÇÃO DE TRAVA DE ESTOQUE
             for (Material mat : todosMateriais) {
                 String pesoStr = params.get("peso_" + mat.getId());
                 if (pesoStr != null && !pesoStr.isEmpty()) {
@@ -490,7 +572,6 @@ public class TelaController {
                     if (pesoSaida > 0) {
                         Double disponivelNoPatio = estoqueRealKg.getOrDefault(mat.getNome(), 0.0);
 
-                        // Trava: Se tentou vender mais do que tem
                         if (pesoSaida > disponivelNoPatio) {
                             ra.addFlashAttribute("erroEstoque", "Quantidade incompatível! Você tentou vender " + pesoSaida + "kg de " + mat.getNome() + ", mas só possui " + String.format("%.2f", disponivelNoPatio) + "kg no pátio.");
                             return "redirect:/admin/saida";
@@ -499,7 +580,6 @@ public class TelaController {
                 }
             }
 
-            // 3. REGISTRANDO A VENDA (Já passou na validação)
             Long idGerado = System.currentTimeMillis();
             String cnpjFinal = (cnpjIndustria != null && !cnpjIndustria.trim().isEmpty()) ? cnpjIndustria : "NÃO INFORMADO";
 
@@ -510,7 +590,6 @@ public class TelaController {
             novaIndustria.setEndereco(cnpjFinal);
             novaIndustria.setTipo(Usuario.TipoUsuario.CATADOR);
 
-            // CORREÇÃO DO ERRO FANTASMA: Salva apenas o cliente (sem abrir solicitação pendente)
             googleSheetsService.salvarUsuario(novaIndustria);
 
             for (Material mat : todosMateriais) {
@@ -544,10 +623,10 @@ public class TelaController {
         }
     }
 
-    // ROTA: FORNECEDORES VIP
     @GetMapping("/admin/fornecedores-vip")
     public String telaFornecedoresVip(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 
@@ -561,6 +640,7 @@ public class TelaController {
     @PostMapping("/admin/fornecedores-vip/novo")
     public String salvarFornecedorVip(@RequestParam String telefone, @RequestParam String material, @RequestParam Double preco, HttpSession session) {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         try { googleSheetsService.salvarFornecedorVip(telefone, material, BigDecimal.valueOf(preco)); } catch (Exception e) {}
         return "redirect:/admin/fornecedores-vip";
     }
@@ -568,14 +648,15 @@ public class TelaController {
     @GetMapping("/admin/fornecedores-vip/deletar")
     public String deletarFornecedorVip(@RequestParam String telefone, @RequestParam String material, HttpSession session) {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         try { googleSheetsService.deletarFornecedorVip(telefone, material); } catch (Exception e) {}
         return "redirect:/admin/fornecedores-vip";
     }
 
-    // ROTA: AJUSTE DE ESTOQUE (DETALHADO)
     @GetMapping("/admin/ajuste-estoque")
     public String telaAjusteEstoque(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
         if (session.getAttribute("gestorAutorizado") == null) return "redirect:/admin/analises/autenticar";
 
@@ -587,6 +668,7 @@ public class TelaController {
     @PostMapping("/admin/ajuste-estoque/novo")
     public String salvarAjusteEstoque(@RequestParam String material, @RequestParam Double peso, @RequestParam String tipoAjuste, @RequestParam String motivo, HttpSession session) {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser")) || session.getAttribute("gestorAutorizado") == null) return "redirect:/admin/analises/autenticar";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         try { googleSheetsService.salvarAjusteEstoque(material, peso, tipoAjuste, motivo); } catch (Exception e) {}
         return "redirect:/admin/analises";
     }
@@ -596,6 +678,7 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser")) || session.getAttribute("gestorAutorizado") == null) {
             return "redirect:/admin/analises/autenticar";
         }
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         try { googleSheetsService.deletarDespesa(id); } catch (Exception e) {}
         return "redirect:/admin/despesas";
     }
@@ -610,13 +693,10 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser")) || session.getAttribute("gestorAutorizado") == null) {
             return "redirect:/admin/analises/autenticar";
         }
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
 
         try {
             googleSheetsService.fecharCaixaDoDia(dataHoje, BigDecimal.valueOf(entradas), BigDecimal.valueOf(saidas), BigDecimal.valueOf(despesas), BigDecimal.valueOf(lucro), pesoTotal);
-
-            //Pausa de 1 segundo para o Google Sheets sincronizar os dados.
-            Thread.sleep(1000);
-
         } catch (Exception e) {
             System.err.println("Erro ao fechar caixa: " + e.getMessage());
         }
@@ -624,33 +704,88 @@ public class TelaController {
         return "redirect:/admin/analises";
     }
 
-    // ROTA DE ASSINATURA (COM TRAVA DE SENHA FINANCEIRA)
+    // ==========================================
+    // ROTA LIVRE (A TELA DE PAGAMENTO)
+    // ==========================================
     @GetMapping("/admin/assinatura")
     public String telaAssinaturaSaaS(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
-        if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
-
-        // A TRAVA DE SEGURANÇA ADICIONADA AQUI
-        if (session.getAttribute("gestorAutorizado") == null) return "redirect:/admin/analises/autenticar";
-
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 
-        // DADOS FALSOS (MOCK) - PRONTOS PARA SEREM SUBSTITUÍDOS PELO DB
-        model.addAttribute("planoNome", "Coletaê SaaS Pro");
-        model.addAttribute("valorMensalidade", 149.90);
-        model.addAttribute("statusAssinatura", "ATIVO");
-        model.addAttribute("proximoVencimento", LocalDate.now(ZoneId.of("America/Recife")).plusDays(10).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        // Puxa o plano que o usuário escolheu na hora do cadastro
+        String plano = (String) session.getAttribute("planoAssinatura");
+        String status = (String) session.getAttribute("statusAssinatura");
 
-        // Lista de Faturas Fake
-        List<Map<String, String>> faturas = new ArrayList<>();
-        Map<String, String> fat1 = new HashMap<>();
-        fat1.put("mes", "Agosto/2026"); fat1.put("valor", "97,00"); fat1.put("status", "PENDENTE");
-        Map<String, String> fat2 = new HashMap<>();
-        fat2.put("mes", "Julho/2026"); fat2.put("valor", "97,00"); fat2.put("status", "PAGO");
-        faturas.add(fat1); faturas.add(fat2);
+        double valor = "PRO".equals(plano) ? 199.90 : 149.90;
+        String planoNome = "PRO".equals(plano) ? "Coletaê SaaS Pro" : "Coletaê SaaS Start";
 
-        model.addAttribute("faturas", faturas);
+        model.addAttribute("planoNome", planoNome);
+        model.addAttribute("valorMensalidade", valor);
+        model.addAttribute("statusAssinatura", status != null ? status : "TRIAL");
 
+        // Define o vencimento para 7 dias após hoje (apenas visual)
+        model.addAttribute("proximoVencimento", LocalDate.now(ZoneId.of("America/Recife")).plusDays(7).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+
+        model.addAttribute("faturas", new ArrayList<>()); // Limpo por enquanto
         return "admin-assinatura";
+    }
+
+    // ==========================================
+    // ÁREA RESTRITA DO MASTER (O SEU PAINEL)
+    // ==========================================
+
+    @GetMapping("/master/painel")
+    public String telaPainelMaster(Model model, HttpSession session) {
+        // Trava de segurança: só você entra aqui
+        if (session.getAttribute("masterLogado") == null) {
+            return "redirect:/login";
+        }
+
+        // Busca todos os clientes no Supabase e manda pra tela
+        model.addAttribute("listaClientes", googleSheetsService.listarTodosArmazensSaaS());
+        return "master-painel";
+    }
+
+    // Rota secreta para você logar como Master
+    @PostMapping("/master/login-secreto")
+    public String loginMaster(@RequestParam String senhaMaster, HttpSession session) {
+        // Usa a variável de ambiente injetada no topo da classe
+        if (senhaMasterConfigurada.equals(senhaMaster)) {
+            session.setAttribute("masterLogado", true);
+            return "redirect:/master/painel";
+        }
+        return "redirect:/login?erro=true";
+    }
+
+    @PostMapping("/master/mudar-status")
+    public String mudarStatusCliente(@RequestParam Long id, @RequestParam String status, HttpSession session) {
+        if (session.getAttribute("masterLogado") == null) return "redirect:/login";
+
+        googleSheetsService.atualizarStatusArmazem(id, status);
+        return "redirect:/master/painel";
+    }
+
+    @PostMapping("/admin/perfil/atualizar-senhas")
+    public String atualizarSenhasPerfil(@RequestParam(required = false) String novaSenha,
+                                        @RequestParam(required = false) String novaSenhaFinanceira,
+                                        HttpSession session,
+                                        org.springframework.web.servlet.mvc.support.RedirectAttributes ra) {
+        if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+
+        try {
+            Long idArmazem = Long.parseLong(session.getAttribute("idPlanilhaAtiva").toString());
+            googleSheetsService.atualizarSenhasArmazem(idArmazem, novaSenha, novaSenhaFinanceira);
+
+            // Atualiza a senha na sessão caso tenha sido alterada
+            if (novaSenhaFinanceira != null && !novaSenhaFinanceira.trim().isEmpty()) {
+                session.setAttribute("senhaFinanceira", novaSenhaFinanceira);
+            }
+
+            ra.addFlashAttribute("sucessoPerfil", "Credenciais atualizadas com sucesso!");
+        } catch (Exception e) {
+            ra.addFlashAttribute("erroPerfil", "Não foi possível atualizar as senhas.");
+        }
+
+        return "redirect:/admin/coletas";
     }
 }

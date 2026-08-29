@@ -1,18 +1,16 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Acesse sua conta - Coletaê</title>
+    <title>Criar Conta - Coletaê</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
 
-    <!-- Bootstrap & Fontes -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
-    <!-- CSS EXTERNO -->
     <link rel="stylesheet" th:href="@{/css/admin-login.css?v=2}">
 </head>
 <body>
@@ -20,18 +18,17 @@
 <div class="container-fluid vh-100 p-0">
     <div class="row g-0 h-100">
 
-        <!-- LADO ESQUERDO (Verde Corporativo) - Oculto em celulares -->
+        <!-- LADO ESQUERDO -->
         <div class="col-lg-6 col-md-5 d-none d-md-flex flex-column justify-content-between p-5 bg-coletae-primary text-white">
             <div>
-                <!-- Logo -->
                 <div class="d-flex align-items-center gap-2 fs-3 fw-bold">
                     <i class="bi bi-recycle"></i> Coletaê
                 </div>
             </div>
 
             <div class="pe-lg-5">
-                <h1 class="fw-bold display-5 mb-4">Gestão inteligente para galpões de reciclagem.</h1>
-                <p class="fs-5 opacity-75 pe-lg-5">Plataforma do Coletaê para controle automatizado de pesagens, gestão financeira e rastreabilidade de materiais.</p>
+                <h1 class="fw-bold display-5 mb-4">Bem-vindo(a) ao futuro da reciclagem.</h1>
+                <p class="fs-5 opacity-75 pe-lg-5">Cadastre seu galpão e ganhe controle total sobre suas compras, vendas e margens de lucro em tempo real.</p>
             </div>
 
             <div class="small opacity-75">
@@ -39,79 +36,137 @@
             </div>
         </div>
 
-        <!-- LADO DIREITO (Formulário Branco) -->
-        <div class="col-lg-6 col-md-7 d-flex align-items-center justify-content-center p-4 bg-white">
-            <div class="w-100" style="max-width: 420px;">
+        <!-- LADO DIREITO -->
+        <div class="col-lg-6 col-md-7 d-flex align-items-center justify-content-center p-4 bg-white" style="overflow-y: auto;">
+            <div class="w-100 py-4" style="max-width: 450px;">
 
                 <!-- BOTÃO DE VOLTAR -->
                 <a href="/" class="btn btn-link text-decoration-none text-muted px-0 mb-3 d-flex align-items-center gap-2" style="width: fit-content;">
                     <i class="bi bi-arrow-left"></i> Voltar para o Início
                 </a>
 
-                <!-- Logo Mobile (Aparece apenas no celular) -->
                 <div class="d-md-none d-flex align-items-center gap-2 fs-2 fw-bold text-success mb-4 justify-content-center">
                     <i class="bi bi-recycle"></i> Coletaê
                 </div>
 
-                <h2 class="fw-bold text-dark mb-1">Acesse sua conta</h2>
-                <p class="text-muted small mb-4">Entre com suas credenciais para continuar.</p>
+                <h2 class="fw-bold text-dark mb-1">Crie sua conta</h2>
+                <p class="text-muted small mb-4">Preencha os dados abaixo para cadastrar seu galpão.</p>
 
-                <!-- Alertas Dinâmicos -->
                 <div th:if="${param.erro != null and param.erro[0] == 'true'}" class="alert alert-danger p-2 small fw-bold d-flex align-items-center gap-2 rounded-3">
-                    <i class="bi bi-exclamation-triangle-fill"></i> Usuário ou senha incorretos.
+                    <i class="bi bi-exclamation-triangle-fill"></i> Ocorreu um erro ao criar a conta. Tente novamente.
                 </div>
-                <div th:if="${param.erro != null and param.erro[0] == 'suspenso'}" class="alert alert-warning p-2 small fw-bold d-flex align-items-center gap-2 rounded-3">
-                    <i class="bi bi-lock-fill"></i> Conta suspensa. Contate o suporte.
+                <div th:if="${param.erro != null and param.erro[0] == 'usuario_existe'}" class="alert alert-danger p-2 small fw-bold d-flex align-items-center gap-2 rounded-3">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Este nome de usuário já está em uso.
                 </div>
 
-                <form action="/login-admin" method="post">
+                <form action="/salvar-cadastro" method="post">
 
-                    <!-- E-mail / Usuário -->
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-dark">E-mail ou Usuário</label>
-                        <div class="input-group input-group-lg shadow-sm">
-                            <span class="input-group-text border-end-0"><i class="bi bi-envelope"></i></span>
-                            <input type="text" name="login" class="form-control border-start-0 fs-6" placeholder="exemplo@coletae.com" required autofocus>
+                    <div class="row g-2 mb-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark">Nome do Galpão / Armazém</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-shop text-muted"></i></span>
+                                <input type="text" name="nomeArmazem" class="form-control border-start-0" placeholder="Ex: Reciclagem Silva" required>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Senha -->
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <label class="form-label small fw-bold text-dark m-0">Senha</label>
-                            <a href="#" class="text-success small text-decoration-none">Esqueceu a senha?</a>
+                    <div class="row g-2 mb-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark">Nome do Proprietário</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-person text-muted"></i></span>
+                                <input type="text" name="nomeProprietario" class="form-control border-start-0" placeholder="Seu nome completo" required>
+                            </div>
                         </div>
-                        <div class="input-group input-group-lg shadow-sm">
-                            <span class="input-group-text border-end-0"><i class="bi bi-lock"></i></span>
-                            <input type="password" name="senha" id="senhaInput" class="form-control border-start-0 border-end-0 fs-6" placeholder="••••••••" required>
-                            <button class="btn btn-toggle-pass border-start-0" type="button" id="togglePassword">
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-dark">CNPJ/CPF (Opcional)</label>
+                            <input type="text" name="cnpj" id="cpfCnpj" class="form-control shadow-sm" placeholder="000.000.000-00" maxlength="18">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-dark">WhatsApp</label>
+                            <input type="tel" name="telefone" id="telefone" class="form-control shadow-sm" placeholder="(00) 00000-0000" required maxlength="15">
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark">Endereço do Galpão</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-geo-alt text-muted"></i></span>
+                                <input type="text" name="endereco" class="form-control border-start-0" placeholder="Rua, Número, Bairro, Cidade" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NOVO: SELEÇÃO DE PLANO -->
+                    <div class="row g-2 mb-3 mt-4">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark mb-2">Plano de Assinatura (7 dias de teste grátis)</label>
+
+                            <div class="form-check p-3 border rounded shadow-sm mb-2" style="background-color: #f8f9fa;">
+                                <input class="form-check-input ms-1 mt-2" type="radio" name="planoEscolhido" id="planoStart" value="START" checked>
+                                <label class="form-check-label ms-2 w-100" for="planoStart" style="cursor: pointer;">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <strong>Plano START</strong>
+                                        <span class="badge bg-secondary">R$ 149,90/mês</span>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">Controle básico de pesagens e recibos digitais.</small>
+                                </label>
+                            </div>
+
+                            <div class="form-check p-3 border rounded shadow-sm border-success mb-2" style="background-color: #f0fdf4;">
+                                <input class="form-check-input ms-1 mt-2" type="radio" name="planoEscolhido" id="planoPro" value="PRO">
+                                <label class="form-check-label ms-2 w-100" for="planoPro" style="cursor: pointer;">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <strong class="text-success">Plano PRO <span class="badge bg-warning text-dark ms-1" style="font-size: 0.6rem;">Mais Popular</span></strong>
+                                        <span class="badge bg-success">R$ 199,90/mês</span>
+                                    </div>
+                                    <small class="text-success opacity-75 d-block mt-1">Gestão financeira completa, DRE e múltiplos usuários.</small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4 text-muted opacity-25">
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark">Usuário de Acesso (Login)</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-envelope text-muted"></i></span>
+                                <input type="text" name="login" class="form-control border-start-0" placeholder="Crie um nome de usuário (ex: silva.recicla)" required>
+                            </div>
+                            <div class="form-text" style="font-size: 0.75rem;">Este será o nome que você usará para entrar no sistema.</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-dark m-0 mb-1">Senha de Acesso</label>
+                        <div class="input-group shadow-sm">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-lock text-muted"></i></span>
+                            <input type="password" name="senha" id="senhaInput" class="form-control border-start-0 border-end-0" placeholder="••••••••" required>
+                            <button class="btn btn-outline-secondary bg-white border-start-0 text-muted" type="button" id="togglePassword">
                                 <i class="bi bi-eye-fill" id="eyeIcon"></i>
                             </button>
                         </div>
                     </div>
 
-                    <!-- Lembrar de mim -->
-                    <div class="form-check mb-4 mt-3">
-                        <input class="form-check-input text-success" type="checkbox" id="lembrar" style="cursor: pointer;">
-                        <label class="form-check-label small text-muted" for="lembrar" style="cursor: pointer;">
-                            Manter-me conectado
-                        </label>
-                    </div>
-
-                    <button type="submit" class="btn btn-success w-100 btn-lg fw-bold shadow-sm mb-4 rounded-3">
-                        Entrar
+                    <button type="submit" class="btn btn-success w-100 btn-lg fw-bold shadow-sm mb-3 rounded-3">
+                        Criar Conta e Iniciar Teste Grátis
                     </button>
 
-                    <!-- Link para Cadastro -->
                     <div class="text-center small">
-                        <span class="text-muted">Ainda não tem acesso?</span>
-                        <a href="/cadastro" class="text-success fw-bold text-decoration-none">Criar conta</a>
+                        <span class="text-muted">Já tem uma conta?</span>
+                        <a href="/login" class="text-success fw-bold text-decoration-none">Faça login</a>
                     </div>
                 </form>
 
                 <div class="text-center mt-4">
                     <p class="small text-muted" style="font-size: 0.75rem;">
-                        <!-- GATILHO DO MODAL AQUI -->
                         Ao continuar, você concorda com os <a href="#" class="text-muted text-decoration-underline" data-bs-toggle="modal" data-bs-target="#modalTermos">Termos de Uso e Privacidade</a> do Coletaê.
                     </p>
                 </div>
@@ -222,7 +277,7 @@
                 <p class="small mb-1"><strong>7.1.</strong> O uso do Coletaê está sujeito à contratação de um plano de assinatura, com cobrança recorrente conforme o ciclo escolhido (mensal, anual ou outro previsto na contratação).</p>
                 <p class="small mb-1"><strong>7.2.</strong> O não pagamento na data de vencimento poderá acarretar a suspensão automática do acesso até a regularização. Nenhum dado é excluído imediatamente, porém o acesso pode ficar bloqueado. A suspensão por inadimplência não exclui a obrigação de pagar os valores devidos.</p>
                 <p class="small mb-1"><strong>7.3.</strong> Por se tratar de serviço digital de acesso imediato, os valores já pagos relativos a período em curso não são reembolsáveis de forma proporcional, salvo disposição legal em contrário ou acordo específico entre as partes.</p>
-                <p class="small mb-1"><strong>7.4.</strong> O cancelamento da assinatura interrompe as cobranças futuras, pode não gerar devolução de valores já pagos pelo período vigente.</p>
+                <p class="small mb-1"><strong>7.4.</strong> O cancelamento da assinatura interrompe as cobranças futuras, mas não gera devolução de valores já pagos pelo período vigente.</p>
 
                 <h6 class="fw-bold text-success mt-4">8. SUPORTE E ATENDIMENTO</h6>
                 <p class="small mb-1"><strong>8.1.</strong> O suporte ao usuário é oferecido pelo canal <strong>contatocoletae@gmail.com</strong>, em horário comercial e conforme a disponibilidade da equipe.</p>
@@ -260,11 +315,58 @@
     </div>
 </div>
 
-<!-- SCRIPTS DO BOOTSTRAP PARA O MODAL FUNCIONAR -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- SCRIPT EXTERNO -->
-<script th:src="@{/js/admin-login.js}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const togglePassword = document.getElementById('togglePassword');
+        const password = document.getElementById('senhaInput');
+        const eyeIcon = document.getElementById('eyeIcon');
+
+        if (togglePassword && password && eyeIcon) {
+            togglePassword.addEventListener('click', function () {
+                const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+                password.setAttribute('type', type);
+
+                if(type === 'text') {
+                    eyeIcon.classList.remove('bi-eye-fill');
+                    eyeIcon.classList.add('bi-eye-slash-fill');
+                } else {
+                    eyeIcon.classList.remove('bi-eye-slash-fill');
+                    eyeIcon.classList.add('bi-eye-fill');
+                }
+            });
+        }
+
+        // MÁSCARA PARA TELEFONE/WHATSAPP
+        const telInput = document.getElementById("telefone");
+        if(telInput) {
+            telInput.addEventListener("input", (e) => {
+                let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,5})(\d{0,4})/);
+                e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
+            });
+        }
+
+        // MÁSCARA DINÂMICA PARA CPF/CNPJ
+        const docInput = document.getElementById("cpfCnpj");
+        if(docInput) {
+            docInput.addEventListener("input", (e) => {
+                let v = e.target.value.replace(/\D/g,"");
+                if (v.length <= 11) { // CPF
+                    v = v.replace(/(\d{3})(\d)/,"$1.$2");
+                    v = v.replace(/(\d{3})(\d)/,"$1.$2");
+                    v = v.replace(/(\d{3})(\d{1,2})$/,"$1-$2");
+                } else { // CNPJ
+                    v = v.replace(/^(\d{2})(\d)/,"$1.$2");
+                    v = v.replace(/^(\d{2})\.(\d{3})(\d)/,"$1.$2.$3");
+                    v = v.replace(/\.(\d{3})(\d)/,".$1/$2");
+                    v = v.replace(/(\d{4})(\d)/,"$1-$2");
+                }
+                e.target.value = v;
+            });
+        }
+    });
+</script>
 
 </body>
 </html>
