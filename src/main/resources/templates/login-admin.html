@@ -14,6 +14,19 @@
 
     <!-- CSS EXTERNO -->
     <link rel="stylesheet" th:href="@{/css/admin-login.css?v=2}">
+
+    <!-- ANIMAÇÃO FLUTUANTE PARA A IMAGEM -->
+    <style>
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0px); }
+        }
+        .img-float {
+            animation: float 6s ease-in-out infinite;
+            filter: drop-shadow(0 25px 25px rgba(0, 0, 0, 0.15));
+        }
+    </style>
 </head>
 <body>
 
@@ -21,20 +34,29 @@
     <div class="row g-0 h-100">
 
         <!-- LADO ESQUERDO (Verde Corporativo) - Oculto em celulares -->
-        <div class="col-lg-6 col-md-5 d-none d-md-flex flex-column justify-content-between p-5 bg-coletae-primary text-white">
-            <div>
+        <div class="col-lg-6 col-md-5 d-none d-md-flex flex-column justify-content-between p-5 bg-coletae-primary text-white position-relative overflow-hidden">
+
+            <!-- Efeito visual de luz no fundo para destacar a imagem -->
+            <div class="position-absolute" style="width: 800px; height: 800px; background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 60%); top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1;"></div>
+
+            <div style="z-index: 2;">
                 <!-- Logo -->
                 <div class="d-flex align-items-center gap-2 fs-3 fw-bold">
                     <i class="bi bi-recycle"></i> Coletaê
                 </div>
             </div>
 
-            <div class="pe-lg-5">
-                <h1 class="fw-bold display-5 mb-4">Gestão inteligente para galpões de reciclagem.</h1>
+            <div class="pe-lg-5 mt-4" style="z-index: 2;">
+                <h1 class="fw-bold display-5 mb-3">Gestão inteligente para galpões de reciclagem.</h1>
                 <p class="fs-5 opacity-75 pe-lg-5">Plataforma do Coletaê para controle automatizado de pesagens, gestão financeira e rastreabilidade de materiais.</p>
             </div>
 
-            <div class="small opacity-75">
+            <!-- ILUSTRAÇÃO GERADA POR IA (Flutuando no centro) -->
+            <div class="text-center mt-auto mb-auto px-4" style="z-index: 2;">
+                <img th:src="@{/img/ilustracao-login.png}" alt="Dashboard Coletaê" class="img-fluid img-float" style="max-height: 45vh; object-fit: contain;">
+            </div>
+
+            <div class="small opacity-75" style="z-index: 2;">
                 © 2026 Coletaê. Todos os direitos reservados.
             </div>
         </div>

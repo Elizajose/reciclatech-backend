@@ -72,7 +72,20 @@ public class TelaController {
         }
     }
 
-    @GetMapping("/login") public String telaLogin() { return "login-admin"; }
+    @GetMapping("/login")
+    public String telaLogin(HttpSession session) {
+
+        if (session.getAttribute("adminLogado") != null) {
+
+            if (session.getAttribute("bloqueadoPagamento") != null) {
+                return "redirect:/admin/assinatura";
+            }
+
+            return "redirect:/admin/coletas";
+        }
+
+        return "login-admin";
+    }
 
     @PostMapping("/login-admin")
     public String login(@RequestParam String login, @RequestParam String senha, HttpSession session) {
@@ -97,37 +110,33 @@ public class TelaController {
                 session.setAttribute("cnpjArmazem", dadosUser.getOrDefault("cnpj", ""));
                 session.setAttribute("senhaFinanceira", dadosUser.getOrDefault("senhaFinanceira", "admin123"));
 
-                // DADOS DA ASSINATURA E BLOQUEIO (TRIAL 7 DIAS)
+                // DADOS DA ASSINATURA E DO TRIAL
                 String status = dadosUser.getOrDefault("status", "ATIVO");
                 String plano = dadosUser.getOrDefault("plano", "START");
-                String dataCadastroStr = dadosUser.get("data_cadastro");
+                String trialVencido = dadosUser.getOrDefault("trialVencido", "false");
 
                 session.setAttribute("planoAssinatura", plano);
                 session.setAttribute("statusAssinatura", status);
 
-                if ("BLOQUEADO".equals(status)) {
+                // ==========================================
+                // O LEÃO DE CHÁCARA DO LOGIN
+                // Se estiver bloqueado (inadimplente) OU se os 7 dias grátis acabaram
+                // ==========================================
+                if ("BLOQUEADO".equals(status) || "true".equals(trialVencido)) {
                     session.setAttribute("bloqueadoPagamento", true);
                     return "redirect:/admin/assinatura";
                 }
 
-                if ("TRIAL".equals(status) && dataCadastroStr != null) {
-                    try {
-                        LocalDate dataCadastro = LocalDate.parse(dataCadastroStr);
-                        LocalDate hoje = LocalDate.now(ZoneId.of("America/Recife"));
-                        long diasUso = java.time.temporal.ChronoUnit.DAYS.between(dataCadastro, hoje);
-
-                        if (diasUso > 7) {
-                            session.setAttribute("bloqueadoPagamento", true);
-                            return "redirect:/admin/assinatura";
-                        }
-                    } catch (Exception e) {} // Ignora se a data estiver mal formatada e deixa entrar
-                }
-
-                session.removeAttribute("bloqueadoPagamento"); // Libera acesso se tudo estiver OK
+                // Libera acesso se tudo estiver OK (Ativo ou Trial no prazo)
+                session.removeAttribute("bloqueadoPagamento");
                 return "redirect:/admin/coletas";
             }
-        } catch (RuntimeException e) { return "redirect:/login?erro=suspenso"; }
-        catch (Exception e) { e.printStackTrace(); }
+        } catch (RuntimeException e) {
+            return "redirect:/login?erro=suspenso";
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         return "redirect:/login?erro=true";
     }
 
@@ -513,8 +522,10 @@ public class TelaController {
 
     @PostMapping("/admin/analises/autenticar")
     public String processarSenhaGestor(@RequestParam String senhaGestor, HttpSession session, org.springframework.web.servlet.mvc.support.RedirectAttributes ra) {
-        String senhaCorreta = (String) session.getAttribute("senhaFinanceira");
-        if (senhaCorreta != null && senhaCorreta.equals(senhaGestor)) {
+        String senhaCorreta = (String) session.getAttribute("senhaFinanceira"); // Essa senha já vem criptografada do banco
+
+        // Criptografa o que o usuário digitou e compara com a sessão
+        if (senhaCorreta != null && senhaCorreta.equals(googleSheetsService.criptografarSenha(senhaGestor))) {
             session.setAttribute("gestorAutorizado", true); return "redirect:/admin/analises";
         }
         ra.addFlashAttribute("erro", "Senha incorreta!"); return "redirect:/admin/analises/autenticar";
@@ -741,8 +752,76 @@ public class TelaController {
             return "redirect:/login";
         }
 
-        // Busca todos os clientes no Supabase e manda pra tela
-        model.addAttribute("listaClientes", googleSheetsService.listarTodosArmazensSaaS());
+        try {
+            // 1. Busca os clientes no formato genérico que o banco entrega (Map)
+            List<Map<String, Object>> clientesBanco = (List<Map<String, Object>>) (List<?>) googleSheetsService.listarTodosArmazensSaaS();
+
+            int totalClientes = clientesBanco.size();
+            int ativos = 0; int trials = 0; int bloqueados = 0;
+            int ativosStart = 0; int ativosPro = 0;
+            int trialsStart = 0; int trialsPro = 0;
+            double faturamentoMensal = 0.0;
+
+            // 2. Cria uma lista oficial de "Armazem" para o HTML ler sem erros
+            List<Armazem> clientesFormatados = new ArrayList<>();
+
+            for (Map<String, Object> c : clientesBanco) {
+                // Captura os dados de forma segura (tratando os nulos)
+                String status = c.get("status") != null ? c.get("status").toString().toUpperCase() : "ATIVO";
+                String plano = c.get("plano") != null ? c.get("plano").toString().toUpperCase() : "START";
+
+                // Lógica de Faturamento e Contagem
+                if ("ATIVO".equals(status)) {
+                    ativos++;
+                    if ("PRO".equals(plano)) {
+                        ativosPro++;
+                        faturamentoMensal += 199.90;
+                    } else {
+                        ativosStart++;
+                        faturamentoMensal += 149.90;
+                    }
+                } else if ("TRIAL".equals(status)) {
+                    trials++;
+                    if ("PRO".equals(plano)) {
+                        trialsPro++;
+                    } else {
+                        trialsStart++;
+                    }
+                } else if ("BLOQUEADO".equals(status) || "SUSPENSO".equals(status)) {
+                    bloqueados++;
+                }
+
+                // 3. Monta o Objeto Armazem perfeito
+                Armazem a = new Armazem();
+                a.setId(c.get("id") != null ? Long.parseLong(c.get("id").toString()) : 0L);
+                a.setNome(c.get("nome") != null ? c.get("nome").toString() : "Sem Nome");
+                a.setPlano(plano);
+                a.setTelefone(c.get("telefone") != null ? c.get("telefone").toString() : "");
+                a.setCnpj(c.get("cnpj") != null ? c.get("cnpj").toString() : "");
+                a.setLogin(c.get("login") != null ? c.get("login").toString() : "");
+                a.setStatus(status);
+
+                // Adiciona na lista limpa
+                clientesFormatados.add(a);
+            }
+
+            // Envia a lista transformada para a tela (Agora o Thymeleaf acha o 'getPlano()')
+            model.addAttribute("listaClientes", clientesFormatados);
+            model.addAttribute("totalClientes", totalClientes);
+            model.addAttribute("ativos", ativos);
+            model.addAttribute("trials", trials);
+            model.addAttribute("bloqueados", bloqueados);
+            model.addAttribute("ativosStart", ativosStart);
+            model.addAttribute("ativosPro", ativosPro);
+            model.addAttribute("trialsStart", trialsStart);
+            model.addAttribute("trialsPro", trialsPro);
+            model.addAttribute("faturamentoMensal", faturamentoMensal);
+
+        } catch (Exception e) {
+            System.err.println("Erro ao carregar o painel master: " + e.getMessage());
+            model.addAttribute("listaClientes", new ArrayList<>());
+        }
+
         return "master-painel";
     }
 
@@ -776,9 +855,9 @@ public class TelaController {
             Long idArmazem = Long.parseLong(session.getAttribute("idPlanilhaAtiva").toString());
             googleSheetsService.atualizarSenhasArmazem(idArmazem, novaSenha, novaSenhaFinanceira);
 
-            // Atualiza a senha na sessão caso tenha sido alterada
+            // Atualiza a senha financeira na sessão já criptografada
             if (novaSenhaFinanceira != null && !novaSenhaFinanceira.trim().isEmpty()) {
-                session.setAttribute("senhaFinanceira", novaSenhaFinanceira);
+                session.setAttribute("senhaFinanceira", googleSheetsService.criptografarSenha(novaSenhaFinanceira));
             }
 
             ra.addFlashAttribute("sucessoPerfil", "Credenciais atualizadas com sucesso!");

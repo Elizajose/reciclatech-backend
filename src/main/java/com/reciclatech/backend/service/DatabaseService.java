@@ -41,20 +41,41 @@ public class DatabaseService {
     // ==========================================
     // AUTENTICAÇÃO E SAAS (ATUALIZADO COM PLANO E DATA)
     // ==========================================
-    public Map<String, String> autenticarSaaS(String login, String senha) {
+    public Map<String, String> autenticarSaaS(String login, String senhaPura) {
         try {
-            // Nota: Puxa o status, o plano e a data de cadastro para verificar o Trial
+            String senhaCriptografada = criptografarSenha(senhaPura);
             String sql = "SELECT id, nome, cnpj, senha_financeira, perfil, status, plano, data_cadastro FROM armazem WHERE login = ? AND senha = ?";
-            return jdbcTemplate.queryForObject(sql, new Object[]{login, senha}, (rs, rowNum) -> {
+
+            return jdbcTemplate.queryForObject(sql, new Object[]{login, senhaCriptografada}, (rs, rowNum) -> {
                 Map<String, String> dados = new HashMap<>();
-                dados.put("idPlanilha", rs.getString("id")); // Usando o ID do banco como referência
+                dados.put("idPlanilha", rs.getString("id"));
                 dados.put("perfil", rs.getString("perfil"));
                 dados.put("nomeArmazem", rs.getString("nome"));
                 dados.put("cnpj", rs.getString("cnpj"));
-                dados.put("senhaFinanceira", rs.getString("senha_financeira") != null ? rs.getString("senha_financeira") : "admin123");
+                dados.put("senhaFinanceira", rs.getString("senha_financeira") != null ? rs.getString("senha_financeira") : criptografarSenha("admin123"));
                 dados.put("status", rs.getString("status"));
                 dados.put("plano", rs.getString("plano"));
-                dados.put("data_cadastro", rs.getString("data_cadastro"));
+
+                // ==========================================
+                // LÓGICA DO BLOQUEIO DE 7 DIAS (TRIAL)
+                // ==========================================
+                java.sql.Date dataCadastroSql = rs.getDate("data_cadastro");
+                if (dataCadastroSql != null && "TRIAL".equals(rs.getString("status"))) {
+                    java.time.LocalDate dataCadastro = dataCadastroSql.toLocalDate();
+                    java.time.LocalDate dataHoje = java.time.LocalDate.now(java.time.ZoneId.of("America/Recife"));
+
+                    // Conta quantos dias se passaram
+                    long diasUso = java.time.temporal.ChronoUnit.DAYS.between(dataCadastro, dataHoje);
+
+                    if (diasUso > 7) {
+                        dados.put("trialVencido", "true");
+                    } else {
+                        dados.put("trialVencido", "false");
+                    }
+                } else {
+                    dados.put("trialVencido", "false");
+                }
+
                 return dados;
             });
         } catch (Exception e) {
@@ -62,11 +83,27 @@ public class DatabaseService {
         }
     }
 
-    public List<Map<String, Object>> obterCotacoesPublicas() throws IOException {
-        List<Armazem> armazens = armazemRepository.findAllByStatus("ATIVO");
-        List<Map<String, Object>> cotacoes = new ArrayList<>();
+    public List<Map<String, Object>> obterCotacoesPublicas() throws java.io.IOException {
+        java.time.LocalDate hoje = java.time.LocalDate.now(java.time.ZoneId.of("America/Recife"));
+
+        List<Armazem> armazens = armazemRepository.findAll().stream()
+                .filter(a -> {
+                    // Se for ATIVO, sempre aparece na vitrine
+                    if ("ATIVO".equals(a.getStatus())) {
+                        return true;
+                    }
+                    // Se for TRIAL, calcula os dias direto com LocalDate
+                    if ("TRIAL".equals(a.getStatus()) && a.getDataCadastro() != null) {
+                        long diasUso = java.time.temporal.ChronoUnit.DAYS.between(a.getDataCadastro(), hoje);
+                        return diasUso <= 7;
+                    }
+                    return false;
+                })
+                .collect(java.util.stream.Collectors.toList());
+
+        List<Map<String, Object>> cotacoes = new java.util.ArrayList<>();
         for (Armazem a : armazens) {
-            Map<String, Object> dados = new HashMap<>();
+            Map<String, Object> dados = new java.util.HashMap<>();
             dados.put("idPlanilha", a.getId().toString());
             dados.put("nome", a.getNome());
             dados.put("htmlId", a.getNome().replaceAll("[^a-zA-Z0-9]", "").toLowerCase());
@@ -334,28 +371,33 @@ public class DatabaseService {
     }
 
     // ==========================================
-    // NOVA FUNÇÃO: CADASTRO DE PARCEIRO SAAS (ATUALIZADO COM PLANO E DATA)
+    // CADASTRO DE PARCEIRO SAAS (BLINDADO CONTRA FRAUDE DE TRIAL)
     // ==========================================
-    public boolean cadastrarParceiroSaaS(String nomeArmazem, String nomeProprietario, String cnpj, String telefone, String endereco, String login, String senha, String planoEscolhido) {
+    public boolean cadastrarParceiroSaaS(String nomeArmazem, String nomeProprietario, String documentoCnpjCpf, String telefone, String endereco, String login, String senha, String planoEscolhido) {
         try {
-            // 1. Verifica se o login já existe na tabela 'armazem' para evitar duplicidade
-            String sqlCheck = "SELECT COUNT(*) FROM armazem WHERE login = ?";
-            Integer count = jdbcTemplate.queryForObject(sqlCheck, Integer.class, login);
+            // 1. Verifica se o LOGIN (nome de usuário) ou o DOCUMENTO (CPF/CNPJ) já existem
+            String sqlCheck = "SELECT COUNT(*) FROM armazem WHERE login = ? OR cnpj = ?";
+
+            // O parâmetro documentoCnpjCpf vai bater com a coluna 'cnpj' no banco, não importa se ele digitou 11 ou 14 dígitos
+            Integer count = jdbcTemplate.queryForObject(sqlCheck, Integer.class, login, documentoCnpjCpf);
 
             if (count != null && count > 0) {
-                return false; // Retorna falso indicando que o usuário já existe
+                return false; // Retorna falso: Login já em uso OU Documento já esgotou o Trial
             }
 
-            // CORREÇÃO: Define a data de hoje como java.sql.Date para o Postgres aceitar perfeitamente
             java.sql.Date dataHoje = java.sql.Date.valueOf(java.time.LocalDate.now(java.time.ZoneId.of("America/Recife")));
 
-            // 2. Insere o novo dono de armazém na tabela 'armazem'
+            // CRIPTOGRAFANDO AS SENHAS ANTES DE SALVAR NO BANCO
+            String senhaCriptografada = criptografarSenha(senha);
+            String senhaFinanceiraPadrao = criptografarSenha("admin123");
+
+            // 2. Insere o novo dono de armazém
             String sqlInsert = "INSERT INTO armazem (nome, cnpj, telefone, login, senha, perfil, senha_financeira, status, plano, data_cadastro) " +
-                    "VALUES (?, ?, ?, ?, ?, 'GESTOR', 'admin123', 'TRIAL', ?, ?)";
+                    "VALUES (?, ?, ?, ?, ?, 'GESTOR', ?, 'TRIAL', ?, ?)";
 
-            jdbcTemplate.update(sqlInsert, nomeArmazem, cnpj, telefone, login, senha, planoEscolhido, dataHoje);
+            jdbcTemplate.update(sqlInsert, nomeArmazem, documentoCnpjCpf, telefone, login, senhaCriptografada, senhaFinanceiraPadrao, planoEscolhido, dataHoje);
 
-            return true; // Cadastro realizado com sucesso!
+            return true;
 
         } catch (Exception e) {
             System.err.println("Erro ao cadastrar parceiro: " + e.getMessage());
@@ -393,20 +435,42 @@ public class DatabaseService {
     // ==========================================
     public void atualizarSenhasArmazem(Long idArmazem, String novaSenhaLogin, String novaSenhaFinanceira) {
         try {
-            if (novaSenhaLogin != null && !novaSenhaLogin.trim().isEmpty() &&
-                    novaSenhaFinanceira != null && !novaSenhaFinanceira.trim().isEmpty()) {
+            boolean mudarLogin = novaSenhaLogin != null && !novaSenhaLogin.trim().isEmpty();
+            boolean mudarFinancas = novaSenhaFinanceira != null && !novaSenhaFinanceira.trim().isEmpty();
+
+            if (mudarLogin && mudarFinancas) {
                 String sql = "UPDATE armazem SET senha = ?, senha_financeira = ? WHERE id = ?";
-                jdbcTemplate.update(sql, novaSenhaLogin, novaSenhaFinanceira, idArmazem);
-            } else if (novaSenhaLogin != null && !novaSenhaLogin.trim().isEmpty()) {
+                jdbcTemplate.update(sql, criptografarSenha(novaSenhaLogin), criptografarSenha(novaSenhaFinanceira), idArmazem);
+            } else if (mudarLogin) {
                 String sql = "UPDATE armazem SET senha = ? WHERE id = ?";
-                jdbcTemplate.update(sql, novaSenhaLogin, idArmazem);
-            } else if (novaSenhaFinanceira != null && !novaSenhaFinanceira.trim().isEmpty()) {
+                jdbcTemplate.update(sql, criptografarSenha(novaSenhaLogin), idArmazem);
+            } else if (mudarFinancas) {
                 String sql = "UPDATE armazem SET senha_financeira = ? WHERE id = ?";
-                jdbcTemplate.update(sql, novaSenhaFinanceira, idArmazem);
+                jdbcTemplate.update(sql, criptografarSenha(novaSenhaFinanceira), idArmazem);
             }
         } catch (Exception e) {
             System.err.println("Erro ao atualizar senhas do armazém: " + e.getMessage());
             throw new RuntimeException("Falha ao atualizar credenciais.");
+        }
+    }
+
+    // ==========================================
+    // UTILITÁRIO DE SEGURANÇA (CRIPTOGRAFIA)
+    // ==========================================
+    public String criptografarSenha(String senha) {
+        if (senha == null) return null;
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(senha.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Erro ao criptografar senha", e);
         }
     }
 }

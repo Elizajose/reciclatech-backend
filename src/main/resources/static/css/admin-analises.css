@@ -1,45 +1,67 @@
+/* DESIGN SOFT UI & HIGHLIGHTS */
 .card {
-    border-radius: 12px;
-    border: none;
-    transition: transform 0.2s;
+    border-radius: 16px; /* Bordas um pouco mais arredondadas para ar moderno */
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dash-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.08)!important;
+}
+
+/* O card principal (Saldo) levanta um pouco mais para dar destaque */
+.dash-card-main:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 1rem 1.5rem rgba(0,0,0,.1)!important;
 }
 
 .chart-container {
-    height: 350px;
+    height: 320px;
     position: relative;
 }
 
+/* Deixando a tabela muito mais limpa */
 .table-historico th {
-    background-color: var(--bs-tertiary-bg);
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--bs-border-color-translucent);
 }
 
 .table-wrapper-historico {
-    max-height: 250px;
+    max-height: 280px;
     overflow-y: auto;
+    border: 1px solid var(--bs-border-color-translucent);
+}
+
+/* Esconde a barra de rolagem da tabela para ficar mais clean, mas permite rolar */
+.table-wrapper-historico::-webkit-scrollbar {
+    width: 6px;
+}
+.table-wrapper-historico::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.1);
+    border-radius: 10px;
 }
 
 .card-small-text {
     font-size: 0.75rem;
+    letter-spacing: 0.3px;
 }
 
 .card-estoque {
-    min-width: 150px;
+    min-width: 140px;
+    flex: 1 1 auto;
 }
 
 .print-only {
     display: none;
 }
 
-/* CONFIGURAÇÕES PARA IMPRESSÃO DO BALANÇO  */
+/* CONFIGURAÇÕES PARA IMPRESSÃO DO BALANÇO (Mantidas e Otimizadas) */
 @media print {
     .no-print, .btn, hr, canvas { display: none !important; }
-
     body { background-color: white !important; font-size: 11pt; }
-
     .container { width: 100% !important; max-width: none !important; margin: 0 !important; }
-
     .row { display: flex !important; flex-wrap: nowrap !important; }
 
     .col-md-3, .col-md-4, .col-md-6 {
@@ -49,13 +71,13 @@
     }
 
     .print-only { display: block !important; }
-
     table { width: 100% !important; border-collapse: collapse !important; }
-
     th, td { border: 1px solid #333 !important; padding: 5px !important; }
 
     .card, .card h6, .card h3, .card span, .card-header,
-    .text-white, .text-muted, .text-success, .text-danger, .text-primary {
+    .text-white, .text-muted, .text-success, .text-danger, .text-primary,
+    .text-success-emphasis, .text-danger-emphasis {
         color: #000 !important;
+        background-color: #fff !important;
     }
 }

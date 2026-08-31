@@ -48,8 +48,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
+// ==========================================
+// FUNÇÃO DE AGENDAMENTO (COM FILTRO DE NÚMERO PARA O WHATSAPP)
+// ==========================================
 function enviarZap(event) {
     event.preventDefault();
+
     let nome = document.getElementById("nomeZap").value.trim();
     let tel = document.getElementById("telZap").value.trim();
     let end = document.getElementById("endZap").value.trim();
@@ -57,12 +61,33 @@ function enviarZap(event) {
     let combo = document.getElementById("armazemDestino");
     let nomeArmazem = combo.options[combo.selectedIndex].text;
 
-    let telefoneArmazem = combo.options[combo.selectedIndex].getAttribute("data-telefone");
+    // Pega o telefone sujo que veio do banco de dados, ex: "(87) 99191-9496"
+    let telefoneBruto = combo.options[combo.selectedIndex].getAttribute("data-telefone");
 
-    let msg = `Olá! Me chamo *${nome}* e desejo agendar uma coleta em *${end}* para o armazém *${nomeArmazem}*. Vi os preços no site!`;
+    let numeroDestino = "";
 
-    let numeroDestino = telefoneArmazem ? telefoneArmazem : "000000000000000";
+    if (telefoneBruto) {
+        // MÁGICA: Arranca tudo que não for número (tira parênteses, traços, espaços)
+        numeroDestino = telefoneBruto.replace(/\D/g, '');
 
-    window.open(`https://wa.me/${numeroDestino}?text=${encodeURIComponent(msg)}`, '_blank');
+        // Adiciona o código do Brasil (55) se o número tiver 10 ou 11 dígitos
+        if (numeroDestino.length === 10 || numeroDestino.length === 11) {
+            numeroDestino = "55" + numeroDestino;
+        }
+    } else {
+        // Número de emergência caso o armazém não tenha cadastrado telefone
+        numeroDestino = "5500000000000";
+    }
+
+    // Monta a mensagem incluindo o telefone do próprio catador para o armazém saber quem é
+    let msg = `Olá! Me chamo *${nome}* e desejo agendar uma coleta em *${end}*. Meu contato é ${tel}. Selecionei o armazém *${nomeArmazem}* no site e vi os preços de hoje!`;
+
+    // Usa a API oficial de envio (api.whatsapp.com/send?phone=) que não dá erro 404 com números formatados
+    let zapUrl = `https://api.whatsapp.com/send?phone=${numeroDestino}&text=${encodeURIComponent(msg)}`;
+
+    // Abre a aba do WhatsApp
+    window.open(zapUrl, '_blank');
+
+    // Envia o formulário para o Java salvar no painel interno do armazém
     setTimeout(() => { event.target.submit(); }, 300);
 }

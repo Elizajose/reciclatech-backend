@@ -9,7 +9,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const cores = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6610f2', '#fd7e14', '#20c997', '#adb5bd'];
 
-    // 3. Monta o Gráfico de Rosca lendo a variável global deixada no HTML
+    // ==========================================
+    // 3. GRÁFICO DE ROSCA (Proporção de Estoque)
+    // ==========================================
     if(typeof dataKgFromServer !== 'undefined' && dataKgFromServer && Object.keys(dataKgFromServer).length > 0) {
         new Chart(document.getElementById('graficoKg').getContext('2d'), {
             type: 'doughnut',
@@ -29,9 +31,70 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // ==========================================
+    // 4. NOVO GRÁFICO BI (Fluxo de Caixa em Barras)
+    // ==========================================
+    if (typeof historicoCaixaFromServer !== 'undefined' && historicoCaixaFromServer && historicoCaixaFromServer.length > 0) {
+        // Inverte a lista para o gráfico ir da data mais antiga (esquerda) para a mais nova (direita)
+        const historico = [...historicoCaixaFromServer].reverse();
+        const labels = historico.map(h => h.data); // Pega as datas
+
+        // Função para transformar texto do tipo "1.234,50" em número de verdade pro JS calcular
+        const parseValor = (str) => {
+            if(!str) return 0;
+            return parseFloat(str.replace(/\./g, '').replace(',', '.'));
+        };
+
+        const entradas = historico.map(h => parseValor(h.entradas));
+        const saidasTudo = historico.map(h => parseValor(h.saidas) + parseValor(h.despesas)); // Soma compra de material + contas do galpão
+
+        new Chart(document.getElementById('graficoFluxoCaixa').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Receitas (Entrou)',
+                        data: entradas,
+                        backgroundColor: '#0d6efd', // Azul corporativo
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Despesas (Saiu)',
+                        data: saidasTudo,
+                        backgroundColor: '#dc3545', // Vermelho alerta
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed.y !== null) {
+                                    label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed.y);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
 });
 
-// 4. Lógica de Compartilhamento de WhatsApp
+// 5. Lógica de Compartilhamento de WhatsApp
 function compartilharReciclometro() {
     let totalElement = document.querySelector('#cardReciclometro h2');
     if(!totalElement) return;
