@@ -24,6 +24,7 @@ public class Armazem {
     private String perfil;
     private String status; // ATIVO, SUSPENSO, TRIAL, BLOQUEADO
     private String plano;
+    private LocalDate ultimoLogin;
 
     // CORREÇÃO AQUI: Mantém o nome no banco com underline, mas no Java fica no padrão CamelCase
     @Column(name = "data_cadastro")
@@ -62,7 +63,11 @@ public class Armazem {
     public String getPlano() { return plano; }
     public void setPlano(String plano) { this.plano = plano; }
 
-
     public LocalDate getDataCadastro() { return dataCadastro; }
     public void setDataCadastro(LocalDate dataCadastro) { this.dataCadastro = dataCadastro; }
+
+    public LocalDate getUltimoLogin() { return ultimoLogin;}
+    public void setUltimoLogin(LocalDate ultimoLogin) { this.ultimoLogin = ultimoLogin; }
+
+
 }

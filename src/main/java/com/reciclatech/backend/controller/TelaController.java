@@ -805,7 +805,44 @@ public class TelaController {
                 clientesFormatados.add(a);
             }
 
-            // Envia a lista transformada para a tela (Agora o Thymeleaf acha o 'getPlano()')
+            // ==========================================
+            // VARIÁVEIS DE BI (INTELIGÊNCIA DE NEGÓCIO) - MOTOR LIGADO
+            // ==========================================
+            double volumeGmv = 0.0;
+            double volumeToneladas = 0.0;
+
+            // O Churn (Evasão) será o número de clientes que estão bloqueados ou suspensos
+            int churnMes = bloqueados;
+
+            int clientesEmRisco = 0; // (Explicado no Passo 2)
+
+            try {
+                // Puxa TUDO que todos os armazéns operaram na plataforma
+                List<Oferta> todasAsTransacoes = googleSheetsService.getHistoricoCompleto();
+
+                // Pega o mês atual no formato YYYY-MM (Ex: "2026-09")
+                String mesAtual = LocalDate.now(ZoneId.of("America/Recife")).toString().substring(0, 7);
+
+                for (Oferta o : todasAsTransacoes) {
+                    // Filtra para somar apenas as transações do mês atual
+                    if (o.getData() != null && o.getData().startsWith(mesAtual)) {
+
+                        // 1. Soma todo o dinheiro movimentado (GMV)
+                        if (o.getPrecoEstimado() != null) {
+                            volumeGmv += o.getPrecoEstimado().doubleValue();
+                        }
+
+                        // 2. Soma o peso e converte de KG para Toneladas (dividindo por 1000)
+                        if (o.getPeso() != null) {
+                            volumeToneladas += (o.getPeso() / 1000.0);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Aviso BI: Ainda sem transações suficientes ou erro de leitura.");
+            }
+
+            // 4. Envia tudo para a tela DE UMA SÓ VEZ
             model.addAttribute("listaClientes", clientesFormatados);
             model.addAttribute("totalClientes", totalClientes);
             model.addAttribute("ativos", ativos);
@@ -816,6 +853,12 @@ public class TelaController {
             model.addAttribute("trialsStart", trialsStart);
             model.addAttribute("trialsPro", trialsPro);
             model.addAttribute("faturamentoMensal", faturamentoMensal);
+
+            // Enviando as métricas reais de BI
+            model.addAttribute("volumeGmv", volumeGmv);
+            model.addAttribute("volumeToneladas", volumeToneladas);
+            model.addAttribute("churnMes", churnMes);
+            model.addAttribute("clientesEmRisco", clientesEmRisco);
 
         } catch (Exception e) {
             System.err.println("Erro ao carregar o painel master: " + e.getMessage());

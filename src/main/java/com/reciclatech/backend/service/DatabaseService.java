@@ -412,11 +412,12 @@ public class DatabaseService {
     // 1. Busca todos os galpões cadastrados
     public List<Map<String, Object>> listarTodosArmazensSaaS() {
         try {
-            String sql = "SELECT id, nome, cnpj, telefone, login, status FROM armazem ORDER BY id DESC";
+            // O "SELECT *" garante que a coluna 'plano' e todas as outras venham para o Java
+            String sql = "SELECT * FROM armazem ORDER BY id DESC";
             return jdbcTemplate.queryForList(sql);
         } catch (Exception e) {
             System.err.println("Erro ao listar armazéns: " + e.getMessage());
-            return new ArrayList<>();
+            return new java.util.ArrayList<>();
         }
     }
 
