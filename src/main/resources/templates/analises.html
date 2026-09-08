@@ -13,7 +13,7 @@
 <body class="bg-body-tertiary">
 <div class="container mt-4">
 
-    <!-- CABEÇALHO (Botões mais limpos e elegantes) -->
+    <!-- CABEÇALHO (Botões reorganizados) -->
     <div class="d-flex justify-content-between align-items-center mb-4 no-print flex-wrap gap-3">
         <h3 class="fw-bold text-secondary-emphasis m-0"><i class="bi bi-cpu text-primary"></i> Inteligência de Negócio</h3>
         <div class="d-flex gap-2 flex-wrap">
@@ -21,16 +21,57 @@
             <a href="/admin/historico" class="btn btn-light border shadow-sm fw-semibold text-secondary-emphasis"><i class="bi bi-clock-history text-secondary"></i> Histórico</a>
             <a href="/admin/despesas" class="btn btn-light border shadow-sm fw-semibold text-secondary-emphasis"><i class="bi bi-wallet2 text-danger"></i> Despesas</a>
             <a href="/admin/ajuste-estoque" class="btn btn-light border shadow-sm fw-semibold text-secondary-emphasis"><i class="bi bi-boxes text-info"></i> Ajustar Estoque</a>
-            <button onclick="window.print()" class="btn btn-light border shadow-sm fw-semibold text-secondary-emphasis"><i class="bi bi-printer text-success"></i> Balanço</button>
-            <a href="/admin/analises/sair" class="btn btn-outline-danger shadow-sm fw-bold"><i class="bi bi-lock-fill"></i> Trancar</a>
-            <!-- DESTAQUE APENAS PARA A AÇÃO PRINCIPAL -->
+            <a href="/admin/relatorio-gerencial" class="btn btn-light border shadow-sm fw-semibold text-secondary-emphasis"><i class="bi bi-printer text-success"></i> Balanço A4</a>
+
+            <!-- NOVA SAÍDA (Trazido para cá) -->
             <a href="/admin/saida" class="btn btn-primary fw-bold shadow-sm ms-2"><i class="bi bi-truck"></i> Nova Saída</a>
+
+            <!-- SAIR DO FINANCEIRO (Antigo 'Trancar' renomeado e movido para o final) -->
+            <a href="/admin/analises/sair" class="btn btn-outline-danger shadow-sm fw-bold"><i class="bi bi-door-closed-fill"></i> Sair do Financeiro</a>
         </div>
     </div>
 
-    <!-- CAIXA DO DIA E BOTÃO DE FECHAMENTO -->
-    <div class="d-flex justify-content-between align-items-end mb-3 no-print">
+    <!-- TÍTULO DA SEÇÃO DE CAIXA (Botão de encerrar removido daqui) -->
+    <div class="mb-3 no-print">
         <h5 class="fw-bold text-secondary-emphasis m-0"><i class="bi bi-cash-coin text-success"></i> Movimentação da Gaveta (Hoje)</h5>
+    </div>
+
+    <!-- CARTÕES SOFT UI (Nomenclatura Psicológica Ajustada) -->
+    <div class="row g-3 mb-4 no-print align-items-stretch">
+        <div class="col-md-3">
+            <div class="card shadow-sm p-3 bg-primary-subtle text-primary-emphasis border-0 text-center h-100 dash-card">
+                <h6 class="opacity-75 fw-bold text-uppercase mb-2">Receitas de Expedição</h6>
+                <h3 class="fw-bold m-0">R$ <span th:text="${caixaEntradaHoje != null ? #numbers.formatDecimal(caixaEntradaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
+                <small class="opacity-75 card-small-text d-block mt-1">Vendas para a Indústria</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm p-3 bg-warning-subtle text-warning-emphasis border-0 text-center h-100 dash-card">
+                <h6 class="opacity-75 fw-bold text-uppercase mb-2">Investido em Material</h6>
+                <h3 class="fw-bold m-0">R$ <span th:text="${caixaSaidaHoje != null ? #numbers.formatDecimal(caixaSaidaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
+                <small class="opacity-75 card-small-text d-block mt-1">Valor pago aos catadores</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm p-3 bg-danger-subtle text-danger-emphasis border-0 text-center h-100 dash-card">
+                <h6 class="opacity-75 fw-bold text-uppercase mb-2">Custos Operacionais</h6>
+                <h3 class="fw-bold m-0">R$ <span th:text="${totalDespesasHoje != null ? #numbers.formatDecimal(totalDespesasHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
+                <small class="opacity-75 card-small-text d-block mt-1">Despesas do galpão</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow p-3 bg-success-subtle text-success-emphasis border border-success border-opacity-25 text-center h-100 dash-card-main">
+                <h6 class="opacity-75 fw-bold text-uppercase mb-2">Caixa Líquido do Dia</h6>
+                <h3 class="fw-bold m-0" th:classappend="${lucroDoDia != null && lucroDoDia < 0} ? 'text-danger' : ''">R$ <span th:text="${lucroDoDia != null ? #numbers.formatDecimal(lucroDoDia, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
+                <!-- Aviso para tranquilizar o dono do galpão -->
+                <small class="opacity-75 card-small-text d-block mt-1" th:text="${lucroDoDia != null && lucroDoDia < 0} ? 'Dias de muita compra fecham negativos. É normal!' : 'Resultado de hoje'"></small>
+                <div class="mt-2"><span class="badge bg-white text-success border border-success-subtle rounded-pill"><i class="bi bi-graph-up-arrow"></i> Em tempo real</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTÃO ENCERRAR DIA REPOSICIONADO -->
+    <div class="d-flex justify-content-end mb-5 no-print">
         <form action="/admin/fechar-caixa" method="post" onsubmit="return confirm('Deseja realmente travar o caixa de hoje? Isso salvará o resumo para o histórico de comparação.')">
             <input type="hidden" name="dataHoje" th:value="${dataHojeString}">
             <input type="hidden" name="entradas" th:value="${caixaEntradaHoje}">
@@ -38,48 +79,14 @@
             <input type="hidden" name="despesas" th:value="${totalDespesasHoje}">
             <input type="hidden" name="lucro" th:value="${lucroDoDia}">
             <input type="hidden" name="pesoTotal" th:value="${pesoCompradoHoje}">
-            <button type="submit" class="btn btn-danger btn-sm fw-bold shadow-sm rounded-pill px-3">
-                <i class="bi bi-safe-fill"></i> Encerrar Dia
+
+            <button type="submit" class="btn btn-danger fw-bold shadow px-4 py-2">
+                <i class="bi bi-safe-fill me-1"></i> Finalizar e Travar Caixa do Dia
             </button>
         </form>
     </div>
 
-    <!-- CARTÕES SOFT UI (Cores pasteis com texto escuro) -->
-    <div class="row g-3 mb-4 no-print align-items-stretch">
-        <div class="col-md-3">
-            <div class="card shadow-sm p-3 bg-primary-subtle text-primary-emphasis border-0 text-center h-100 dash-card">
-                <h6 class="opacity-75 fw-bold text-uppercase mb-2">Vendas p/ Indústria</h6>
-                <h3 class="fw-bold m-0">R$ <span th:text="${caixaEntradaHoje != null ? #numbers.formatDecimal(caixaEntradaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
-                <small class="opacity-75 card-small-text d-block mt-1">Dinheiro que entrou</small>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm p-3 bg-warning-subtle text-warning-emphasis border-0 text-center h-100 dash-card">
-                <h6 class="opacity-75 fw-bold text-uppercase mb-2">Pago aos Catadores</h6>
-                <h3 class="fw-bold m-0">R$ <span th:text="${caixaSaidaHoje != null ? #numbers.formatDecimal(caixaSaidaHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
-                <small class="opacity-75 card-small-text d-block mt-1">Investido em material</small>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm p-3 bg-danger-subtle text-danger-emphasis border-0 text-center h-100 dash-card">
-                <h6 class="opacity-75 fw-bold text-uppercase mb-2">Despesas do Galpão</h6>
-                <h3 class="fw-bold m-0">R$ <span th:text="${totalDespesasHoje != null ? #numbers.formatDecimal(totalDespesasHoje, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
-                <small class="opacity-75 card-small-text d-block mt-1">Contas pagas no dia</small>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <!-- Saldo com destaque sutil (sombra um pouco maior e borda fina) -->
-            <div class="card shadow p-3 bg-success-subtle text-success-emphasis border border-success border-opacity-25 text-center h-100 dash-card-main">
-                <h6 class="opacity-75 fw-bold text-uppercase mb-2">Saldo do Caixa</h6>
-                <h3 class="fw-bold m-0">R$ <span th:text="${lucroDoDia != null ? #numbers.formatDecimal(lucroDoDia, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></h3>
-                <small class="opacity-75 card-small-text d-block mt-1">Resultado de hoje</small>
-                <!-- Exemplo visual de gatilho financeiro (pode deixar estático por enquanto) -->
-                <div class="mt-2"><span class="badge bg-white text-success border border-success-subtle rounded-pill"><i class="bi bi-graph-up-arrow"></i> Em tempo real</span></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- GRÁFICO DE BARRAS (Receitas vs Despesas BI) -->
+    <!-- GRÁFICO DE BARRAS -->
     <div class="row mb-4 no-print">
         <div class="col-md-12">
             <div class="card shadow-sm border-0 bg-body">
@@ -105,10 +112,10 @@
                     <tr>
                         <th class="ps-4 text-secondary">Data</th>
                         <th class="text-secondary">KG Comprado</th>
-                        <th class="text-primary">Vendas (Entrou)</th>
-                        <th class="text-warning-emphasis">Catadores (Saiu)</th>
-                        <th class="text-danger">Despesas (Saiu)</th>
-                        <th class="text-end pe-4 text-success">Saldo do Caixa</th>
+                        <th class="text-primary">Receitas (Entrou)</th>
+                        <th class="text-warning-emphasis">Material (Saiu)</th>
+                        <th class="text-danger">Custos (Saiu)</th>
+                        <th class="text-end pe-4 text-success">Caixa Líquido</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -131,16 +138,26 @@
         </div>
     </div>
 
-    <!-- ESTOQUE REAL NO PÁTIO -->
-    <h5 class="fw-bold mb-3 mt-4 no-print text-secondary-emphasis"><i class="bi bi-box-seam text-info"></i> Estoque Real no Pátio</h5>
+    <!-- ESTOQUE REAL NO PÁTIO E PATRIMÔNIO -->
+    <div class="d-flex justify-content-between align-items-end mb-3 mt-4 no-print flex-wrap gap-2">
+        <h5 class="fw-bold text-secondary-emphasis m-0"><i class="bi bi-box-seam text-info"></i> Estoque Real no Pátio</h5>
+        <div class="bg-success bg-opacity-10 text-success border border-success border-opacity-50 px-3 py-1 rounded-pill shadow-sm fw-bold">
+            <i class="bi bi-bank"></i> Patrimônio Estimado: R$ <span th:text="${patrimonioTotal != null ? #numbers.formatDecimal(patrimonioTotal, 1, 'POINT', 2, 'COMMA') : '0,00'}"></span>
+        </div>
+    </div>
     <div class="row mb-4 no-print">
         <div class="col-md-12">
             <div class="card shadow-sm border-0 bg-body">
                 <div class="card-body">
                     <div class="d-flex flex-wrap gap-3">
-                        <div th:each="item : ${estoqueReal}" class="border border-secondary-subtle rounded p-3 text-center bg-light shadow-sm card-estoque">
-                            <h6 class="text-body-secondary mb-1 fw-bold text-uppercase" th:text="${item.key}"></h6>
-                            <h4 class="text-secondary-emphasis m-0 fw-bold" th:text="${#numbers.formatDecimal(item.value, 1, 'POINT', 1, 'COMMA')} + ' ' + ${mapaUnidades != null && mapaUnidades.containsKey(item.key) ? mapaUnidades[item.key] : 'KG'}"></h4>
+                        <div th:each="item : ${estoqueReal}" class="border border-secondary-subtle rounded p-3 text-center bg-light shadow-sm card-estoque d-flex flex-column justify-content-between">
+                            <div>
+                                <h6 class="text-body-secondary mb-1 fw-bold text-uppercase" th:text="${item.key}"></h6>
+                                <h4 class="text-secondary-emphasis m-0 fw-bold" th:text="${#numbers.formatDecimal(item.value, 1, 'POINT', 1, 'COMMA')} + ' ' + ${mapaUnidades != null && mapaUnidades.containsKey(item.key) ? mapaUnidades[item.key] : 'KG'}"></h4>
+                            </div>
+                            <div class="mt-2 pt-2 border-top border-secondary-subtle">
+                                <small class="text-success fw-bold"><i class="bi bi-cash-stack"></i> R$ <span th:text="${mapaPrecos != null && mapaPrecos.containsKey(item.key) ? #numbers.formatDecimal(item.value * mapaPrecos[item.key], 1, 'POINT', 2, 'COMMA') : '---'}"></span></small>
+                            </div>
                         </div>
                         <div th:if="${estoqueReal == null || #maps.isEmpty(estoqueReal)}" class="text-body-secondary fst-italic p-2">
                             Seu pátio está vazio ou não há registros no momento.

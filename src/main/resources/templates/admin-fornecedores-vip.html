@@ -26,8 +26,8 @@
         <div class="card-body">
             <form action="/admin/fornecedores-vip/novo" method="post" class="row g-3 align-items-end">
                 <div class="col-md-4">
-                    <label class="small fw-bold text-body-secondary mb-1">Telefone do Cliente (Só Números)</label>
-                    <input type="text" name="telefone" class="form-control" placeholder="DDD + Número" required>
+                    <label class="small fw-bold text-body-secondary mb-1">CPF do Cliente</label>
+                    <input type="text" name="cpf" id="cpfVipInput" class="form-control" placeholder="000.000.000-00" maxlength="14" required>
                 </div>
                 <div class="col-md-4">
                     <label class="small fw-bold text-body-secondary mb-1">Material</label>
@@ -60,7 +60,7 @@
             <table class="table table-hover align-middle mb-0 bg-body">
                 <thead class="table-light">
                 <tr>
-                    <th class="ps-4">Telefone</th>
+                    <th class="ps-4">CPF</th>
                     <th>Material</th>
                     <th>Preço Aplicado</th>
                     <th class="text-end pe-4">Remover</th>
@@ -68,11 +68,11 @@
                 </thead>
                 <tbody>
                 <tr th:each="vip : ${vips}">
-                    <td class="ps-4 fw-bold" th:text="${vip.telefone}"></td>
+                    <td class="ps-4 fw-bold" th:text="${vip.cpf}"></td>
                     <td class="text-uppercase" th:text="${vip.material}"></td>
                     <td class="text-success fw-bold">R$ <span th:text="${vip.preco}"></span></td>
                     <td class="text-end pe-4">
-                        <a th:href="@{'/admin/fornecedores-vip/deletar?telefone=' + ${vip.telefone} + '&material=' + ${vip.material}}"
+                        <a th:href="@{'/admin/fornecedores-vip/deletar?cpf=' + ${vip.cpf} + '&material=' + ${vip.material}}"
                            class="btn btn-outline-danger btn-sm shadow-sm"
                            onclick="confirmarRemocaoVip(event)">
                             <i class="bi bi-trash3-fill"></i>
@@ -88,7 +88,7 @@
     </div>
 </div>
 
-<!-- SCRIPT EXTERNO -->
+<!-- SCRIPT EXTERNO (Chama o JS limpo que criamos acima) -->
 <script th:src="@{/js/admin-fornecedores-vip.js}"></script>
 </body>
 </html>

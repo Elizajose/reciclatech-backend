@@ -21,12 +21,15 @@ import java.util.stream.Collectors;
 @Controller
 public class TelaController {
 
+
     @Autowired(required = false) private OfertaRepository ofertaRepository;
     @Autowired(required = false) private UsuarioRepository usuarioRepository;
     @Autowired(required = false) private MaterialRepository materialRepository;
 
     // A MÁGICA AQUI: Conectando com o novo serviço de banco de dados
     @Autowired private DatabaseService googleSheetsService;
+    @Autowired(required = false)
+    private org.springframework.mail.javamail.JavaMailSender mailSender;
 
     // VARIÁVEL DE AMBIENTE: Puxa a senha Master do sistema operacional
     @Value("${SENHA_MASTER:Sertao2026}")
@@ -183,13 +186,23 @@ public class TelaController {
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         response.setHeader("Pragma", "no-cache"); response.setDateHeader("Expires", 0);
+
         try {
             googleSheetsService.marcarComoEmAtendimento(idUsuario);
-            Usuario vendedor = googleSheetsService.listarUsuarios().stream().filter(u -> u.getTelefone().equals(idUsuario) || u.getId().toString().equals(idUsuario)).findFirst().orElseThrow();
+            Usuario vendedor = googleSheetsService.listarUsuarios().stream()
+                    .filter(u -> idUsuario.equals(u.getTelefone()) || idUsuario.equals(u.getId().toString()))
+                    .findFirst().orElseThrow();
+
             model.addAttribute("vendedor", vendedor);
             model.addAttribute("todosMateriais", googleSheetsService.listarMateriais());
-            model.addAttribute("precosVip", googleSheetsService.buscarPrecosEspeciais(vendedor.getTelefone())); // PARÊNTESE CORRIGIDO
-        } catch (Exception e) { return "redirect:/admin/coletas?erro=usuario"; }
+
+            // CORREÇÃO VIP AQUI: Passamos o getCpf(), e não mais o telefone!
+            model.addAttribute("precosVip", googleSheetsService.buscarPrecosEspeciais(vendedor.getCpf()));
+
+        } catch (Exception e) {
+            System.err.println("Erro ao carregar checklist: " + e.getMessage());
+            return "redirect:/admin/coletas?erro=usuario";
+        }
         return "admin-checklist";
     }
 
@@ -204,11 +217,17 @@ public class TelaController {
     public String revisarColeta(@RequestParam String idVendedor, @RequestParam Map<String, String> params, Model model, HttpSession session) {
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         try {
-            Usuario vendedor = googleSheetsService.listarUsuarios().stream().filter(u -> u.getTelefone().equals(idVendedor) || u.getId().toString().equals(idVendedor)).findFirst().orElseThrow();
+            // Busca o usuário usando a chave do balcão
+            Usuario vendedor = googleSheetsService.listarUsuarios().stream()
+                    .filter(u -> u.getTelefone().equals(idVendedor) || u.getId().toString().equals(idVendedor))
+                    .findFirst().orElseThrow();
+
             List<PreVendaDTO> itensRevisao = new ArrayList<>();
             BigDecimal totalEstimado = BigDecimal.ZERO;
             List<Material> todosMateriais = googleSheetsService.listarMateriais();
-            Map<String, BigDecimal> precosVip = googleSheetsService.buscarPrecosEspeciais(vendedor.getTelefone());
+
+            // A CORREÇÃO ESTÁ AQUI: Agora ele busca os preços especiais usando o CPF!
+            Map<String, BigDecimal> precosVip = googleSheetsService.buscarPrecosEspeciais(vendedor.getCpf());
 
             for (String key : params.keySet()) {
                 if (key.startsWith("qtd_") && !params.get(key).isEmpty()) {
@@ -218,9 +237,11 @@ public class TelaController {
                         if (quantidade > 0) {
                             Material mat = todosMateriais.stream().filter(m -> m.getId().equals(idMaterial)).findFirst().orElse(null);
                             if (mat != null) {
+                                // O sistema cruza as tabelas: se tiver VIP aplica, se não, usa o preço normal
                                 BigDecimal precoBase = precosVip.containsKey(mat.getNome()) ? precosVip.get(mat.getNome()) : mat.getPrecoPorKg();
                                 BigDecimal totalItem = precoBase.multiply(BigDecimal.valueOf(quantidade));
-                                mat.setPrecoPorKg(precoBase);
+                                mat.setPrecoPorKg(precoBase); // Atualiza o objeto para a tela de revisão
+
                                 itensRevisao.add(new PreVendaDTO(mat, quantidade, totalItem));
                                 totalEstimado = totalEstimado.add(totalItem);
                             }
@@ -228,9 +249,13 @@ public class TelaController {
                     } catch (Exception e) {}
                 }
             }
-            model.addAttribute("vendedor", vendedor); model.addAttribute("itens", itensRevisao); model.addAttribute("totalEstimado", totalEstimado);
+            model.addAttribute("vendedor", vendedor);
+            model.addAttribute("itens", itensRevisao);
+            model.addAttribute("totalEstimado", totalEstimado);
             return "admin-revisao";
-        } catch (Exception e) { return "redirect:/admin/coletas?erro=planilha"; }
+        } catch (Exception e) {
+            return "redirect:/admin/coletas?erro=planilha";
+        }
     }
 
     @PostMapping("/admin/confirmar-finalizacao")
@@ -241,6 +266,8 @@ public class TelaController {
         try {
             if (idsMateriais == null || idsMateriais.isEmpty()) return "redirect:/admin/coletas?erro=sem_materiais";
             List<Material> todosMateriais = googleSheetsService.listarMateriais();
+
+            // Lista preparada para o PostgreSQL (passando Números Reais, e não Textos com vírgula)
             List<List<Object>> loteDeVendas = new ArrayList<>();
 
             for (int i = 0; i < idsMateriais.size(); i++) {
@@ -251,18 +278,29 @@ public class TelaController {
 
                 String idVendaUnico = UUID.randomUUID().toString().substring(0, 13).toUpperCase();
 
+                // DADOS LIMPOS: O PostgreSQL adora esse formato
                 List<Object> row = Arrays.asList(
-                        idVendaUnico, mat.getNome(), pesosFinais.get(i).toString().replace(".", ","), "ENTREGA NO LOCAL",
-                        precoUn.toString().replace(".", ","), total.toString().replace(".", ","), LocalDate.now(ZoneId.of("America/Recife")).toString(),
+                        idVendaUnico, mat.getNome(), pesosFinais.get(i), "ENTREGA NO LOCAL",
+                        precoUn, total, LocalDate.now(ZoneId.of("America/Recife")).toString(),
                         idVendedor, "VENDIDO", cpfFinal != null && !cpfFinal.trim().isEmpty() ? cpfFinal : "NÃO INFORMADO"
                 );
                 loteDeVendas.add(row);
             }
             googleSheetsService.registrarVendasEmLote(loteDeVendas);
-            googleSheetsService.atualizarCpfUsuario(idVendedor, cpfFinal);
+
+            // Atualiza o CPF se o catador forneceu
+            if(cpfFinal != null && !cpfFinal.trim().isEmpty()) {
+                googleSheetsService.atualizarCpfUsuario(idVendedor, cpfFinal);
+            }
+
             googleSheetsService.marcarSolicitacaoComoConcluida(idVendedor);
+
             return "redirect:/extrato/" + idVendedor;
-        } catch (Exception e) { return "redirect:/admin/coletas?erro=venda"; }
+        } catch (Exception e) {
+            System.err.println("Erro ao finalizar coleta: " + e.getMessage());
+            e.printStackTrace();
+            return "redirect:/admin/coletas?erro=venda";
+        }
     }
 
     @GetMapping("/extrato/{id}")
@@ -296,21 +334,58 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        try { model.addAttribute("usuarios", googleSheetsService.buscarUsuariosComVendasHoje()); }
-        catch (IOException e) { model.addAttribute("usuarios", new ArrayList<>()); }
+
+        try {
+            // O DatabaseService já faz o trabalho duro e devolve a lista pronta!
+            List<Usuario> usuarios = googleSheetsService.buscarUsuariosComVendasHoje();
+            model.addAttribute("usuarios", usuarios);
+        }
+        catch (Exception e) {
+            System.err.println("Erro na Central de Extratos: " + e.getMessage());
+            model.addAttribute("usuarios", new ArrayList<>());
+        }
         return "lista-extratos";
     }
 
     @PostMapping("/admin/pesagem-rapida")
-    public String pesagemRapida(@RequestParam String nome, HttpSession session) {
+    public String pesagemRapida(@RequestParam String nome, @RequestParam(required = false) String cpf, HttpSession session) {
         if(session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
-        Long idGerado = System.currentTimeMillis();
-        Usuario novoAvulso = new Usuario(); novoAvulso.setId(idGerado); novoAvulso.setNome(nome); novoAvulso.setTelefone(idGerado.toString()); novoAvulso.setEndereco("Atendimento Avulso"); novoAvulso.setTipo(Usuario.TipoUsuario.CATADOR);
-        try { googleSheetsService.salvarSolicitacaoInicial(novoAvulso, novoAvulso.getEndereco()); return "redirect:/admin/atender/" + idGerado; }
-        catch (IOException e) { return "redirect:/admin/coletas?erro=pesagem_rapida"; }
-    }
 
+        // 1. PADRONIZAÇÃO DO CPF MANTIDA (A Máscara perfeita para o VIP ler depois)
+        String cpfPadronizado = "";
+        if (cpf != null && !cpf.trim().isEmpty()) {
+            String apenasNumeros = cpf.replaceAll("\\D", ""); // Pega só os números
+            if (apenasNumeros.length() == 11) {
+                cpfPadronizado = apenasNumeros.replaceFirst("(\\d{3})(\\d{3})(\\d{3})(\\d{2})", "$1.$2.$3-$4");
+            } else {
+                cpfPadronizado = cpf.trim();
+            }
+        }
+
+        String chaveTemporaria = String.valueOf(System.currentTimeMillis());
+
+        try {
+            // 2. A GRANDE CORREÇÃO (O Isolamento de Recibos)
+            // Removemos a busca de IDs antigos. O Balcão SEMPRE cria um "ticket/sessão"
+            // novo para garantir que o recibo seja único para essa visita específica.
+            Usuario usuarioBalcao = new Usuario();
+            usuarioBalcao.setNome(nome);
+            usuarioBalcao.setCpf(cpfPadronizado); // Passa o CPF para o Motor VIP atuar na próxima tela!
+            usuarioBalcao.setTelefone(chaveTemporaria);
+            usuarioBalcao.setEndereco("Atendimento Avulso");
+            usuarioBalcao.setTipo(Usuario.TipoUsuario.CATADOR);
+
+            // Salva a sessão isolada
+            googleSheetsService.salvarSolicitacaoInicial(usuarioBalcao, "Atendimento Avulso");
+
+            return "redirect:/admin/atender/" + chaveTemporaria;
+
+        } catch (Exception e) {
+            System.err.println("Erro pesagem rápida: " + e.getMessage());
+            return "redirect:/admin/coletas?erro=pesagem_rapida";
+        }
+    }
     @GetMapping("/admin/historico")
     public String historicoMovimentacoes(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
@@ -499,10 +574,87 @@ public class TelaController {
             model.addAttribute("historicoCaixa", historicoCaixa);
             model.addAttribute("dataHojeString", dataHoje);
 
+            // ---------------- INÍCIO CÁLCULO DE PATRIMÔNIO (Adicionado aqui) ---------------- //
+            Map<String, BigDecimal> mapaPrecos = todosMateriais.stream()
+                    .collect(Collectors.toMap(Material::getNome, Material::getPrecoPorKg));
+
+            Double patrimonioTotal = 0.0;
+            for (Map.Entry<String, Double> entry : estoqueRealKg.entrySet()) {
+                BigDecimal precoVenda = mapaPrecos.getOrDefault(entry.getKey(), BigDecimal.ZERO);
+                patrimonioTotal += entry.getValue() * precoVenda.doubleValue();
+            }
+
+            model.addAttribute("mapaPrecos", mapaPrecos);
+            model.addAttribute("patrimonioTotal", patrimonioTotal);
+            // ---------------- FIM CÁLCULO DE PATRIMÔNIO ---------------- //
+
             return "analises";
 
         } catch (Exception e) {
             return "redirect:/admin/coletas?erro=analises";
+        }
+    }
+
+    @GetMapping("/admin/relatorio-gerencial")
+    public String gerarRelatorioBalanço(Model model, HttpSession session, HttpServletResponse response) {
+        if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
+        if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
+
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
+        try {
+            List<Oferta> historico = googleSheetsService.getHistoricoCompleto();
+            String dataHoje = LocalDate.now(ZoneId.of("America/Recife")).toString();
+            List<Material> todosMateriais = googleSheetsService.listarMateriais();
+            Map<String, String> mapaUnidades = todosMateriais.stream().collect(Collectors.toMap(Material::getNome, Material::getUnidade));
+            Map<String, BigDecimal> mapaPrecos = todosMateriais.stream().collect(Collectors.toMap(Material::getNome, Material::getPrecoPorKg));
+
+            Double caixaEntradaHoje = 0.0; Double caixaSaidaHoje = 0.0;
+            Map<String, Double> estoqueRealKg = new HashMap<>();
+
+            for (Oferta o : historico) {
+                if (o.getMaterial() == null || o.getPeso() == null) continue;
+                String material = o.getMaterial(); Double peso = o.getPeso();
+                Double valor = (o.getPrecoEstimado() != null) ? o.getPrecoEstimado().doubleValue() : 0.0;
+                boolean isHoje = dataHoje.equals(o.getData());
+                String status = (o.getStatus() != null) ? o.getStatus().toString().toUpperCase() : "VENDIDO";
+
+                if (status.equals("SAIDA_INDUSTRIA") || status.equals("AJUSTE_NEGATIVO")) {
+                    estoqueRealKg.put(material, estoqueRealKg.getOrDefault(material, 0.0) - peso);
+                    if (isHoje && status.equals("SAIDA_INDUSTRIA")) caixaEntradaHoje += valor;
+                } else if (status.equals("VENDIDO") || status.equals("AJUSTE_POSITIVO")) {
+                    estoqueRealKg.put(material, estoqueRealKg.getOrDefault(material, 0.0) + peso);
+                    if (isHoje && status.equals("VENDIDO")) caixaSaidaHoje += valor;
+                }
+            }
+
+            estoqueRealKg.entrySet().removeIf(entry -> entry.getValue() <= 0);
+
+            Double totalDespesasHoje = googleSheetsService.calcularDespesasDoDia(dataHoje);
+            Double lucroDoDia = caixaEntradaHoje - caixaSaidaHoje - totalDespesasHoje;
+
+            Double patrimonioTotal = 0.0;
+            for (Map.Entry<String, Double> entry : estoqueRealKg.entrySet()) {
+                BigDecimal precoVenda = mapaPrecos.getOrDefault(entry.getKey(), BigDecimal.ZERO);
+                patrimonioTotal += entry.getValue() * precoVenda.doubleValue();
+            }
+
+            model.addAttribute("dataRelatorio", LocalDate.now(ZoneId.of("America/Recife")).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            model.addAttribute("nomeArmazem", session.getAttribute("nomeArmazem"));
+            model.addAttribute("caixaEntradaHoje", caixaEntradaHoje);
+            model.addAttribute("caixaSaidaHoje", caixaSaidaHoje);
+            model.addAttribute("totalDespesasHoje", totalDespesasHoje);
+            model.addAttribute("lucroDoDia", lucroDoDia);
+            model.addAttribute("estoqueReal", estoqueRealKg);
+            model.addAttribute("mapaUnidades", mapaUnidades);
+            model.addAttribute("mapaPrecos", mapaPrecos);
+            model.addAttribute("patrimonioTotal", patrimonioTotal);
+            model.addAttribute("historicoCaixa", googleSheetsService.listarFechamentosCaixa());
+
+            return "admin-relatorio";
+        } catch (Exception e) {
+            return "redirect:/admin/analises?erro=relatorio";
         }
     }
 
@@ -649,18 +801,18 @@ public class TelaController {
     }
 
     @PostMapping("/admin/fornecedores-vip/novo")
-    public String salvarFornecedorVip(@RequestParam String telefone, @RequestParam String material, @RequestParam Double preco, HttpSession session) {
+    public String salvarFornecedorVip(@RequestParam String cpf, @RequestParam String material, @RequestParam Double preco, HttpSession session) {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/login";
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
-        try { googleSheetsService.salvarFornecedorVip(telefone, material, BigDecimal.valueOf(preco)); } catch (Exception e) {}
+        try { googleSheetsService.salvarFornecedorVip(cpf, material, BigDecimal.valueOf(preco)); } catch (Exception e) {}
         return "redirect:/admin/fornecedores-vip";
     }
 
     @GetMapping("/admin/fornecedores-vip/deletar")
-    public String deletarFornecedorVip(@RequestParam String telefone, @RequestParam String material, HttpSession session) {
+    public String deletarFornecedorVip(@RequestParam String cpf, @RequestParam String material, HttpSession session) {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/login";
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
-        try { googleSheetsService.deletarFornecedorVip(telefone, material); } catch (Exception e) {}
+        try { googleSheetsService.deletarFornecedorVip(cpf, material); } catch (Exception e) {}
         return "redirect:/admin/fornecedores-vip";
     }
 
@@ -906,6 +1058,68 @@ public class TelaController {
             ra.addFlashAttribute("sucessoPerfil", "Credenciais atualizadas com sucesso!");
         } catch (Exception e) {
             ra.addFlashAttribute("erroPerfil", "Não foi possível atualizar as senhas.");
+        }
+
+        return "redirect:/admin/coletas";
+    }
+
+    @PostMapping("/admin/suporte/enviar")
+    public String enviarChamado(
+            @RequestParam String assunto,
+            @RequestParam String prioridade,
+            @RequestParam String descricao,
+            @RequestParam(required = false) String emailRetorno,
+            @RequestParam(required = false) org.springframework.web.multipart.MultipartFile printTela,
+            jakarta.servlet.http.HttpSession session,
+            org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
+
+        try {
+            // Puxa o nome e o telefone da sessão
+            String nomeArmazem = (String) session.getAttribute("nomeArmazem");
+            // OBS: Verifique se a variável do telefone do dono do galpão na sua sessão chama "telefone" mesmo.
+            String telefoneAdmin = (String) session.getAttribute("telefone");
+
+            // Cria uma mensagem multimídia para suportar HTML e Anexos
+            jakarta.mail.internet.MimeMessage message = mailSender.createMimeMessage();
+            org.springframework.mail.javamail.MimeMessageHelper helper = new org.springframework.mail.javamail.MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo("contatocoletae@gmail.com");
+            helper.setSubject("[CHAMADO " + prioridade.toUpperCase() + "] " + assunto);
+
+            // Se ele preencheu o e-mail no modal, configura para quando você clicar em "Responder" no Gmail
+            if (emailRetorno != null && !emailRetorno.trim().isEmpty()) {
+                helper.setReplyTo(emailRetorno);
+            }
+
+            // Cria o link direto para o WhatsApp do cliente
+            String linkZap = "<em>Telefone não encontrado na sessão.</em>";
+            if (telefoneAdmin != null && !telefoneAdmin.isEmpty()) {
+                // Remove tudo que não for número (parênteses, traços, espaços)
+                String numeroLimpo = telefoneAdmin.replaceAll("[^0-9]", "");
+                linkZap = "<a href='https://wa.me/55" + numeroLimpo + "' style='background-color:#25D366; color:white; padding:10px 15px; text-decoration:none; border-radius:5px; font-weight:bold; display:inline-block;'>🟢 Responder via WhatsApp</a>";
+            }
+
+            // Corpo do e-mail em HTML
+            String corpoHTML = "<h2 style='color:#198754;'>Novo Chamado Técnico - Coletaê</h2>"
+                    + "<p><b>Armazém:</b> " + (nomeArmazem != null ? nomeArmazem : "Desconhecido") + "</p>"
+                    + "<p><b>E-mail de Retorno:</b> " + (emailRetorno != null && !emailRetorno.isEmpty() ? emailRetorno : "Não informado") + "</p>"
+                    + "<p><b>Descrição do Problema:</b><br>" + descricao + "</p>"
+                    + "<hr style='border:1px solid #eee; margin:20px 0;'>"
+                    + "<p>" + linkZap + "</p>";
+
+            helper.setText(corpoHTML, true); // O 'true' indica que o texto contém HTML
+
+            // Anexa a imagem se o usuário enviou uma
+            if (printTela != null && !printTela.isEmpty()) {
+                helper.addAttachment(printTela.getOriginalFilename(), printTela);
+            }
+
+            mailSender.send(message);
+
+            redirectAttributes.addFlashAttribute("sucessoSuporte", "Chamado enviado com sucesso!ossa equipe técnica analisará o caso.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("erroSuporte", "Ocorreu um erro ao enviar seu chamado. Tente novamente ou chame no WhatsApp.");
+            e.printStackTrace();
         }
 
         return "redirect:/admin/coletas";

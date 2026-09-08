@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
+
+    // ==========================================
+    // 1. LÓGICA DO TEMA (LIGHT/DARK)
+    // ==========================================
     const htmlElement = document.documentElement;
     const themeToggleBtn = document.getElementById('themeToggleBtn');
     const themeIcon = document.getElementById('themeIcon');
@@ -35,5 +39,27 @@ document.addEventListener('DOMContentLoaded', () => {
             themeIcon.classList.remove('bi-sun-fill', 'text-warning');
             themeIcon.classList.add('bi-moon-fill');
         }
+    }
+
+    // ==========================================
+    // 2. MÁSCARA DE CPF PARA O BALCÃO
+    // ==========================================
+    const cpfInput = document.getElementById('cpfInput');
+    if (cpfInput) {
+        cpfInput.addEventListener('input', function() {
+            let v = this.value.replace(/\D/g, ""); // Remove tudo que não é número
+            if (v.length > 11) v = v.substring(0, 11); // Trava em exatos 11 números
+
+            // Aplica a formatação 000.000.000-00 visualmente
+            if (v.length > 9) {
+                v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
+            } else if (v.length > 6) {
+                v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+            } else if (v.length > 3) {
+                v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+            }
+
+            this.value = v;
+        });
     }
 });

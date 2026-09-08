@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
 <head>
-    <title>Documento Oficial - Coletaê</title>
+    <title>Documento Oficial - Coletaê SaaS</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
@@ -14,15 +14,19 @@
 
     <!-- CSS EXTERNO -->
     <link rel="stylesheet" th:href="@{/css/admin-documento.css}">
+
+    <style>
+        .dados-fiscais { font-size: 12px; line-height: 1.5; color: #444; margin-top: 10px; }
+        .header-box { border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
+    </style>
 </head>
 <body th:classappend="${param.view != null && param.view[0] == 'resumo'} ? 'modo-cliente' : ''"
       th:with="isSaida=${vendedor.nome != null && vendedor.nome.contains('(SAÍDA)')}">
 
 <!-- Botões do seu sistema (WhatsApp, Voltar, Imprimir) -->
 <div class="text-center mb-4 no-print d-flex flex-wrap justify-content-center gap-2 botoes-topo mt-2">
-    <!-- CORREÇÃO AQUI: Botão voltar vai para a Home do Administrador -->
     <a href="/admin/coletas" class="btn btn-outline-light fw-bold">
-        <i class="bi bi-arrow-left"></i> Voltar
+        <i class="bi bi-arrow-left"></i> Voltar ao Painel
     </a>
     <button onclick="window.print()" class="btn btn-success">
         <i class="bi bi-printer"></i> Imprimir / PDF
@@ -41,11 +45,20 @@
 </div>
 
 <div class="folha text-dark">
-    <!-- CABEÇALHO DO DOCUMENTO -->
-    <div class="header-box">
-        <h2 class="fw-bold m-0" style="letter-spacing: 2px;">COLETAÊ SALGUEIRO</h2>
-        <h4 class="fw-bold mt-2 text-muted" th:text="${isSaida ? 'ROMANEIO DE EXPEDIÇÃO (NOTA DE SAÍDA)' : 'RECIBO DE PAGAMENTO / ENTRADA DE MATERIAL'}"></h4>
-        <p class="m-0 mt-2 fw-bold">DATA DE EMISSÃO: <span th:text="${#temporals.format(dataHoje, 'dd/MM/yyyy')}"></span></p>
+    <!-- CABEÇALHO DO DOCUMENTO (ÁREA DO CLIENTE SAAS) -->
+    <div class="header-box text-center">
+        <!-- Nome Dinâmico do Galpão -->
+        <h2 class="fw-bold m-0 text-uppercase" style="letter-spacing: 2px;" th:text="${session.nomeArmazem != null ? session.nomeArmazem : 'NOME DO GALPÃO / ARMAZÉM'}"></h2>
+
+        <!-- Bloco Fiscal -->
+        <div class="dados-fiscais text-uppercase">
+            <span><strong>CNPJ:</strong> <span th:text="${session.cnpjArmazem != null && !session.cnpjArmazem.isEmpty() ? session.cnpjArmazem : 'A CADASTRAR'}"></span></span> |
+            <span><strong>INSCRIÇÃO MUNICIPAL:</strong> ISENTO</span><br>
+            <span><strong>ENDEREÇO DA OPERAÇÃO:</strong> <span th:text="${session.enderecoArmazem != null ? session.enderecoArmazem : 'ENDEREÇO CADASTRADO NO SISTEMA'}"></span></span>
+        </div>
+
+        <h4 class="fw-bold mt-4 text-dark" th:text="${isSaida ? 'ROMANEIO DE EXPEDIÇÃO (NOTA DE SAÍDA)' : 'RECIBO DE PAGAMENTO / ENTRADA DE MATERIAL'}"></h4>
+        <p class="m-0 mt-1">DATA DE EMISSÃO: <span class="fw-bold" th:text="${#temporals.format(dataHoje, 'dd/MM/yyyy')}"></span></p>
     </div>
 
     <!-- DADOS DA INDÚSTRIA / CLIENTE -->
@@ -57,11 +70,11 @@
             </div>
             <div class="col-4">
                 <strong>CPF/CNPJ:</strong><br>
-                <span th:text="${isSaida ? vendedor.endereco : (vendedor.cpf != null ? vendedor.cpf : 'NÃO INFORMADO')}"></span>
+                <span th:text="${isSaida ? vendedor.endereco : (vendedor.cpf != null && !vendedor.cpf.isEmpty() ? vendedor.cpf : 'NÃO INFORMADO')}"></span>
             </div>
             <div class="col-12 mt-3">
                 <strong>ENDEREÇO / OBSERVAÇÃO DA CARGA:</strong><br>
-                <span th:text="${isSaida ? 'Carga registrada e expedida.' : vendedor.endereco}"></span>
+                <span class="text-uppercase" th:text="${isSaida ? 'Carga devidamente registrada e expedida.' : vendedor.endereco}"></span>
             </div>
         </div>
     </div>
@@ -103,40 +116,40 @@
     <!-- ÁREA DE ASSINATURAS ADAPTÁVEL -->
     <div class="row assinaturas mt-5 pt-4">
         <div class="col-6 mb-4">
-            <div class="linha-assinatura">
-                <span th:text="${isSaida ? 'RESPONSÁVEL PELA EXPEDIÇÃO (COLETAÊ)' : 'ASSINATURA DO COMPRADOR (COLETAÊ)'}"></span><br>
-                <span class="small text-muted fw-normal">Nome da Empresa</span>
+            <div class="linha-assinatura text-uppercase">
+                <span th:text="${isSaida ? 'RESPONSÁVEL PELA EXPEDIÇÃO' : 'ASSINATURA DO COMPRADOR'}"></span><br>
+                <span class="small text-muted fw-bold" th:text="${session.nomeArmazem != null ? session.nomeArmazem : 'GESTOR DO ARMAZÉM'}"></span>
             </div>
         </div>
         <div class="col-6 mb-4">
-            <div class="linha-assinatura">
-                <span th:text="${isSaida ? 'MOTORISTA / CONFERENTE (CLIENTE)' : 'ASSINATURA DO FORNECEDOR (CATADOR)'}"></span><br>
-                <span class="small text-muted fw-normal text-uppercase" th:text="${vendedor.nome.replace('(SAÍDA)', '')}"></span>
+            <div class="linha-assinatura text-uppercase">
+                <span th:text="${isSaida ? 'MOTORISTA / CONFERENTE (DESTINATÁRIO)' : 'ASSINATURA DO FORNECEDOR (CATADOR)'}"></span><br>
+                <span class="small text-muted fw-bold" th:text="${vendedor.nome.replace('(SAÍDA)', '')}"></span>
             </div>
         </div>
     </div>
 
-    <!-- RODAPÉ COM QR CODE E LOGO -->
-    <div class="row mt-4 pt-4 align-items-center justify-content-between border-top">
+    <!-- RODAPÉ TECNOLÓGICO DA COLETAÊ -->
+    <div class="row mt-4 pt-3 align-items-center justify-content-between border-top">
         <div class="col-5 text-center">
             <div id="qrcode" class="mb-2"></div>
-            <small class="d-block fw-bold text-muted" style="font-size: 10px;">VERIFICAR AUTENTICIDADE</small>
+            <small class="d-block fw-bold text-muted" style="font-size: 9px; letter-spacing: 1px;">VERIFICAR AUTENTICIDADE</small>
         </div>
 
         <div class="col-5 text-center">
-            <img src="/img/logo-coletae.png" alt="Coletaê" class="logo-footer-ajustada" th:src="@{/img/logo.png}" onerror="this.src='https://lh3.googleusercontent.com/u/0/d/1v7RtV-9ZfeY_zrxKSfzx3nPM3MqO60Pk'">
-            <div class="mt-2 small text-muted fw-bold" style="font-size: 10px;">PLATAFORMA OFICIAL COLETAÊ</div>
+            <img src="/img/logo-coletae.png" alt="Coletaê" class="logo-footer-ajustada" th:src="@{/img/logo.png}" onerror="this.src='https://lh3.googleusercontent.com/u/0/d/1v7RtV-9ZfeY_zrxKSfzx3nPM3MqO60Pk'" style="max-height: 40px; opacity: 0.8;">
+            <div class="mt-2 small text-muted fw-bold" style="font-size: 9px; letter-spacing: 1px;">SOFTWARE DE GESTÃO - SAAS</div>
         </div>
     </div>
 
-    <div class="text-center mt-4 px-4">
-        <p class="text-muted" style="font-size: 11px; line-height: 1.4; max-width: 600px; margin: 0 auto;">
-            <strong>OBSERVAÇÃO:</strong> <span th:text="${isSaida ? 'Este romaneio possui validade apenas para controle interno de estoque, expedição e transporte da carga até o destinatário, não substituindo documento fiscal.' : 'Este documento serve como comprovante de entrega e recebimento de materiais recicláveis para fins de controle e emissão de nota fiscal de entrada, conforme legislação vigente.'}"></span>
+    <div class="text-center mt-3 px-4">
+        <p class="text-muted" style="font-size: 10px; line-height: 1.4; max-width: 600px; margin: 0 auto;">
+            <strong>OBSERVAÇÃO LEGAL:</strong> <span th:text="${isSaida ? 'Este romaneio possui validade apenas para controle interno de estoque, expedição e transporte da carga até o destinatário, não substituindo documento fiscal obrigatório.' : 'Este documento serve como comprovante de entrega e recebimento de materiais recicláveis para fins de controle interno e embasamento para emissão de nota fiscal de entrada, conforme legislação tributária vigente.'}"></span>
         </p>
     </div>
 
-    <div class="text-center mt-3">
-        <small style="font-size: 10px;" class="text-muted">Documento processado digitalmente - coletaê.net.br</small>
+    <div class="text-center mt-2 pb-2">
+        <small style="font-size: 9px; opacity: 0.6;" class="text-muted text-uppercase fw-bold">Tecnologia fornecida por Plataforma Coletaê • www.coletae.net.br</small>
     </div>
 </div>
 

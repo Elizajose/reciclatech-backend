@@ -11,21 +11,11 @@
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <meta http-equiv="refresh" content="30">
 
-    <!-- CSS EXTERNO -->
     <link rel="stylesheet" th:href="@{/css/admin-lista-coletas.css}">
-    <style>
-        .module-disabled {
-            opacity: 0.65;
-            cursor: pointer;
-            border: 1px dashed #cbd5e1 !important;
-        }
-    </style>
 </head>
 <body class="bg-body-tertiary pb-5">
 
-<!-- NAVBAR MODERNA COM MENU DE PERFIL -->
 <nav class="navbar navbar-expand navbar-dark bg-success shadow-sm mb-4">
     <div class="container-fluid px-md-5">
         <a class="navbar-brand mb-0 h1 fw-bold d-flex align-items-center gap-2" href="#">
@@ -33,7 +23,6 @@
             <span class="d-none d-sm-inline" th:text="${session.nomeArmazem != null ? session.nomeArmazem : 'Painel do Gestor'}">Painel do Gestor</span>
             <span class="d-inline d-sm-none">Gestor</span>
         </a>
-        <!-- Menu do Usuário -->
         <div class="dropdown">
             <button class="btn btn-success dropdown-toggle d-flex align-items-center gap-2 border-0 bg-transparent shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-person-circle fs-4"></i>
@@ -52,7 +41,6 @@
                     </button>
                 </li>
                 <li>
-                    <!-- BOTÃO DARK MODE DENTRO DO MENU -->
                     <button class="dropdown-item d-flex justify-content-between align-items-center" id="themeToggleBtn">
                         Modo Escuro <i id="themeIcon" class="bi bi-moon-fill text-secondary"></i>
                     </button>
@@ -66,7 +54,6 @@
 
 <div class="container px-md-4" style="max-width: 1000px;">
 
-    <!-- Alertas de Confirmação/Erro do Perfil -->
     <div th:if="${sucessoPerfil != null}" class="alert alert-success alert-dismissible fade show small fw-bold shadow-sm" role="alert">
         <i class="bi bi-check-circle-fill me-2"></i> <span th:text="${sucessoPerfil}"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -76,10 +63,17 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 
-    <!-- MÓDULOS DO SISTEMA (GRID COM CARDS) -->
+    <div th:if="${sucessoSuporte != null}" class="alert alert-success alert-dismissible fade show small fw-bold shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i> <span th:text="${sucessoSuporte}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${erroSuporte != null}" class="alert alert-danger alert-dismissible fade show small fw-bold shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> <span th:text="${erroSuporte}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
     <div class="row g-3 mb-4 justify-content-center">
 
-        <!-- Card 1: Análises / Financeiro (LIBERADO SE FOR PRO) -->
         <div class="col-12 col-sm-4" th:if="${session.perfilUser == 'GESTOR' and session.planoAssinatura == 'PRO'}">
             <a href="/admin/analises" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none">
                 <div class="card-body text-center p-3 d-flex flex-column justify-content-center">
@@ -90,7 +84,6 @@
             </a>
         </div>
 
-        <!-- Card 1 (TRAVA VISUAL): Financeiro BLOQUEADO SE FOR START -->
         <div class="col-12 col-sm-4" th:if="${session.perfilUser == 'GESTOR' and session.planoAssinatura != 'PRO'}">
             <a href="/admin/assinatura" class="card shadow-sm border-0 h-100 module-card module-disabled bg-body text-body text-decoration-none" onclick="alert('O módulo Financeiro (DRE, Caixa Diário e Margem de Lucro) é exclusivo do Plano PRO. Acesse Assinatura para fazer o upgrade!');">
                 <div class="card-body text-center p-3 d-flex flex-column justify-content-center position-relative">
@@ -102,7 +95,6 @@
             </a>
         </div>
 
-        <!-- Card 2: Extratos/Recibos -->
         <div class="col-12 col-sm-4">
             <a href="/meus-extratos" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none">
                 <div class="card-body text-center p-3 d-flex flex-column justify-content-center">
@@ -113,7 +105,6 @@
             </a>
         </div>
 
-        <!-- Card 3: Tabela de Preços -->
         <div class="col-12 col-sm-4" th:if="${session.perfilUser == 'GESTOR'}">
             <a href="/admin/precos" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none border-start border-success border-4">
                 <div class="card-body text-center p-3 d-flex flex-column justify-content-center">
@@ -125,7 +116,6 @@
         </div>
     </div>
 
-    <!-- ATENDIMENTO RÁPIDO DE BALCÃO -->
     <div class="card shadow-sm border-0 border-start border-4 border-primary bg-body mb-4">
         <div class="card-body p-4">
             <div class="d-flex align-items-center mb-3">
@@ -134,12 +124,15 @@
                 </div>
                 <div>
                     <h5 class="fw-bold mb-0">Atendimento de Balcão</h5>
-                    <p class="small text-body-secondary m-0">Nova compra direta no galpão. Digite o nome do cliente.</p>
+                    <p class="small text-body-secondary m-0">Nova compra direta no galpão. Digite o nome e, se for VIP, informe o CPF.</p>
                 </div>
             </div>
 
-            <form action="/admin/pesagem-rapida" method="post" class="d-flex flex-column flex-sm-row gap-2">
+            <form action="/admin/pesagem-rapida" method="post" class="d-flex flex-column flex-md-row gap-2">
                 <input type="text" name="nome" class="form-control form-control-lg flex-grow-1 bg-body-tertiary text-body border-0 shadow-sm" required placeholder="Ex: João da Silva">
+
+                <input type="text" name="cpf" id="cpfInput" class="form-control form-control-lg bg-body-tertiary text-body border-0 shadow-sm" style="min-width: 240px;" placeholder="CPF (Apenas VIP)" maxlength="14">
+
                 <button type="submit" class="btn btn-primary btn-lg fw-bold px-4 text-nowrap shadow-sm">
                     Iniciar Pesagem <i class="bi bi-arrow-right-circle ms-1"></i>
                 </button>
@@ -147,7 +140,6 @@
         </div>
     </div>
 
-    <!-- LISTA DE AGENDAMENTOS DO SITE -->
     <h5 class="text-body-secondary mb-3 mt-5 d-flex align-items-center gap-2">
         <i class="bi bi-geo-alt-fill text-danger"></i> Agendamentos de Coleta
     </h5>
@@ -201,7 +193,6 @@
     </div>
 </div>
 
-<!-- MODAL DE ALTERAR SENHAS -->
 <div class="modal fade" id="modalAlterarSenhas" tabindex="-1" aria-labelledby="modalAlterarSenhasLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
@@ -233,10 +224,120 @@
     </div>
 </div>
 
+<button type="button" class="btn btn-warning fw-bold text-dark btn-flutuante-ajuda" data-bs-toggle="modal" data-bs-target="#modalSuporte">
+    <i class="bi bi-life-preserver me-1"></i> Precisa de Ajuda?
+</button>
+
+<div class="modal fade" id="modalSuporte" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-headset me-2 text-warning"></i> Central de Suporte Coletaê</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <ul class="nav nav-tabs nav-fill bg-light pt-2 px-2" id="ajudaTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold text-dark border-bottom-0" data-bs-toggle="tab" data-bs-target="#tab-faq" type="button" role="tab">
+                            <i class="bi bi-journal-text text-primary me-1"></i> Base de Conhecimento
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold text-muted border-bottom-0" data-bs-toggle="tab" data-bs-target="#tab-chamado" type="button" role="tab">
+                            <i class="bi bi-envelope-paper text-success me-1"></i> Abrir Chamado Técnico
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content p-4 text-body">
+                    <div class="tab-pane fade show active" id="tab-faq" role="tabpanel">
+                        <h6 class="fw-bold mb-3 text-secondary">Perguntas Frequentes & Tutoriais</h6>
+                        <div class="accordion" id="accordionFaq">
+                            <div class="accordion-item shadow-sm mb-2 border-0 rounded">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed fw-bold rounded" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                        <i class="bi bi-play-circle-fill text-danger me-2"></i> Como alterar a Senha Financeira?
+                                    </button>
+                                </h2>
+                                <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#accordionFaq">
+                                    <div class="accordion-body bg-body-tertiary">
+                                        Vá até o canto superior direito, clique no menu <strong>Meu Perfil</strong> e selecione a opção "Alterar Senhas". Digite sua nova senha no segundo campo e salve.
+                                        <div class="mt-3 text-center p-3 border border-dashed rounded bg-light text-muted">
+                                            <em>Espaço reservado para vídeo do YouTube: "Trocando Senhas"</em>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item shadow-sm mb-2 border-0 rounded">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed fw-bold rounded" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                        <i class="bi bi-play-circle-fill text-danger me-2"></i> Como configurar clientes VIP?
+                                    </button>
+                                </h2>
+                                <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#accordionFaq">
+                                    <div class="accordion-body bg-body-tertiary">
+                                        Acesse o módulo <strong>Tabela de Preços</strong>, O Preço VIP é a melhor forma de fidelizar seus catadores mais frequentes, vá em 'Fornecedores VIP' e cadastre o CPF com um valor especial. Na hora da pesagem no balcão, o sistema já aplica esse preço diferenciado automaticamente!".
+                                        <div class="mt-3 text-center">
+                                            <img th:src="@{/img/tutoriais/preco_vip.gif}" class="img-fluid rounded shadow-sm border" alt="Tutorial de como trocar a senha">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-chamado" role="tabpanel">
+                        <div class="alert alert-info small border-0 shadow-sm rounded-3 mb-4">
+                            <i class="bi bi-info-circle-fill me-1"></i> Precisa de ajuda com algum erro? Descreva abaixo e nossa equipe técnica investigará o caso.
+                        </div>
+                        <form action="/admin/suporte/enviar" method="POST" enctype="multipart/form-data" onsubmit="btnEnviar = this.querySelector('button[type=submit]'); btnEnviar.disabled = true; btnEnviar.innerHTML = '<i class=\'bi bi-hourglass-split spin\'></i> Enviando...';">
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label class="form-label fw-bold small">Assunto do Chamado</label>
+                                    <input type="text" name="assunto" class="form-control bg-body-tertiary border-0 shadow-sm" placeholder="Ex: Erro ao fechar caixa..." required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small">Prioridade</label>
+                                    <select name="prioridade" class="form-select bg-body-tertiary border-0 shadow-sm text-dark fw-bold" required>
+                                        <option value="baixa">Baixa (Dúvida)</option>
+                                        <option value="normal" selected>Normal</option>
+                                        <option value="urgente">Urgente (Erro no Sistema)</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label fw-bold small">E-mail para resposta (Opcional)</label>
+                                    <input type="email" name="emailRetorno" class="form-control bg-body-tertiary border-0 shadow-sm" placeholder="seuemail@exemplo.com">
+                                    <div class="form-text small">Ou responderemos direto no WhatsApp cadastrado no galpão.</div>
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label fw-bold small"><i class="bi bi-camera-fill text-secondary"></i> Anexar Print da Tela (Opcional)</label>
+                                    <input type="file" name="printTela" class="form-control bg-body-tertiary border-0 shadow-sm" accept="image/png, image/jpeg, image/jpg">
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label fw-bold small">Descrição Detalhada do Problema</label>
+                                    <textarea name="descricao" class="form-control bg-body-tertiary border-0 shadow-sm" rows="4" placeholder="Explique com detalhes o que aconteceu, onde você clicou e qual o erro exibido..." required></textarea>
+                                </div>
+                            </div>
+                            <div class="text-end mt-4">
+                                <button type="button" class="btn btn-outline-secondary px-4 me-2 fw-bold" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-success px-4 fw-bold shadow-sm">
+                                    <i class="bi bi-send-fill me-1"></i> Enviar Chamado
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- SCRIPT EXTERNO -->
-<script th:src="@{/js/admin-lista-coletas.js}"></script>
+<script th:src="@{/js/admin-lista-coletas.js?v=2}"></script>
 
 </body>
 </html>

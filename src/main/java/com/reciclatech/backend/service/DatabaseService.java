@@ -39,6 +39,28 @@ public class DatabaseService {
     }
 
     // ==========================================
+    // MÉTODO INTELIGENTE DE BUSCA (A CORREÇÃO DO ERRO)
+    // Busca por ID do PostgreSQL ou Telefone Legado
+    // ==========================================
+    private Optional<Usuario> buscarUsuarioPorIdOuTelefone(String idOuTelefone) {
+        if (idOuTelefone == null || idOuTelefone.trim().isEmpty()) return Optional.empty();
+
+        try {
+            Long id = Long.parseLong(idOuTelefone);
+            Optional<Usuario> u = usuarioRepository.findById(id);
+            // Confirma se o usuário achado pertence ao armazém logado
+            if (u.isPresent() && u.get().getArmazem().getId().equals(getArmazemIdLogado())) {
+                return u;
+            }
+        } catch (NumberFormatException e) {
+            // Se cair aqui, é porque a string enviada não é um ID (é um telefone com letras/símbolos)
+        }
+
+        // Tenta buscar pelo telefone
+        return usuarioRepository.findByTelefoneAndArmazemId(idOuTelefone, getArmazemIdLogado());
+    }
+
+    // ==========================================
     // AUTENTICAÇÃO E SAAS (ATUALIZADO COM PLANO E DATA)
     // ==========================================
     public Map<String, String> autenticarSaaS(String login, String senhaPura) {
@@ -160,7 +182,7 @@ public class DatabaseService {
 
     public void atualizarCpfUsuario(String idVendedor, String cpfFinal) throws IOException {
         if (cpfFinal == null || cpfFinal.trim().isEmpty() || cpfFinal.equals("NÃO INFORMADO")) return;
-        usuarioRepository.findByTelefoneAndArmazemId(idVendedor, getArmazemIdLogado()).ifPresent(u -> {
+        buscarUsuarioPorIdOuTelefone(idVendedor).ifPresent(u -> {
             u.setCpf(cpfFinal);
             usuarioRepository.save(u);
         });
@@ -186,33 +208,38 @@ public class DatabaseService {
         oferta.setPeso(0.0);
         oferta.setPrecoEstimado(BigDecimal.ZERO);
         oferta.setStatus(Oferta.StatusOferta.DISPONIVEL);
-        oferta.setData(LocalDate.now().toString());
+        oferta.setData(LocalDate.now(ZoneId.of("America/Recife")).toString());
         ofertaRepository.save(oferta);
     }
 
     public List<Usuario> buscarUsuariosComColetasPendentes() throws IOException {
+        String hoje = LocalDate.now(ZoneId.of("America/Recife")).toString();
         List<Oferta> pendentes = ofertaRepository.findAllByArmazemIdOrderByDataCriacaoDesc(getArmazemIdLogado()).stream()
-                .filter(o -> (o.getStatus() == Oferta.StatusOferta.DISPONIVEL || o.getStatus() == Oferta.StatusOferta.EM_ATENDIMENTO) && o.getData().equals(LocalDate.now().toString()))
+                .filter(o -> (o.getStatus() == Oferta.StatusOferta.DISPONIVEL || o.getStatus() == Oferta.StatusOferta.EM_ATENDIMENTO) && o.getData().equals(hoje))
                 .collect(Collectors.toList());
 
         Set<Usuario> usuarios = new HashSet<>();
         for (Oferta o : pendentes) {
-            Usuario u = o.getUsuario();
-            u.setStatusPlanilha(o.getStatus().toString());
-            usuarios.add(u);
+            if(o.getUsuario() != null) {
+                Usuario u = o.getUsuario();
+                u.setStatusPlanilha(o.getStatus().toString());
+                usuarios.add(u);
+            }
         }
         return new ArrayList<>(usuarios);
     }
 
     public List<Usuario> buscarUsuariosComVendasHoje() throws IOException {
-        String hoje = LocalDate.now().toString();
+        String hoje = LocalDate.now(ZoneId.of("America/Recife")).toString();
         List<Oferta> vendasHoje = ofertaRepository.findAllByArmazemIdOrderByDataCriacaoDesc(getArmazemIdLogado()).stream()
                 .filter(o -> o.getStatus() == Oferta.StatusOferta.VENDIDO && o.getData().equals(hoje))
                 .collect(Collectors.toList());
 
         Set<Usuario> usuarios = new HashSet<>();
         for (Oferta o : vendasHoje) {
-            usuarios.add(o.getUsuario());
+            if(o.getUsuario() != null) {
+                usuarios.add(o.getUsuario());
+            }
         }
         return new ArrayList<>(usuarios);
     }
@@ -224,12 +251,28 @@ public class DatabaseService {
             Oferta o = new Oferta();
             o.setArmazem(getArmazemLogado());
             o.setMaterial(row.get(1).toString());
-            o.setPeso(Double.parseDouble(row.get(2).toString().replace(",", ".")));
-            o.setPrecoEstimado(new BigDecimal(row.get(5).toString().replace(",", ".")));
+
+            // Tratamento ultra-seguro para converter qualquer formato em Double
+            Object pesoObj = row.get(2);
+            if(pesoObj instanceof Double) {
+                o.setPeso((Double) pesoObj);
+            } else {
+                o.setPeso(Double.parseDouble(pesoObj.toString().replace(",", ".")));
+            }
+
+            // Tratamento ultra-seguro para converter em BigDecimal
+            Object precoObj = row.get(5);
+            if(precoObj instanceof BigDecimal) {
+                o.setPrecoEstimado((BigDecimal) precoObj);
+            } else {
+                o.setPrecoEstimado(new BigDecimal(precoObj.toString().replace(",", ".")));
+            }
+
             o.setData(row.get(6).toString());
 
+            // A MÁGICA: Usando o nosso novo método inteligente
             String docUsuario = row.get(7).toString();
-            usuarioRepository.findByTelefoneAndArmazemId(docUsuario, getArmazemIdLogado()).ifPresent(o::setUsuario);
+            buscarUsuarioPorIdOuTelefone(docUsuario).ifPresent(o::setUsuario);
 
             o.setStatus(Oferta.StatusOferta.valueOf(row.get(8).toString()));
             ofertaRepository.save(o);
@@ -246,7 +289,7 @@ public class DatabaseService {
     }
 
     private void mudarStatusOferta(String idVendedor, Oferta.StatusOferta de, Oferta.StatusOferta para) {
-        usuarioRepository.findByTelefoneAndArmazemId(idVendedor, getArmazemIdLogado()).ifPresent(u -> {
+        buscarUsuarioPorIdOuTelefone(idVendedor).ifPresent(u -> {
             List<Oferta> ofertas = ofertaRepository.findAllByUsuarioIdAndStatusIn(u.getId(), Arrays.asList(de));
             for(Oferta o : ofertas) {
                 o.setStatus(para);
@@ -255,8 +298,8 @@ public class DatabaseService {
         });
     }
 
-    public List<Oferta> buscarVendasPorUsuario(String telefone) throws IOException {
-        Optional<Usuario> u = usuarioRepository.findByTelefoneAndArmazemId(telefone, getArmazemIdLogado());
+    public List<Oferta> buscarVendasPorUsuario(String idOuTelefone) throws IOException {
+        Optional<Usuario> u = buscarUsuarioPorIdOuTelefone(idOuTelefone);
         if (u.isPresent()) {
             return ofertaRepository.findAllByUsuarioIdAndStatusIn(u.get().getId(), Arrays.asList(Oferta.StatusOferta.VENDIDO, Oferta.StatusOferta.SAIDA_INDUSTRIA));
         }
@@ -340,33 +383,41 @@ public class DatabaseService {
     }
 
     // --- PREÇOS VIP ---
-    public Map<String, BigDecimal> buscarPrecosEspeciais(String telefone) throws IOException {
+
+
+    public Map<String, BigDecimal> buscarPrecosEspeciais(String cpf) throws IOException {
+        if (cpf == null || cpf.trim().isEmpty()) return new HashMap<>();
+        String cpfLimpo = cpf.replaceAll("\\D", "");
+
         return precoVipRepository.findAllByArmazemId(getArmazemIdLogado()).stream()
-                .filter(p -> p.getTelefoneCatador().equals(telefone))
+                // A CORREÇÃO ESTÁ AQUI: Verifica se o CPF não é nulo antes de tentar comparar!
+                .filter(p -> p.getCpfCatador() != null && p.getCpfCatador().equals(cpfLimpo))
                 .collect(Collectors.toMap(PrecoVip::getMaterialNome, PrecoVip::getPrecoEspecial));
     }
 
     public List<Map<String, String>> listarFornecedoresVip() throws IOException {
         return precoVipRepository.findAllByArmazemId(getArmazemIdLogado()).stream().map(p -> {
             Map<String, String> map = new HashMap<>();
-            map.put("telefone", p.getTelefoneCatador());
+            // Proteção extra para não quebrar a tela de listagem
+            map.put("cpf", p.getCpfCatador() != null ? p.getCpfCatador() : "SEM CPF (Antigo)");
             map.put("material", p.getMaterialNome());
             map.put("preco", String.format("%.2f", p.getPrecoEspecial()).replace(".", ","));
             return map;
         }).collect(Collectors.toList());
     }
 
-    public void salvarFornecedorVip(String telefone, String material, BigDecimal preco) throws IOException {
+    public void salvarFornecedorVip(String cpf, String material, BigDecimal preco) throws IOException {
         PrecoVip p = new PrecoVip();
         p.setArmazem(getArmazemLogado());
-        p.setTelefoneCatador(telefone.replaceAll("\\D", ""));
+        p.setCpfCatador(cpf.replaceAll("\\D", "")); // Salva só os números
         p.setMaterialNome(material);
         p.setPrecoEspecial(preco);
         precoVipRepository.save(p);
     }
 
-    public void deletarFornecedorVip(String telefone, String material) throws IOException {
-        precoVipRepository.findByArmazemIdAndTelefoneCatadorAndMaterialNome(getArmazemIdLogado(), telefone, material)
+    public void deletarFornecedorVip(String cpf, String material) throws IOException {
+        String cpfLimpo = cpf.replaceAll("\\D", "");
+        precoVipRepository.findByArmazemIdAndCpfCatadorAndMaterialNome(getArmazemIdLogado(), cpfLimpo, material)
                 .ifPresent(precoVipRepository::delete);
     }
 

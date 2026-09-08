@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Plataforma Coletaê - Relatório Gerencial</title>
+    <meta charset="UTF-8">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #555; font-family: 'Courier New', Courier, monospace; }
+        .folha-a4 {
+            background-color: white; width: 210mm; min-height: 297mm;
+            margin: 20px auto; padding: 20mm; box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        .header-relatorio { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 25px; }
+        .table-custom th { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; }
+        @media print {
+            body { background-color: white; margin: 0; padding: 0; }
+            .folha-a4 { box-shadow: none; margin: 0; width: 100%; min-height: 100%; padding: 10mm; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="text-center mt-3 mb-3 no-print">
+    <a href="/admin/analises" class="btn btn-secondary me-2"><i class="bi bi-arrow-left"></i> Voltar ao Painel</a>
+    <button onclick="window.print()" class="btn btn-primary shadow"><i class="bi bi-printer-fill"></i> Imprimir PDF / Salvar</button>
+</div>
+
+<div class="folha-a4">
+    <div class="header-relatorio">
+        <p class="text-muted small text-uppercase mb-1 fw-bold">Plataforma Coletaê - Software de Gestão</p>
+        <h2 class="fw-bold m-0">Armazém/Galpão: <span th:text="${nomeArmazem}">NOME DO ARMAZÉM</span></h2>
+        <h5 class="fw-bold mt-4">BALANÇO GERENCIAL E POSIÇÃO DE ESTOQUE</h5>
+        <p class="m-0 mt-2">DATA DE EMISSÃO: <span th:text="${dataRelatorio}"></span></p>
+    </div>
+
+    <!-- RESUMO FINANCEIRO DO DIA -->
+    <h6 class="fw-bold mt-4 mb-2">1. RESUMO FINANCEIRO (MOVIMENTAÇÃO DO DIA)</h6>
+    <table class="table table-bordered table-sm table-custom border-dark">
+        <tr>
+            <th width="70%">(+) RECEITAS DE EXPEDIÇÃO (VENDAS)</th>
+            <td class="text-end fw-bold text-primary">R$ <span th:text="${#numbers.formatDecimal(caixaEntradaHoje, 1, 'POINT', 2, 'COMMA')}"></span></td>
+        </tr>
+        <tr>
+            <th>(-) INVESTIDO EM MATERIAL (PAGO AOS CATADORES)</th>
+            <td class="text-end text-danger">R$ <span th:text="${#numbers.formatDecimal(caixaSaidaHoje, 1, 'POINT', 2, 'COMMA')}"></span></td>
+        </tr>
+        <tr>
+            <th>(-) CUSTOS OPERACIONAIS (DESPESAS DO GALPÃO)</th>
+            <td class="text-end text-danger">R$ <span th:text="${#numbers.formatDecimal(totalDespesasHoje, 1, 'POINT', 2, 'COMMA')}"></span></td>
+        </tr>
+        <tr class="table-light">
+            <th class="fs-5">(=) RESULTADO LÍQUIDO DO CAIXA</th>
+            <td class="text-end fs-5 fw-bold" th:classappend="${lucroDoDia >= 0} ? 'text-success' : 'text-danger'">
+                R$ <span th:text="${#numbers.formatDecimal(lucroDoDia, 1, 'POINT', 2, 'COMMA')}"></span>
+            </td>
+        </tr>
+    </table>
+
+    <!-- POSIÇÃO DE ESTOQUE E PATRIMÔNIO -->
+    <h6 class="fw-bold mt-5 mb-2">2. POSIÇÃO FÍSICA E PATRIMÔNIO NO PÁTIO</h6>
+    <table class="table table-bordered table-sm table-custom border-dark text-center">
+        <thead>
+        <tr>
+            <th class="text-start">MATERIAL</th>
+            <th>PESO/QTD NO PÁTIO</th>
+            <th>VALOR BASE (UN/KG)</th>
+            <th class="text-end">VALOR ESTIMADO</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item : ${estoqueReal}">
+            <td class="text-start text-uppercase fw-bold" th:text="${item.key}"></td>
+            <td th:text="${#numbers.formatDecimal(item.value, 1, 'POINT', 1, 'COMMA')} + ' ' + ${mapaUnidades != null && mapaUnidades.containsKey(item.key) ? mapaUnidades[item.key] : 'KG'}"></td>
+            <td th:text="'R$ ' + ${mapaPrecos != null && mapaPrecos.containsKey(item.key) ? #numbers.formatDecimal(mapaPrecos[item.key], 1, 'POINT', 2, 'COMMA') : '0,00'}"></td>
+            <td class="text-end">R$ <span th:text="${mapaPrecos != null && mapaPrecos.containsKey(item.key) ? #numbers.formatDecimal(item.value * mapaPrecos[item.key], 1, 'POINT', 2, 'COMMA') : '0,00'}"></span></td>
+        </tr>
+        <tr th:if="${estoqueReal == null || #maps.isEmpty(estoqueReal)}">
+            <td colspan="4" class="fst-italic py-3 text-muted">O pátio encontra-se sem materiais registrados no momento.</td>
+        </tr>
+        </tbody>
+        <tfoot>
+        <tr class="table-light">
+            <th colspan="3" class="text-end fs-6">PATRIMÔNIO TOTAL ESTIMADO NO ESTOQUE:</th>
+            <th class="text-end fs-6 fw-bold text-success">R$ <span th:text="${#numbers.formatDecimal(patrimonioTotal, 1, 'POINT', 2, 'COMMA')}"></span></th>
+        </tr>
+        </tfoot>
+    </table>
+
+    <!-- ASSINATURAS -->
+    <div style="margin-top: 100px;" class="row text-center">
+        <div class="col-6">
+            <hr style="border-top: 1px solid #000; width: 80%; margin: 0 auto;">
+            <p class="mt-2 mb-0 small text-uppercase fw-bold" th:text="'GALPÃO: ' + ${nomeArmazem}"></p>
+            <p class="small text-muted">Gestor(a) Responsável</p>
+        </div>
+        <div class="col-6">
+            <hr style="border-top: 1px solid #000; width: 80%; margin: 0 auto;">
+            <p class="mt-2 mb-0 small fw-bold">__________________________________</p>
+            <p class="small text-muted">Conferência / Contabilidade</p>
+        </div>
+    </div>
+
+    <div class="text-center mt-5">
+        <p class="small text-muted" style="font-size: 10px;">Documento gerado eletronicamente pela Plataforma Coletaê.</p>
+    </div>
+</div>
+
+</body>
+</html>
