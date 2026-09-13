@@ -54,7 +54,7 @@
         <div class="dados-fiscais text-uppercase">
             <span><strong>CNPJ:</strong> <span th:text="${session.cnpjArmazem != null && !session.cnpjArmazem.isEmpty() ? session.cnpjArmazem : 'A CADASTRAR'}"></span></span> |
             <span><strong>INSCRIÇÃO MUNICIPAL:</strong> ISENTO</span><br>
-            <span><strong>ENDEREÇO DA OPERAÇÃO:</strong> <span th:text="${session.enderecoArmazem != null ? session.enderecoArmazem : 'ENDEREÇO CADASTRADO NO SISTEMA'}"></span></span>
+            <span th:text="${session.enderecoArmazem != null ? session.enderecoArmazem : 'Endereço não informado'}">Endereço da Operação</span>
         </div>
 
         <h4 class="fw-bold mt-4 text-dark" th:text="${isSaida ? 'ROMANEIO DE EXPEDIÇÃO (NOTA DE SAÍDA)' : 'RECIBO DE PAGAMENTO / ENTRADA DE MATERIAL'}"></h4>
@@ -149,7 +149,7 @@
     </div>
 
     <div class="text-center mt-2 pb-2">
-        <small style="font-size: 9px; opacity: 0.6;" class="text-muted text-uppercase fw-bold">Tecnologia fornecida por Plataforma Coletaê • www.coletae.net.br</small>
+        <small style="font-size: 9px; opacity: 0.6;" class="text-muted text-uppercase fw-bold">Tecnologia fornecida por Plataforma Coletaê • www.coletae.com.br</small>
     </div>
 </div>
 

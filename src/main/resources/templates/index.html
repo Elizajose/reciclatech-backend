@@ -186,7 +186,7 @@
     </div>
 </section>
 
-<!-- NOVA SEÇÃO DE PLANOS -->
+<!-- SEÇÃO DE PLANOS ATUALIZADA -->
 <section id="planos" class="py-5 bg-light">
     <div class="container py-5">
         <div class="text-center mb-5">
@@ -199,19 +199,19 @@
 
             <div class="col-lg-4">
                 <div class="pricing-card">
-                    <h3 class="fw-bold text-dark">Start</h3>
-                    <p class="text-muted small">Para pequenos depósitos focados em controle básico.</p>
+                    <h3 class="fw-bold text-dark">Básico</h3>
+                    <p class="text-muted small">Para pequenos depósitos focados em controle operacional.</p>
                     <div class="plan-price notranslate">R$ 149<span>,90/mês</span></div>
 
                     <ul class="plan-features">
-                        <li><i class="bi bi-check-circle-fill"></i> Controle de Pesagem</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Registro de Pesagens</li>
                         <li><i class="bi bi-check-circle-fill"></i> Emissão de Recibos Digitais</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Cadastro de Catadores</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Múltiplos Usuários (Funcionários)</li>
                         <li><i class="bi bi-check-circle-fill"></i> Cotação Online para o público</li>
-                        <li><i class="bi bi-check-circle-fill text-secondary opacity-50"></i> <span class="text-muted opacity-75 text-decoration-line-through">Painel Financeiro / DRE</span></li>
+                        <li><i class="bi bi-check-circle-fill text-secondary opacity-50"></i> <span class="text-muted opacity-75 text-decoration-line-through">Painel Financeiro</span></li>
                     </ul>
 
-                    <a href="https://wa.me/5587991919496?text=Olá!%20Quero%20assinar%20o%20Plano%20START%20do%20Coletaê." target="_blank" class="btn btn-outline-dark btn-lg w-100 fw-bold rounded-pill">Assinar Start</a>
+                    <a href="https://wa.me/5587991919496?text=Olá!%20Quero%20assinar%20o%20Plano%20BÁSICO%20do%20Coletaê." target="_blank" class="btn btn-outline-dark btn-lg w-100 fw-bold rounded-pill">Assinar Básico</a>
                 </div>
             </div>
 
@@ -223,10 +223,10 @@
                     <div class="plan-price text-white notranslate">R$ 199<span>,90/mês</span></div>
 
                     <ul class="plan-features">
-                        <li><i class="bi bi-check-circle-fill text-warning"></i> <strong>Tudo do plano Start</strong></li>
+                        <li><i class="bi bi-check-circle-fill text-warning"></i> <strong>Tudo do plano Básico</strong></li>
                         <li class="text-white"><i class="bi bi-check-circle-fill text-warning"></i> Painel Financeiro e Lucro do Dia</li>
-                        <li class="text-white"><i class="bi bi-check-circle-fill text-warning"></i> Controle de Estoque de Saída</li>
-                        <li class="text-white"><i class="bi bi-check-circle-fill text-warning"></i> Múltiplos Usuários (Gestor/Operador)</li>
+                        <li class="text-white"><i class="bi bi-check-circle-fill text-warning"></i> Controle de Estoque e Saída</li>
+                        <li class="text-white"><i class="bi bi-check-circle-fill text-warning"></i> Cadastro de Catadores e Clientes VIPs</li>
                         <li class="text-white"><i class="bi bi-check-circle-fill text-warning"></i> Histórico Completo de Vendas</li>
                     </ul>
 
@@ -243,7 +243,8 @@
                     <ul class="plan-features">
                         <li><i class="bi bi-star-fill text-dark"></i> <strong>Tudo do plano Pro</strong></li>
                         <li><i class="bi bi-star-fill text-dark"></i> Treinamento Presencial/Online da Equipe</li>
-                        <li><i class="bi bi-star-fill text-dark"></i> Ajustes Específicos nas Planilhas</li>
+                        <li><i class="bi bi-star-fill text-dark"></i> Ajustes Específicos para o seu negócio</li>
+                        <li><i class="bi bi-star-fill text-dark"></i> Emissão de Notas Fiscais</li>
                         <li><i class="bi bi-star-fill text-dark"></i> Suporte Prioritário Direto</li>
                     </ul>
 
@@ -288,16 +289,16 @@
     </div>
 </section>
 
-<!-- VÍDEO EDUCATIVO -->
+<!-- VÍDEO EDUCATIVO (COM AUTOPLAY, MUTED E LOOP) -->
 <section id="reciclaveis" class="py-5 bg-light">
     <div class="container py-5">
         <div class="row align-items-center g-5">
             <div class="col-lg-6">
                 <div class="video-container">
-                    <!-- VÍDEO EXPLICATIVO NATIVO (SEM YOUTUBE) -->
+                    <!-- VÍDEO COM AUTOPLAY MUTED LOOP E CONTROLES -->
                     <div class="ratio ratio-16x9 shadow-sm rounded-4 overflow-hidden border">
-                        <video controls preload="metadata" poster="/img/capa-do-video.jpg">
-                            <source src="/video/video_explicativo.mp4" type="video/mp4">
+                        <video autoplay muted loop controls preload="metadata" poster="/img/capa-do-video.jpg">
+                            <source th:src="@{/video/video_explicativo.mp4?v=2}" type="video/mp4">
                             Seu navegador não suporta a exibição deste vídeo.
                         </video>
                     </div>
@@ -529,7 +530,7 @@
 
                 <h6 class="fw-bold text-success mt-4">9. PROPRIEDADE INTELECTUAL E TITULARIDADE DOS DADOS</h6>
                 <p class="small mb-1"><strong>9.1.</strong> Todo o software, marca, layout, design, funcionalidades, relatórios e código do Coletaê são de propriedade exclusiva do <strong>Coletaê - Plataforma Inteligente de Reciclagem</strong> ou de seus licenciadores.</p>
-                <p class="small mb-1"><strong>9.2.</strong> O usuário recebe uma licença de uso limitada, não exclusiva, intransferível e revogável, restrita à utilização da plataforma conforme estes Termos, durante a vigência da assinatura.</p>
+                <p class="small mb-1"><strong>9.2.</strong> O usuário recebe uma licença de uso limitada, não exclusiva, intransferível e revogável, restrita à utilização da plataforma conforme estos Termos, durante a vigência da assinatura.</p>
                 <p class="small mb-1"><strong>9.3.</strong> É proibido copiar, modificar, distribuir, replicar, vender, licenciar, sublicenciar ou fazer engenharia reversa do sistema, no todo ou em parte.</p>
                 <p class="small mb-1"><strong>9.4.</strong> Os dados inseridos pelo usuário permanecem de titularidade do usuário. A licença concedida à Coletaê limita-se ao necessário para operar, manter e melhorar a plataforma.</p>
 

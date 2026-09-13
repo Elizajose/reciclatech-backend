@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class DatabaseService {
+
     @Autowired
     private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
@@ -26,7 +27,13 @@ public class DatabaseService {
     @Autowired private DespesaRepository despesaRepository;
     @Autowired private CaixaDiarioRepository caixaDiarioRepository;
     @Autowired private PrecoVipRepository precoVipRepository;
+    @Autowired private FuncionarioRepository funcionarioRepository;
     @Autowired private HttpSession session;
+
+
+    // =========================================================================
+    // 1. HELPERS E CONTEXTO DA SESSÃO
+    // =========================================================================
 
     private Long getArmazemIdLogado() {
         Object id = session.getAttribute("idPlanilhaAtiva");
@@ -38,94 +45,117 @@ public class DatabaseService {
         return armazemRepository.findById(getArmazemIdLogado()).orElse(null);
     }
 
-    // ==========================================
-    // MÉTODO INTELIGENTE DE BUSCA (A CORREÇÃO DO ERRO)
-    // Busca por ID do PostgreSQL ou Telefone Legado
-    // ==========================================
     private Optional<Usuario> buscarUsuarioPorIdOuTelefone(String idOuTelefone) {
         if (idOuTelefone == null || idOuTelefone.trim().isEmpty()) return Optional.empty();
 
         try {
             Long id = Long.parseLong(idOuTelefone);
             Optional<Usuario> u = usuarioRepository.findById(id);
-            // Confirma se o usuário achado pertence ao armazém logado
             if (u.isPresent() && u.get().getArmazem().getId().equals(getArmazemIdLogado())) {
                 return u;
             }
         } catch (NumberFormatException e) {
-            // Se cair aqui, é porque a string enviada não é um ID (é um telefone com letras/símbolos)
+            // Não é ID numérico, busca pelo telefone
         }
 
-        // Tenta buscar pelo telefone
         return usuarioRepository.findByTelefoneAndArmazemId(idOuTelefone, getArmazemIdLogado());
     }
 
-    // ==========================================
-    // AUTENTICAÇÃO E SAAS (ATUALIZADO COM PLANO E DATA)
-    // ==========================================
-    public Map<String, String> autenticarSaaS(String login, String senhaPura) {
-        try {
-            String senhaCriptografada = criptografarSenha(senhaPura);
-            String sql = "SELECT id, nome, cnpj, senha_financeira, perfil, status, plano, data_cadastro FROM armazem WHERE login = ? AND senha = ?";
 
-            return jdbcTemplate.queryForObject(sql, new Object[]{login, senhaCriptografada}, (rs, rowNum) -> {
+    // =========================================================================
+    // 2. AUTENTICAÇÃO, SaaS E COTAÇÕES PÚBLICAS
+    // =========================================================================
+
+    public Map<String, String> autenticarSaaS(String login, String senhaPura) {
+        String senhaCriptografada = criptografarSenha(senhaPura);
+
+        // 1. TENTA LOGAR COMO DONO (GESTOR)
+        try {
+            // ADICIONADO 'telefone' NA QUERY ABAIXO:
+            String sqlGestor = "SELECT id, nome, cnpj, endereco, telefone, senha, perfil, status, plano, data_cadastro FROM armazem WHERE login = ? AND senha = ?";
+            return jdbcTemplate.queryForObject(sqlGestor, new Object[]{login, senhaCriptografada}, (rs, rowNum) -> {
                 Map<String, String> dados = new HashMap<>();
                 dados.put("idPlanilha", rs.getString("id"));
                 dados.put("perfil", rs.getString("perfil"));
                 dados.put("nomeArmazem", rs.getString("nome"));
                 dados.put("cnpj", rs.getString("cnpj"));
-                dados.put("senhaFinanceira", rs.getString("senha_financeira") != null ? rs.getString("senha_financeira") : criptografarSenha("admin123"));
+                dados.put("endereco", rs.getString("endereco"));
+                dados.put("telefone", rs.getString("telefone")); // <--- ADICIONADO AQUI
+                dados.put("senhaLogin", rs.getString("senha"));
                 dados.put("status", rs.getString("status"));
                 dados.put("plano", rs.getString("plano"));
-
-                // ==========================================
-                // LÓGICA DO BLOQUEIO DE 7 DIAS (TRIAL)
-                // ==========================================
-                java.sql.Date dataCadastroSql = rs.getDate("data_cadastro");
-                if (dataCadastroSql != null && "TRIAL".equals(rs.getString("status"))) {
-                    java.time.LocalDate dataCadastro = dataCadastroSql.toLocalDate();
-                    java.time.LocalDate dataHoje = java.time.LocalDate.now(java.time.ZoneId.of("America/Recife"));
-
-                    // Conta quantos dias se passaram
-                    long diasUso = java.time.temporal.ChronoUnit.DAYS.between(dataCadastro, dataHoje);
-
-                    if (diasUso > 7) {
-                        dados.put("trialVencido", "true");
-                    } else {
-                        dados.put("trialVencido", "false");
-                    }
-                } else {
-                    dados.put("trialVencido", "false");
-                }
-
+                dados.put("trialVencido", "false");
                 return dados;
             });
         } catch (Exception e) {
-            return null; // Login ou senha inválidos
+            // Não é o dono. Segue para o funcionário.
+        }
+
+        // 2. TENTA LOGAR COMO FUNCIONÁRIO (OPERADOR)
+        try {
+            // ADICIONADO 'a.telefone' NA QUERY ABAIXO:
+            String sqlOperador = "SELECT f.id as func_id, f.nome as func_nome, f.perfil, f.armazem_id, " +
+                    "a.nome as nome_armazem, a.cnpj, a.endereco, a.telefone, a.status, a.plano " +
+                    "FROM funcionario f " +
+                    "JOIN armazem a ON f.armazem_id = a.id " +
+                    "WHERE f.login = ? AND f.senha = ? AND f.ativo = true";
+
+            return jdbcTemplate.queryForObject(sqlOperador, new Object[]{login, senhaCriptografada}, (rs, rowNum) -> {
+                Map<String, String> dados = new HashMap<>();
+                dados.put("idPlanilha", rs.getString("armazem_id"));
+                dados.put("perfil", rs.getString("perfil"));
+                dados.put("nomeArmazem", rs.getString("nome_armazem"));
+                dados.put("cnpj", rs.getString("cnpj"));
+                dados.put("endereco", rs.getString("endereco"));
+                dados.put("telefone", rs.getString("telefone"));
+                dados.put("status", rs.getString("status"));
+                dados.put("plano", rs.getString("plano"));
+                dados.put("nomeFuncionarioLogado", rs.getString("func_nome"));
+                return dados;
+            });
+        } catch (Exception e) {
+            return null;
         }
     }
 
-    public List<Map<String, Object>> obterCotacoesPublicas() throws java.io.IOException {
-        java.time.LocalDate hoje = java.time.LocalDate.now(java.time.ZoneId.of("America/Recife"));
+    public boolean cadastrarParceiroSaaS(String nomeArmazem, String nomeProprietario, String documentoCnpjCpf, String telefone, String endereco, String login, String senha, String planoEscolhido) {
+        try {
+            String sqlCheck = "SELECT COUNT(*) FROM armazem WHERE login = ? OR cnpj = ?";
+            Integer count = jdbcTemplate.queryForObject(sqlCheck, Integer.class, login, documentoCnpjCpf);
+            if (count != null && count > 0) return false;
+
+            java.sql.Date dataHoje = java.sql.Date.valueOf(LocalDate.now(ZoneId.of("America/Recife")));
+            String senhaCriptografada = criptografarSenha(senha);
+
+            String sqlInsert = "INSERT INTO armazem (nome, cnpj, telefone, endereco, login, senha, perfil, status, plano, data_cadastro) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, 'GESTOR', 'TRIAL', ?, ?)";
+
+            jdbcTemplate.update(sqlInsert, nomeArmazem, documentoCnpjCpf, telefone, endereco, login, senhaCriptografada, planoEscolhido, dataHoje);
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("Erro ao cadastrar parceiro: " + e.getMessage());
+            throw new RuntimeException("Erro no banco de dados ao salvar o cadastro.");
+        }
+    }
+
+    public List<Map<String, Object>> obterCotacoesPublicas() throws IOException {
+        LocalDate hoje = LocalDate.now(ZoneId.of("America/Recife"));
 
         List<Armazem> armazens = armazemRepository.findAll().stream()
                 .filter(a -> {
-                    // Se for ATIVO, sempre aparece na vitrine
-                    if ("ATIVO".equals(a.getStatus())) {
-                        return true;
-                    }
-                    // Se for TRIAL, calcula os dias direto com LocalDate
+                    if ("ATIVO".equals(a.getStatus())) return true;
                     if ("TRIAL".equals(a.getStatus()) && a.getDataCadastro() != null) {
                         long diasUso = java.time.temporal.ChronoUnit.DAYS.between(a.getDataCadastro(), hoje);
                         return diasUso <= 7;
                     }
                     return false;
                 })
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
 
-        List<Map<String, Object>> cotacoes = new java.util.ArrayList<>();
+        List<Map<String, Object>> cotacoes = new ArrayList<>();
         for (Armazem a : armazens) {
-            Map<String, Object> dados = new java.util.HashMap<>();
+            Map<String, Object> dados = new HashMap<>();
             dados.put("idPlanilha", a.getId().toString());
             dados.put("nome", a.getNome());
             dados.put("htmlId", a.getNome().replaceAll("[^a-zA-Z0-9]", "").toLowerCase());
@@ -136,7 +166,11 @@ public class DatabaseService {
         return cotacoes;
     }
 
-    // --- MATERIAIS ---
+
+    // =========================================================================
+    // 3. GESTÃO DE MATERIAIS E PREÇOS
+    // =========================================================================
+
     public List<Material> listarMateriais() throws IOException {
         return materialRepository.findAllByArmazemIdOrderByNomeAsc(getArmazemIdLogado());
     }
@@ -165,7 +199,11 @@ public class DatabaseService {
         });
     }
 
-    // --- USUÁRIOS E SOLICITAÇÕES ---
+
+    // =========================================================================
+    // 4. GESTÃO DE USUÁRIOS E SOLICITAÇÕES DE COLETA
+    // =========================================================================
+
     public List<Usuario> listarUsuarios() throws IOException {
         return usuarioRepository.findAllByArmazemId(getArmazemIdLogado());
     }
@@ -244,7 +282,11 @@ public class DatabaseService {
         return new ArrayList<>(usuarios);
     }
 
-    // --- VENDAS, OFERTAS E ESTOQUE ---
+
+    // =========================================================================
+    // 5. VENDAS, OFERTAS E CONTROLE DE ESTOQUE
+    // =========================================================================
+
     @Transactional
     public void registrarVendasEmLote(List<List<Object>> linhasParaSalvar) throws IOException {
         for (List<Object> row : linhasParaSalvar) {
@@ -252,7 +294,6 @@ public class DatabaseService {
             o.setArmazem(getArmazemLogado());
             o.setMaterial(row.get(1).toString());
 
-            // Tratamento ultra-seguro para converter qualquer formato em Double
             Object pesoObj = row.get(2);
             if(pesoObj instanceof Double) {
                 o.setPeso((Double) pesoObj);
@@ -260,7 +301,6 @@ public class DatabaseService {
                 o.setPeso(Double.parseDouble(pesoObj.toString().replace(",", ".")));
             }
 
-            // Tratamento ultra-seguro para converter em BigDecimal
             Object precoObj = row.get(5);
             if(precoObj instanceof BigDecimal) {
                 o.setPrecoEstimado((BigDecimal) precoObj);
@@ -270,7 +310,6 @@ public class DatabaseService {
 
             o.setData(row.get(6).toString());
 
-            // A MÁGICA: Usando o nosso novo método inteligente
             String docUsuario = row.get(7).toString();
             buscarUsuarioPorIdOuTelefone(docUsuario).ifPresent(o::setUsuario);
 
@@ -322,7 +361,11 @@ public class DatabaseService {
         ofertaRepository.save(o);
     }
 
-    // --- FINANCEIRO E DESPESAS ---
+
+    // =========================================================================
+    // 6. FINANCEIRO, CAIXA E DESPESAS
+    // =========================================================================
+
     public void salvarDespesa(String descricao, BigDecimal valor) throws IOException {
         Despesa d = new Despesa();
         d.setArmazem(getArmazemLogado());
@@ -382,15 +425,16 @@ public class DatabaseService {
         }).collect(Collectors.toList());
     }
 
-    // --- PREÇOS VIP ---
 
+    // =========================================================================
+    // 7. PREÇOS VIP (FORNECEDORES ESPECIAIS)
+    // =========================================================================
 
     public Map<String, BigDecimal> buscarPrecosEspeciais(String cpf) throws IOException {
         if (cpf == null || cpf.trim().isEmpty()) return new HashMap<>();
         String cpfLimpo = cpf.replaceAll("\\D", "");
 
         return precoVipRepository.findAllByArmazemId(getArmazemIdLogado()).stream()
-                // A CORREÇÃO ESTÁ AQUI: Verifica se o CPF não é nulo antes de tentar comparar!
                 .filter(p -> p.getCpfCatador() != null && p.getCpfCatador().equals(cpfLimpo))
                 .collect(Collectors.toMap(PrecoVip::getMaterialNome, PrecoVip::getPrecoEspecial));
     }
@@ -398,7 +442,6 @@ public class DatabaseService {
     public List<Map<String, String>> listarFornecedoresVip() throws IOException {
         return precoVipRepository.findAllByArmazemId(getArmazemIdLogado()).stream().map(p -> {
             Map<String, String> map = new HashMap<>();
-            // Proteção extra para não quebrar a tela de listagem
             map.put("cpf", p.getCpfCatador() != null ? p.getCpfCatador() : "SEM CPF (Antigo)");
             map.put("material", p.getMaterialNome());
             map.put("preco", String.format("%.2f", p.getPrecoEspecial()).replace(".", ","));
@@ -409,7 +452,7 @@ public class DatabaseService {
     public void salvarFornecedorVip(String cpf, String material, BigDecimal preco) throws IOException {
         PrecoVip p = new PrecoVip();
         p.setArmazem(getArmazemLogado());
-        p.setCpfCatador(cpf.replaceAll("\\D", "")); // Salva só os números
+        p.setCpfCatador(cpf.replaceAll("\\D", ""));
         p.setMaterialNome(material);
         p.setPrecoEspecial(preco);
         precoVipRepository.save(p);
@@ -421,58 +464,21 @@ public class DatabaseService {
                 .ifPresent(precoVipRepository::delete);
     }
 
-    // ==========================================
-    // CADASTRO DE PARCEIRO SAAS (BLINDADO CONTRA FRAUDE DE TRIAL)
-    // ==========================================
-    public boolean cadastrarParceiroSaaS(String nomeArmazem, String nomeProprietario, String documentoCnpjCpf, String telefone, String endereco, String login, String senha, String planoEscolhido) {
-        try {
-            // 1. Verifica se o LOGIN (nome de usuário) ou o DOCUMENTO (CPF/CNPJ) já existem
-            String sqlCheck = "SELECT COUNT(*) FROM armazem WHERE login = ? OR cnpj = ?";
 
-            // O parâmetro documentoCnpjCpf vai bater com a coluna 'cnpj' no banco, não importa se ele digitou 11 ou 14 dígitos
-            Integer count = jdbcTemplate.queryForObject(sqlCheck, Integer.class, login, documentoCnpjCpf);
+    // =========================================================================
+    // 8. PAINEL MASTER (ADMINISTRATIVO SaaS)
+    // =========================================================================
 
-            if (count != null && count > 0) {
-                return false; // Retorna falso: Login já em uso OU Documento já esgotou o Trial
-            }
-
-            java.sql.Date dataHoje = java.sql.Date.valueOf(java.time.LocalDate.now(java.time.ZoneId.of("America/Recife")));
-
-            // CRIPTOGRAFANDO AS SENHAS ANTES DE SALVAR NO BANCO
-            String senhaCriptografada = criptografarSenha(senha);
-            String senhaFinanceiraPadrao = criptografarSenha("admin123");
-
-            // 2. Insere o novo dono de armazém
-            String sqlInsert = "INSERT INTO armazem (nome, cnpj, telefone, login, senha, perfil, senha_financeira, status, plano, data_cadastro) " +
-                    "VALUES (?, ?, ?, ?, ?, 'GESTOR', ?, 'TRIAL', ?, ?)";
-
-            jdbcTemplate.update(sqlInsert, nomeArmazem, documentoCnpjCpf, telefone, login, senhaCriptografada, senhaFinanceiraPadrao, planoEscolhido, dataHoje);
-
-            return true;
-
-        } catch (Exception e) {
-            System.err.println("Erro ao cadastrar parceiro: " + e.getMessage());
-            throw new RuntimeException("Erro no banco de dados ao salvar o cadastro.");
-        }
-    }
-
-    // ==========================================
-    // ROTAS DO PAINEL MASTER (SaaS)
-    // ==========================================
-
-    // 1. Busca todos os galpões cadastrados
     public List<Map<String, Object>> listarTodosArmazensSaaS() {
         try {
-            // O "SELECT *" garante que a coluna 'plano' e todas as outras venham para o Java
             String sql = "SELECT * FROM armazem ORDER BY id DESC";
             return jdbcTemplate.queryForList(sql);
         } catch (Exception e) {
             System.err.println("Erro ao listar armazéns: " + e.getMessage());
-            return new java.util.ArrayList<>();
+            return new ArrayList<>();
         }
     }
 
-    // 2. Bloqueia ou Desbloqueia um galpão
     public void atualizarStatusArmazem(Long id, String novoStatus) {
         try {
             String sql = "UPDATE armazem SET status = ? WHERE id = ?";
@@ -482,33 +488,23 @@ public class DatabaseService {
         }
     }
 
-    // ==========================================
-    // ATUALIZAR SENHAS DO ARMAZÉM (GESTOR)
-    // ==========================================
-    public void atualizarSenhasArmazem(Long idArmazem, String novaSenhaLogin, String novaSenhaFinanceira) {
-        try {
-            boolean mudarLogin = novaSenhaLogin != null && !novaSenhaLogin.trim().isEmpty();
-            boolean mudarFinancas = novaSenhaFinanceira != null && !novaSenhaFinanceira.trim().isEmpty();
 
-            if (mudarLogin && mudarFinancas) {
-                String sql = "UPDATE armazem SET senha = ?, senha_financeira = ? WHERE id = ?";
-                jdbcTemplate.update(sql, criptografarSenha(novaSenhaLogin), criptografarSenha(novaSenhaFinanceira), idArmazem);
-            } else if (mudarLogin) {
+    // =========================================================================
+    // 9. GESTÃO DE FUNCIONÁRIOS, SEGURANÇA E PERFIL
+    // =========================================================================
+
+    public void atualizarSenhasArmazem(Long idArmazem, String novaSenhaLogin) {
+        try {
+            if (novaSenhaLogin != null && !novaSenhaLogin.trim().isEmpty()) {
                 String sql = "UPDATE armazem SET senha = ? WHERE id = ?";
                 jdbcTemplate.update(sql, criptografarSenha(novaSenhaLogin), idArmazem);
-            } else if (mudarFinancas) {
-                String sql = "UPDATE armazem SET senha_financeira = ? WHERE id = ?";
-                jdbcTemplate.update(sql, criptografarSenha(novaSenhaFinanceira), idArmazem);
             }
         } catch (Exception e) {
-            System.err.println("Erro ao atualizar senhas do armazém: " + e.getMessage());
+            System.err.println("Erro ao atualizar senha do armazém: " + e.getMessage());
             throw new RuntimeException("Falha ao atualizar credenciais.");
         }
     }
 
-    // ==========================================
-    // UTILITÁRIO DE SEGURANÇA (CRIPTOGRAFIA)
-    // ==========================================
     public String criptografarSenha(String senha) {
         if (senha == null) return null;
         try {
@@ -524,5 +520,29 @@ public class DatabaseService {
         } catch (Exception e) {
             throw new RuntimeException("Erro ao criptografar senha", e);
         }
+    }
+
+    public List<Funcionario> listarFuncionarios() {
+        return funcionarioRepository.findAllByArmazemId(getArmazemIdLogado());
+    }
+
+    public void salvarFuncionario(String nome, String login, String senhaPura) {
+        Funcionario f = new Funcionario();
+        f.setArmazem(getArmazemLogado());
+        f.setNome(nome);
+        f.setLogin(login);
+        f.setSenha(criptografarSenha(senhaPura));
+        f.setAtivo(true);
+        f.setPerfil("OPERADOR");
+        funcionarioRepository.save(f);
+    }
+
+    public void alterarStatusFuncionario(Long id, boolean ativo) {
+        funcionarioRepository.findById(id).ifPresent(f -> {
+            if(f.getArmazem().getId().equals(getArmazemIdLogado())) {
+                f.setAtivo(ativo);
+                funcionarioRepository.save(f);
+            }
+        });
     }
 }

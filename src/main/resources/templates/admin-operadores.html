@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coletaê- Gestão de Funcionários</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .navbar-custom { background-color: #198754; }
+        .card-custom { border-radius: 10px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+
+<!-- CABEÇALHO -->
+<nav class="navbar navbar-dark navbar-custom mb-4 px-3">
+    <div class="container-fluid">
+        <span class="navbar-brand mb-0 h1 fw-bold">♻️ ColetaAí - Gestão de Equipe</span>
+        <a href="/admin/coletas" class="btn btn-light btn-sm fw-bold">Voltar ao Balcão</a>
+    </div>
+</nav>
+
+<div class="container">
+
+    <!-- ALERTAS DE ERRO OU SUCESSO -->
+    <div th:if="${param.erro != null}" class="alert alert-danger" role="alert">
+        Erro: Não foi possível cadastrar. Verifique se o login já está em uso.
+    </div>
+
+    <div class="row">
+        <!-- COLUNA ESQUERDA: FORMULÁRIO DE CADASTRO -->
+        <div class="col-md-4 mb-4">
+            <div class="card card-custom p-3">
+                <div class="card-body">
+                    <h5 class="card-title text-success fw-bold mb-3">Novo Operador</h5>
+                    <p class="text-muted small">Crie um acesso para seu balconista. Ele não terá acesso ao financeiro.</p>
+
+                    <!-- Formulário com autocomplete desativado -->
+                    <form action="/admin/operadores/novo" method="POST" autocomplete="off">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Nome Completo</label>
+                            <input type="text" name="nome" class="form-control" placeholder="Ex: João da Silva" autocomplete="off" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Login (Usuário)</label>
+                            <input type="text" name="login" class="form-control" placeholder="Ex: joao.balcao" autocomplete="off" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small">Senha de Acesso</label>
+                            <input type="password" name="senha" class="form-control" placeholder="***" autocomplete="new-password" required>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100 fw-bold">Cadastrar Acesso</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUNA DIREITA: LISTA DE FUNCIONÁRIOS -->
+        <div class="col-md-8">
+            <div class="card card-custom p-3">
+                <div class="card-body">
+
+                    <!-- CABEÇALHO DA TABELA COM O BOTÃO SÓLIDO -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title text-success fw-bold m-0">Equipe Cadastrada</h5>
+                        <button type="button" class="btn btn-sm btn-dark d-flex align-items-center gap-2 px-3 py-2 shadow-sm rounded-pill fw-bold" onclick="togglePrivacy()" id="privacyBtn" title="Ocultar/Exibir Dados">
+                            <i class="bi bi-eye-slash fs-6" id="privacyIcon"></i>
+                            <span id="privacyText" style="font-size: 0.85rem;">Ocultar Dados</span>
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Nome</th>
+                                <th>Login</th>
+                                <th>Status</th>
+                                <th class="text-end">Ação</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <!-- Thymeleaf faz o loop na lista de operadores -->
+                            <tr th:each="op : ${operadores}">
+                                <!-- Coluna Nome com atributo data-real -->
+                                <td class="fw-bold operator-field" th:text="${op.nome}" th:data-real="${op.nome}">Nome do Funcionario</td>
+
+                                <!-- Coluna Login com atributo data-real -->
+                                <td class="text-muted operator-field" th:text="${op.login}" th:data-real="${op.login}">login.func</td>
+
+                                <!-- Coluna Status com atributo data-real guardando o texto do status -->
+                                <td>
+                                    <span class="operator-status-wrapper">
+                                        <span th:if="${op.ativo}" class="badge bg-success operator-field" th:data-real="Ativo">Ativo</span>
+                                        <span th:unless="${op.ativo}" class="badge bg-secondary operator-field" th:data-real="Bloqueado">Bloqueado</span>
+                                    </span>
+                                </td>
+
+                                <td class="text-end">
+                                    <!-- Botão de Bloquear / Desbloquear -->
+                                    <form action="/admin/operadores/status" method="POST" class="d-inline">
+                                        <input type="hidden" name="id" th:value="${op.id}">
+                                        <input th:if="${op.ativo}" type="hidden" name="ativo" value="false">
+                                        <input th:unless="${op.ativo}" type="hidden" name="ativo" value="true">
+
+                                        <button type="submit" class="btn btn-sm" th:classappend="${op.ativo ? 'btn-outline-danger' : 'btn-outline-success'}">
+                                            <span th:text="${op.ativo ? 'Bloquear Acesso' : 'Liberar Acesso'}"></span>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <!-- Caso a lista esteja vazia -->
+                            <tr th:if="${#lists.isEmpty(operadores)}">
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    Nenhum operador cadastrado ainda.
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SCRIPT DE PRIVACIDADE TOTAL DA LINHA -->
+<script>
+    let dataHidden = false;
+
+    function togglePrivacy() {
+        dataHidden = !dataHidden;
+        const fields = document.querySelectorAll('.operator-field');
+        const icon = document.getElementById('privacyIcon');
+        const textLabel = document.getElementById('privacyText');
+        const btn = document.getElementById('privacyBtn');
+
+        fields.forEach(el => {
+            if (dataHidden) {
+                el.textContent = '••••••••';
+            } else {
+                el.textContent = el.getAttribute('data-real');
+            }
+        });
+
+        if (dataHidden) {
+            icon.classList.replace('bi-eye-slash', 'bi-eye');
+            textLabel.textContent = 'Exibir Dados';
+            btn.classList.replace('btn-dark', 'btn-outline-dark');
+        } else {
+            icon.classList.replace('bi-eye', 'bi-eye-slash');
+            textLabel.textContent = 'Ocultar Dados';
+            btn.classList.replace('btn-outline-dark', 'btn-dark');
+        }
+    }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
