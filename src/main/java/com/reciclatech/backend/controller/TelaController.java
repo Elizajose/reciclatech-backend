@@ -103,7 +103,14 @@ public class TelaController {
                 session.setAttribute("telefone", dadosUser.getOrDefault("telefone", ""));
                 session.setAttribute("senhaLogin", dadosUser.getOrDefault("senhaLogin", ""));
                 session.setAttribute("enderecoArmazem", dadosUser.getOrDefault("endereco", "Endereço não informado"));
-                session.setAttribute("nomeFuncionarioLogado", dadosUser.getOrDefault("nomeFuncionarioLogado", ""));
+
+                // DEFINIÇÃO INTELIGENTE DO RESPONSÁVEL:
+                String perfil = dadosUser.get("perfil");
+                if ("GESTOR".equals(perfil)) {
+                    session.setAttribute("nomeFuncionarioLogado", "Gestor / Administrador");
+                } else {
+                    session.setAttribute("nomeFuncionarioLogado", dadosUser.getOrDefault("nomeFuncionarioLogado", "Operador de Balcão"));
+                }
 
                 String status = dadosUser.getOrDefault("status", "ATIVO");
                 String plano = dadosUser.getOrDefault("plano", "START");
@@ -315,8 +322,8 @@ public class TelaController {
 
 
     // =========================================================================
-    // 3. EXTRATOS E RECIBOS
-    // =========================================================================
+// 3. EXTRATOS E RECIBOS
+// =========================================================================
 
     @GetMapping("/extrato/{id}")
     public String gerarExtratoIndividual(@PathVariable String id, Model model, HttpSession session) {
@@ -328,6 +335,15 @@ public class TelaController {
             BigDecimal totalGeral = vendasReais.stream().map(Oferta::getPrecoEstimado).reduce(BigDecimal.ZERO, BigDecimal::add);
             List<Material> mats = googleSheetsService.listarMateriais();
 
+            // =========================================================================
+            // ADICIONADO: BUSCA O RESPONSÁVEL DA SESSÃO PARA O RECIBO/EXTRATO
+            // =========================================================================
+            String responsavel = (String) session.getAttribute("nomeFuncionarioLogado");
+            if (responsavel == null || responsavel.trim().isEmpty()) {
+                responsavel = "Gestor / Administrador";
+            }
+            model.addAttribute("responsavelAtendimento", responsavel);
+
             model.addAttribute("mapaUnidades", mats.stream().collect(Collectors.toMap(Material::getNome, Material::getUnidade)));
             model.addAttribute("mapaPrecos", mats.stream().collect(Collectors.toMap(Material::getNome, Material::getPrecoPorKg)));
             model.addAttribute("vendedor", usuario);
@@ -335,7 +351,9 @@ public class TelaController {
             model.addAttribute("total", totalGeral);
             model.addAttribute("dataHoje", LocalDate.now(ZoneId.of("America/Recife")));
 
-        } catch (Exception e) { return "redirect:/?erro=extrato"; }
+        } catch (Exception e) {
+            return "redirect:/?erro=extrato";
+        }
         return "extrato";
     }
 

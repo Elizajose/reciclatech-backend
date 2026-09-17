@@ -23,7 +23,7 @@
 <body th:classappend="${param.view != null && param.view[0] == 'resumo'} ? 'modo-cliente' : ''"
       th:with="isSaida=${vendedor.nome != null && vendedor.nome.contains('(SAÍDA)')}">
 
-<!-- Botões do seu sistema (WhatsApp, Voltar, Imprimir) -->
+<!-- Botões do seu sistema (Voltar, Imprimir) -->
 <div class="text-center mb-4 no-print d-flex flex-wrap justify-content-center gap-2 botoes-topo mt-2">
     <a href="/admin/coletas" class="btn btn-outline-light fw-bold">
         <i class="bi bi-arrow-left"></i> Voltar ao Painel
@@ -31,12 +31,7 @@
     <button onclick="window.print()" class="btn btn-success">
         <i class="bi bi-printer"></i> Imprimir / PDF
     </button>
-    <button onclick="enviarZap('empresa')" class="btn btn-primary">
-        <i class="bi bi-whatsapp"></i> Enviar p/ Empresa
-    </button>
-    <button onclick="enviarZap('cliente')" class="btn btn-info text-dark fw-bold">
-        <i class="bi bi-person-check"></i> Enviar p/ Cliente
-    </button>
+
 </div>
 
 <!-- Alerta de salvamento do Google Sheets -->
@@ -127,6 +122,11 @@
                 <span class="small text-muted fw-bold" th:text="${vendedor.nome.replace('(SAÍDA)', '')}"></span>
             </div>
         </div>
+    </div>
+
+    <!-- IDENTIFICAÇÃO DO OPERADOR / RESPONSÁVEL PELO ATENDIMENTO -->
+    <div class="mt-3 pt-2 text-end border-top">
+        <span class="text-muted" style="font-size: 11px;">Atendimento realizado por: <strong class="text-dark" th:text="${responsavelAtendimento}">Operador</strong></span>
     </div>
 
     <!-- RODAPÉ TECNOLÓGICO DA COLETAÊ -->
