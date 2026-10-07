@@ -38,6 +38,10 @@ public class TelaController {
         return !senhaMasterConfigurada.isBlank() && senhaMasterConfigurada.equals(senha);
     }
 
+    // E-mail que recebe os chamados de suporte (variável EMAIL_SUPORTE)
+    @Value("${coletae.email-suporte}")
+    private String emailSuporte;
+
 
     // =========================================================================
     // 1. ÁREA PÚBLICA E AUTENTICAÇÃO
@@ -965,7 +969,7 @@ public class TelaController {
             jakarta.mail.internet.MimeMessage message = mailSender.createMimeMessage();
             org.springframework.mail.javamail.MimeMessageHelper helper = new org.springframework.mail.javamail.MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setTo("contatocoletae@gmail.com");
+            helper.setTo(emailSuporte);
             helper.setSubject("[CHAMADO " + prioridade.toUpperCase() + "] " + assunto);
 
             if (emailRetorno != null && !emailRetorno.trim().isEmpty()) {
