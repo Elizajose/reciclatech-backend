@@ -30,9 +30,13 @@ public class TelaController {
     @Autowired(required = false)
     private org.springframework.mail.javamail.JavaMailSender mailSender;
 
-    // VARIÁVEL DE AMBIENTE: Puxa a senha Master do sistema operacional
-    @Value("${SENHA_MASTER:Sertao2026}")
+    // Senha Master configurada no application.properties (variável SENHA_MASTER)
+    @Value("${coletae.senha-master}")
     private String senhaMasterConfigurada;
+
+    private boolean senhaMasterValida(String senha) {
+        return !senhaMasterConfigurada.isBlank() && senhaMasterConfigurada.equals(senha);
+    }
 
 
     // =========================================================================
@@ -87,7 +91,7 @@ public class TelaController {
 
     @PostMapping("/login-admin")
     public String login(@RequestParam String login, @RequestParam String senha, HttpSession session) {
-        if ("master".equals(login) && senhaMasterConfigurada.equals(senha)) {
+        if ("master".equals(login) && senhaMasterValida(senha)) {
             session.setAttribute("masterLogado", true);
             return "redirect:/master/painel";
         }
@@ -1089,7 +1093,7 @@ public class TelaController {
 
     @PostMapping("/master/login-secreto")
     public String loginMaster(@RequestParam String senhaMaster, HttpSession session) {
-        if (senhaMasterConfigurada.equals(senhaMaster)) {
+        if (senhaMasterValida(senhaMaster)) {
             session.setAttribute("masterLogado", true);
             return "redirect:/master/painel";
         }
