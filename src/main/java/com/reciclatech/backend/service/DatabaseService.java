@@ -120,8 +120,11 @@ public class DatabaseService {
 
     public boolean cadastrarParceiroSaaS(String nomeArmazem, String nomeProprietario, String documentoCnpjCpf, String telefone, String endereco, String login, String senha, String planoEscolhido) {
         try {
-            String sqlCheck = "SELECT COUNT(*) FROM armazem WHERE login = ? OR cnpj = ?";
-            Integer count = jdbcTemplate.queryForObject(sqlCheck, Integer.class, login, documentoCnpjCpf);
+            // CNPJ/CPF é opcional: vazio vira NULL e só entra na checagem de duplicidade quando preenchido
+            String documento = (documentoCnpjCpf == null || documentoCnpjCpf.isBlank()) ? null : documentoCnpjCpf.trim();
+            Integer count = (documento == null)
+                    ? jdbcTemplate.queryForObject("SELECT COUNT(*) FROM armazem WHERE login = ?", Integer.class, login)
+                    : jdbcTemplate.queryForObject("SELECT COUNT(*) FROM armazem WHERE login = ? OR cnpj = ?", Integer.class, login, documento);
             if (count != null && count > 0) return false;
 
             java.sql.Date dataHoje = java.sql.Date.valueOf(LocalDate.now(ZoneId.of("America/Recife")));
@@ -130,7 +133,7 @@ public class DatabaseService {
             String sqlInsert = "INSERT INTO armazem (nome, cnpj, telefone, endereco, login, senha, perfil, status, plano, data_cadastro) " +
                     "VALUES (?, ?, ?, ?, ?, ?, 'GESTOR', 'TRIAL', ?, ?)";
 
-            jdbcTemplate.update(sqlInsert, nomeArmazem, documentoCnpjCpf, telefone, endereco, login, senhaCriptografada, planoEscolhido, dataHoje);
+            jdbcTemplate.update(sqlInsert, nomeArmazem, documento, telefone, endereco, login, senhaCriptografada, planoEscolhido, dataHoje);
             return true;
 
         } catch (Exception e) {

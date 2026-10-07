@@ -12,6 +12,7 @@ public class Armazem {
     private String nome;
     private String cnpj;
     private String telefone;
+    private String endereco;
 
     @Column(unique = true)
     private String login;
@@ -44,6 +45,8 @@ public class Armazem {
 
     public String getTelefone() { return telefone; }
     public void setTelefone(String telefone) { this.telefone = telefone; }
+    public String getEndereco() { return endereco; }
+    public void setEndereco(String endereco) { this.endereco = endereco; }
 
     public String getLogin() { return login; }
     public void setLogin(String login) { this.login = login; }
