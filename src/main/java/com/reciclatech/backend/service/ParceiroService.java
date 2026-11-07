@@ -4,17 +4,20 @@ import com.reciclatech.backend.model.Armazem;
 import com.reciclatech.backend.model.Parceiro;
 import com.reciclatech.backend.repository.ArmazemRepository;
 import com.reciclatech.backend.repository.ParceiroRepository;
+import com.reciclatech.backend.util.DocumentoValidator;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-/** Regras da conta do dono (Parceiro). Ainda não é chamado por nenhuma tela: entra na fase 3. */
+/** Regras da conta do dono (Parceiro): cadastro, login e armazéns do dono. */
 @Service
 public class ParceiroService {
 
@@ -72,5 +75,45 @@ public class ParceiroService {
     @Transactional(readOnly = true)
     public Optional<Armazem> buscarArmazemDoDono(Long armazemId, Long parceiroId) {
         return armazemRepository.findByIdAndProprietarioId(armazemId, parceiroId);
+    }
+
+    /** Cadastra um armazém já vinculado ao dono. Mensagens de erro prontas para a tela. */
+    @Transactional
+    public Armazem cadastrarArmazem(Long parceiroId, String nome, String cnpj, String telefone, String endereco, String plano) {
+        if (nome == null || nome.isBlank()) throw new IllegalArgumentException("Informe o nome do armazém.");
+        if (nome.trim().length() > 150) throw new IllegalArgumentException("Nome do armazém muito longo.");
+        if (telefone == null || telefone.isBlank()) throw new IllegalArgumentException("Informe o telefone do armazém.");
+        if (endereco == null || endereco.isBlank()) throw new IllegalArgumentException("Informe o endereço do armazém.");
+
+        String documento = (cnpj == null || cnpj.isBlank()) ? null : cnpj.trim();
+        if (documento != null) {
+            if (!DocumentoValidator.valido(documento)) throw new IllegalArgumentException("CPF/CNPJ inválido.");
+            if (armazemRepository.existsByCnpj(documento)) throw new IllegalArgumentException("Este CPF/CNPJ já está cadastrado.");
+        }
+
+        Parceiro dono = parceiroRepository.findById(parceiroId)
+                .orElseThrow(() -> new IllegalArgumentException("Conta não encontrada."));
+
+        Armazem a = new Armazem();
+        a.setProprietario(dono);
+        a.setNome(nome.trim());
+        a.setCnpj(documento);
+        a.setTelefone(telefone.trim());
+        a.setEndereco(endereco.trim());
+        a.setPerfil("GESTOR");
+        a.setStatus("TRIAL");
+        a.setPlano("PRO".equalsIgnoreCase(plano) ? "PRO" : "START");
+        a.setDataCadastro(LocalDate.now(ZoneId.of("America/Recife")));
+        return armazemRepository.save(a);
+    }
+
+    /** Liga um armazém antigo (que já tinha login/senha) a esta conta. Só se ainda não tiver dono. */
+    @Transactional
+    public Armazem vincularArmazemLegado(Long parceiroId, Long armazemId) {
+        Armazem a = armazemRepository.findById(armazemId)
+                .orElseThrow(() -> new IllegalArgumentException("Armazém não encontrado."));
+        if (a.getProprietario() != null) throw new IllegalArgumentException("Este armazém já está vinculado a uma conta.");
+        a.setProprietario(parceiroRepository.getReferenceById(parceiroId));
+        return armazemRepository.save(a);
     }
 }
