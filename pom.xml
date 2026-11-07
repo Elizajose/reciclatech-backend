@@ -47,6 +47,12 @@
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
+        <!-- Criptografia de senha (BCrypt). Só a biblioteca: não ativa o Spring Security -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+
         <!-- Ferramentas e Testes -->
         <dependency>
             <groupId>org.projectlombok</groupId>

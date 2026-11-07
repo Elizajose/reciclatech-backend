@@ -1,5 +1,6 @@
 package com.reciclatech.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
@@ -8,6 +9,11 @@ public class Armazem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    // Dono (conta Parceiro). Nullable de propósito: armazéns antigos ainda não têm dono vinculado.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "proprietario_id")
+    private Parceiro proprietario;
 
     private String nome;
     private String cnpj;
@@ -68,6 +74,10 @@ public class Armazem {
 
     public LocalDate getDataCadastro() { return dataCadastro; }
     public void setDataCadastro(LocalDate dataCadastro) { this.dataCadastro = dataCadastro; }
+
+    @JsonIgnore // nunca serializar o dono (evita erro de proxy lazy e vazamento em respostas JSON)
+    public Parceiro getProprietario() { return proprietario; }
+    public void setProprietario(Parceiro proprietario) { this.proprietario = proprietario; }
 
     public LocalDate getUltimoLogin() { return ultimoLogin;}
     public void setUltimoLogin(LocalDate ultimoLogin) { this.ultimoLogin = ultimoLogin; }
