@@ -153,6 +153,13 @@ public class TelaController {
     public String solicitarColeta(@RequestParam String endereco, @RequestParam String nomeVendedor,
                                   @RequestParam String telefoneVendedor, @RequestParam String idPlanilhaDestino) {
         String zapLimpo = telefoneVendedor.replaceAll("\\D", "");
+        if (nomeVendedor.isBlank() || nomeVendedor.length() > 120 || endereco.isBlank() || endereco.length() > 255
+                || zapLimpo.length() < 10 || zapLimpo.length() > 13) {
+            return "redirect:/?erro=dados";
+        }
+        if (!googleSheetsService.armazemAceitaSolicitacoes(idPlanilhaDestino)) {
+            return "redirect:/?erro=armazem";
+        }
         Usuario novo = new Usuario();
         novo.setNome(nomeVendedor); novo.setTelefone(zapLimpo); novo.setEndereco(endereco); novo.setTipo(Usuario.TipoUsuario.CATADOR);
         try { googleSheetsService.salvarSolicitacaoInicial(novo, endereco, idPlanilhaDestino); }
@@ -335,6 +342,7 @@ public class TelaController {
 
     @GetMapping("/extrato/{id}")
     public String gerarExtratoIndividual(@PathVariable String id, Model model, HttpSession session) {
+        if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         try {
             Usuario usuario = googleSheetsService.listarUsuarios().stream().filter(u -> u.getTelefone().equals(id) || u.getId().toString().equals(id)).findFirst().orElse(null);
             if (usuario == null) return "redirect:/";
@@ -962,6 +970,7 @@ public class TelaController {
             jakarta.servlet.http.HttpSession session,
             org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
 
+        if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         try {
             String nomeArmazem = (String) session.getAttribute("nomeArmazem");
             String telefoneAdmin = (String) session.getAttribute("telefone");

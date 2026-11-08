@@ -38,7 +38,7 @@ public class DatabaseService {
     private Long getArmazemIdLogado() {
         Object id = session.getAttribute("idPlanilhaAtiva");
         if (id != null) return Long.parseLong(id.toString());
-        return 1L; // Fallback segurança
+        throw new SessaoInvalidaException(); // falha fechada: sem login nunca se assume um armazém
     }
 
     private Armazem getArmazemLogado() {
@@ -216,7 +216,7 @@ public class DatabaseService {
     }
 
     public void salvarUsuario(Usuario usuario, String planilhaAlvo) throws IOException {
-        usuario.setArmazem(armazemRepository.findById(Long.parseLong(planilhaAlvo)).orElse(getArmazemLogado()));
+        usuario.setArmazem(armazemRepository.findById(Long.parseLong(planilhaAlvo)).orElseGet(this::getArmazemLogado));
         usuario.prePersist();
         usuarioRepository.save(usuario);
     }
@@ -235,7 +235,8 @@ public class DatabaseService {
 
     public void salvarSolicitacaoInicial(Usuario usuario, String endereco, String idArmazemDestino) throws IOException {
         Long armazemId = idArmazemDestino != null ? Long.parseLong(idArmazemDestino) : getArmazemIdLogado();
-        Armazem destino = armazemRepository.findById(armazemId).orElse(getArmazemLogado());
+        Armazem destino = armazemRepository.findById(armazemId)
+                .orElseThrow(() -> new IOException("Armazém de destino não encontrado"));
 
         usuario.setArmazem(destino);
         usuario.setEndereco(endereco);
@@ -396,7 +397,30 @@ public class DatabaseService {
     }
 
     public void deletarDespesa(String id) throws IOException {
-        despesaRepository.deleteById(Long.parseLong(id));
+        // só apaga se a despesa for do armazém logado
+        despesaRepository.findById(Long.parseLong(id)).ifPresent(d -> {
+            if (d.getArmazem() != null && d.getArmazem().getId().equals(getArmazemIdLogado())) {
+                despesaRepository.delete(d);
+            }
+        });
+    }
+
+    /** Mesmo critério da lista pública da home: armazém ATIVO, ou TRIAL com até 7 dias de uso. */
+    public boolean armazemAceitaSolicitacoes(String idArmazem) {
+        if (idArmazem == null) return false;
+        try {
+            Long id = Long.parseLong(idArmazem.trim());
+            LocalDate hoje = LocalDate.now(ZoneId.of("America/Recife"));
+            return armazemRepository.findById(id).filter(a -> {
+                if ("ATIVO".equals(a.getStatus())) return true;
+                if ("TRIAL".equals(a.getStatus()) && a.getDataCadastro() != null) {
+                    return java.time.temporal.ChronoUnit.DAYS.between(a.getDataCadastro(), hoje) <= 7;
+                }
+                return false;
+            }).isPresent();
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     public void fecharCaixaDoDia(String data, BigDecimal entradas, BigDecimal saidas, BigDecimal despesas, BigDecimal lucro, Double pesoComprado) throws IOException {

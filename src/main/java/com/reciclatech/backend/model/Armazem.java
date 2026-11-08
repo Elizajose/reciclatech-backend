@@ -57,9 +57,11 @@ public class Armazem {
     public String getLogin() { return login; }
     public void setLogin(String login) { this.login = login; }
 
+    @JsonIgnore
     public String getSenha() { return senha; }
     public void setSenha(String senha) { this.senha = senha; }
 
+    @JsonIgnore
     public String getSenhaFinanceira() { return senhaFinanceira; }
     public void setSenhaFinanceira(String senhaFinanceira) { this.senhaFinanceira = senhaFinanceira; }
 
