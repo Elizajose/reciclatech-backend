@@ -5,6 +5,7 @@ import com.reciclatech.backend.model.Parceiro;
 import com.reciclatech.backend.service.DatabaseService;
 import com.reciclatech.backend.service.LoginThrottle;
 import com.reciclatech.backend.service.ParceiroService;
+import com.reciclatech.backend.service.RecuperacaoSenhaService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,11 +31,14 @@ public class ContaController {
     private final ParceiroService parceiroService;
     private final DatabaseService databaseService;
     private final LoginThrottle throttle;
+    private final RecuperacaoSenhaService recuperacaoSenhaService;
 
-    public ContaController(ParceiroService parceiroService, DatabaseService databaseService, LoginThrottle throttle) {
+    public ContaController(ParceiroService parceiroService, DatabaseService databaseService,
+                           LoginThrottle throttle, RecuperacaoSenhaService recuperacaoSenhaService) {
         this.parceiroService = parceiroService;
         this.databaseService = databaseService;
         this.throttle = throttle;
+        this.recuperacaoSenhaService = recuperacaoSenhaService;
     }
 
     private Long parceiroLogado(HttpSession session) {
@@ -214,5 +218,55 @@ public class ContaController {
         } catch (IllegalArgumentException e) {
             return "redirect:/conta/armazens?erro=ja_vinculado";
         }
+    }
+
+    // ---------------- recuperação de senha ----------------
+
+    @GetMapping("/esqueci-senha")
+    public String esqueciForm() {
+        return "conta-esqueci-senha";
+    }
+
+    @PostMapping("/esqueci-senha")
+    public String esqueciEnviar(@RequestParam String email, Model model) {
+        String chave = "reset:" + email;
+        if (!throttle.bloqueado(chave)) {
+            throttle.falhou(chave); // conta cada pedido: no máximo 5 e-mails a cada 15 min por endereço
+            recuperacaoSenhaService.solicitar(email);
+        }
+        model.addAttribute("enviado", true); // mesma resposta exista ou não a conta
+        return "conta-esqueci-senha";
+    }
+
+    @GetMapping("/redefinir-senha")
+    public String redefinirForm(@RequestParam(required = false) String token, Model model) {
+        boolean valido = token != null && recuperacaoSenhaService.tokenValido(token);
+        model.addAttribute("tokenValido", valido);
+        model.addAttribute("token", valido ? token : "");
+        return "conta-redefinir-senha";
+    }
+
+    @PostMapping("/redefinir-senha")
+    public String redefinir(@RequestParam String token, @RequestParam String senha,
+                            @RequestParam String confirmarSenha, Model model) {
+        String erro = null;
+        if (!senha.equals(confirmarSenha)) {
+            erro = "As senhas não conferem.";
+        } else {
+            try {
+                if (recuperacaoSenhaService.redefinir(token, senha)) {
+                    return "redirect:/conta/login?senhaRedefinida=true";
+                }
+                model.addAttribute("tokenValido", false);
+                model.addAttribute("token", "");
+                return "conta-redefinir-senha";
+            } catch (IllegalArgumentException e) {
+                erro = e.getMessage();
+            }
+        }
+        model.addAttribute("tokenValido", true);
+        model.addAttribute("token", token);
+        model.addAttribute("erro", erro);
+        return "conta-redefinir-senha";
     }
 }

@@ -59,7 +59,7 @@ public class TelaController {
 
     @GetMapping("/cadastro")
     public String telaCadastro() {
-        return "cadastro";
+        return "redirect:/conta/cadastro"; // cadastro antigo desativado na tela; o fluxo novo é /conta/cadastro
     }
 
     @PostMapping("/salvar-cadastro")

@@ -116,4 +116,15 @@ public class ParceiroService {
         a.setProprietario(parceiroRepository.getReferenceById(parceiroId));
         return armazemRepository.save(a);
     }
+
+    /** Define uma senha nova (usada na redefinição por e-mail). */
+    @Transactional
+    public void definirSenha(Long parceiroId, String novaSenha) {
+        if (novaSenha == null || novaSenha.length() < 8) throw new IllegalArgumentException("A senha deve ter pelo menos 8 caracteres.");
+        if (novaSenha.length() > 72) throw new IllegalArgumentException("A senha deve ter no máximo 72 caracteres.");
+        Parceiro p = parceiroRepository.findById(parceiroId)
+                .orElseThrow(() -> new IllegalArgumentException("Conta não encontrada."));
+        p.setSenhaHash(encoder.encode(novaSenha));
+        parceiroRepository.save(p);
+    }
 }

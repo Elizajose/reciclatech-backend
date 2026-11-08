@@ -17,12 +17,14 @@
         <h1 class="h4 fw-bold mb-1">Entrar na sua conta</h1>
         <p class="text-muted small mb-4">Acesso do dono de armazém ou cooperativa.</p>
         <div th:if="${param.criada != null}" class="alert alert-success small fw-bold py-2">Conta criada! Entre com seu e-mail e senha.</div>
+        <div th:if="${param.senhaRedefinida != null}" class="alert alert-success small fw-bold py-2">Senha alterada! Entre com a nova senha.</div>
         <div th:if="${erro != null}" class="alert alert-danger small fw-bold py-2" th:text="${erro}"></div>
         <form th:action="@{/conta/login}" method="post">
             <div class="mb-3"><label class="form-label small fw-bold">E-mail</label>
                 <input type="email" name="email" class="form-control" th:value="${email}" required autofocus autocomplete="email"></div>
             <div class="mb-4"><label class="form-label small fw-bold">Senha</label>
-                <input type="password" name="senha" class="form-control" required autocomplete="current-password"></div>
+                <input type="password" name="senha" class="form-control" required autocomplete="current-password">
+                <div class="text-end small mt-1"><a th:href="@{/conta/esqueci-senha}" class="text-muted">Esqueci minha senha</a></div></div>
             <button type="submit" class="btn btn-success w-100 fw-bold">Entrar</button>
         </form>
         <p class="text-center small mt-3 mb-1">Ainda não tem conta? <a th:href="@{/conta/cadastro}" class="text-success fw-bold text-decoration-none">Criar conta</a></p>
