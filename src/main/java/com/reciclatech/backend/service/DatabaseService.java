@@ -4,6 +4,7 @@ import com.reciclatech.backend.model.*;
 import com.reciclatech.backend.repository.*;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,7 @@ public class DatabaseService {
     @Autowired private CaixaDiarioRepository caixaDiarioRepository;
     @Autowired private PrecoVipRepository precoVipRepository;
     @Autowired private FuncionarioRepository funcionarioRepository;
+    @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private HttpSession session;
 
 
@@ -66,42 +68,23 @@ public class DatabaseService {
     // 2. AUTENTICAÇÃO, SaaS E COTAÇÕES PÚBLICAS
     // =========================================================================
 
-    public Map<String, String> autenticarSaaS(String login, String senhaPura) {
-        String senhaCriptografada = criptografarSenha(senhaPura);
-
-        // 1. TENTA LOGAR COMO DONO (GESTOR)
+    /**
+     * Login de OPERADOR (funcionário). O dono entra pela conta (/conta/login), não por aqui.
+     * Senhas novas são BCrypt; senhas antigas (SHA-256) ainda entram uma vez e são convertidas para BCrypt.
+     */
+    public Map<String, String> autenticarOperador(String login, String senhaPura) {
+        if (login == null || senhaPura == null) return null;
         try {
-            // ADICIONADO 'telefone' NA QUERY ABAIXO:
-            String sqlGestor = "SELECT id, nome, cnpj, endereco, telefone, senha, perfil, status, plano, data_cadastro FROM armazem WHERE login = ? AND senha = ?";
-            return jdbcTemplate.queryForObject(sqlGestor, new Object[]{login, senhaCriptografada}, (rs, rowNum) -> {
-                Map<String, String> dados = new HashMap<>();
-                dados.put("idPlanilha", rs.getString("id"));
-                dados.put("perfil", rs.getString("perfil"));
-                dados.put("nomeArmazem", rs.getString("nome"));
-                dados.put("cnpj", rs.getString("cnpj"));
-                dados.put("endereco", rs.getString("endereco"));
-                dados.put("telefone", rs.getString("telefone")); // <--- ADICIONADO AQUI
-                dados.put("senhaLogin", rs.getString("senha"));
-                dados.put("status", rs.getString("status"));
-                dados.put("plano", rs.getString("plano"));
-                dados.put("trialVencido", "false");
-                return dados;
-            });
-        } catch (Exception e) {
-            // Não é o dono. Segue para o funcionário.
-        }
-
-        // 2. TENTA LOGAR COMO FUNCIONÁRIO (OPERADOR)
-        try {
-            // ADICIONADO 'a.telefone' NA QUERY ABAIXO:
-            String sqlOperador = "SELECT f.id as func_id, f.nome as func_nome, f.perfil, f.armazem_id, " +
-                    "a.nome as nome_armazem, a.cnpj, a.endereco, a.telefone, a.status, a.plano " +
+            String sql = "SELECT f.id AS func_id, f.nome AS func_nome, f.senha AS func_senha, f.perfil, f.armazem_id, " +
+                    "a.nome AS nome_armazem, a.cnpj, a.endereco, a.telefone, a.status, a.plano " +
                     "FROM funcionario f " +
                     "JOIN armazem a ON f.armazem_id = a.id " +
-                    "WHERE f.login = ? AND f.senha = ? AND f.ativo = true";
+                    "WHERE f.login = ? AND f.ativo = true";
 
-            return jdbcTemplate.queryForObject(sqlOperador, new Object[]{login, senhaCriptografada}, (rs, rowNum) -> {
+            List<Map<String, String>> achados = jdbcTemplate.query(sql, (rs, rowNum) -> {
                 Map<String, String> dados = new HashMap<>();
+                dados.put("funcId", rs.getString("func_id"));
+                dados.put("senhaHash", rs.getString("func_senha"));
                 dados.put("idPlanilha", rs.getString("armazem_id"));
                 dados.put("perfil", rs.getString("perfil"));
                 dados.put("nomeArmazem", rs.getString("nome_armazem"));
@@ -112,10 +95,31 @@ public class DatabaseService {
                 dados.put("plano", rs.getString("plano"));
                 dados.put("nomeFuncionarioLogado", rs.getString("func_nome"));
                 return dados;
-            });
+            }, login);
+            if (achados.isEmpty()) return null;
+
+            Map<String, String> dados = achados.get(0);
+            String hashSalvo = dados.remove("senhaHash");
+            String funcId = dados.remove("funcId");
+            if (!senhaConfere(senhaPura, hashSalvo)) return null;
+
+            if (hashSalvo != null && !hashSalvo.startsWith("$2")) {
+                jdbcTemplate.update("UPDATE funcionario SET senha = ? WHERE id = ?",
+                        passwordEncoder.encode(senhaPura), Long.valueOf(funcId));
+            }
+            return dados;
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private boolean senhaConfere(String senhaPura, String hashSalvo) {
+        if (hashSalvo == null) return false;
+        if (hashSalvo.startsWith("$2")) return passwordEncoder.matches(senhaPura, hashSalvo);
+        // formato antigo (SHA-256 em hexadecimal)
+        return java.security.MessageDigest.isEqual(
+                criptografarSenha(senhaPura).getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                hashSalvo.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     public boolean cadastrarParceiroSaaS(String nomeArmazem, String nomeProprietario, String documentoCnpjCpf, String telefone, String endereco, String login, String senha, String planoEscolhido) {
@@ -520,18 +524,6 @@ public class DatabaseService {
     // 9. GESTÃO DE FUNCIONÁRIOS, SEGURANÇA E PERFIL
     // =========================================================================
 
-    public void atualizarSenhasArmazem(Long idArmazem, String novaSenhaLogin) {
-        try {
-            if (novaSenhaLogin != null && !novaSenhaLogin.trim().isEmpty()) {
-                String sql = "UPDATE armazem SET senha = ? WHERE id = ?";
-                jdbcTemplate.update(sql, criptografarSenha(novaSenhaLogin), idArmazem);
-            }
-        } catch (Exception e) {
-            System.err.println("Erro ao atualizar senha do armazém: " + e.getMessage());
-            throw new RuntimeException("Falha ao atualizar credenciais.");
-        }
-    }
-
     public String criptografarSenha(String senha) {
         if (senha == null) return null;
         try {
@@ -558,7 +550,7 @@ public class DatabaseService {
         f.setArmazem(getArmazemLogado());
         f.setNome(nome);
         f.setLogin(login);
-        f.setSenha(criptografarSenha(senhaPura));
+        f.setSenha(passwordEncoder.encode(senhaPura));
         f.setAtivo(true);
         f.setPerfil("OPERADOR");
         funcionarioRepository.save(f);

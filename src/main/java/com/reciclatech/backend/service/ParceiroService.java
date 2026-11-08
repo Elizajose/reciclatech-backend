@@ -107,16 +107,6 @@ public class ParceiroService {
         return armazemRepository.save(a);
     }
 
-    /** Liga um armazém antigo (que já tinha login/senha) a esta conta. Só se ainda não tiver dono. */
-    @Transactional
-    public Armazem vincularArmazemLegado(Long parceiroId, Long armazemId) {
-        Armazem a = armazemRepository.findById(armazemId)
-                .orElseThrow(() -> new IllegalArgumentException("Armazém não encontrado."));
-        if (a.getProprietario() != null) throw new IllegalArgumentException("Este armazém já está vinculado a uma conta.");
-        a.setProprietario(parceiroRepository.getReferenceById(parceiroId));
-        return armazemRepository.save(a);
-    }
-
     /** Define uma senha nova (usada na redefinição por e-mail). */
     @Transactional
     public void definirSenha(Long parceiroId, String novaSenha) {
@@ -126,5 +116,15 @@ public class ParceiroService {
                 .orElseThrow(() -> new IllegalArgumentException("Conta não encontrada."));
         p.setSenhaHash(encoder.encode(novaSenha));
         parceiroRepository.save(p);
+    }
+
+    /** Troca a senha da conta confirmando a senha atual. false = senha atual incorreta. */
+    @Transactional
+    public boolean alterarSenha(Long parceiroId, String senhaAtual, String novaSenha) {
+        Parceiro p = parceiroRepository.findById(parceiroId)
+                .orElseThrow(() -> new IllegalArgumentException("Conta não encontrada."));
+        if (senhaAtual == null || !encoder.matches(senhaAtual, p.getSenhaHash())) return false;
+        definirSenha(parceiroId, novaSenha); // valida o tamanho e grava
+        return true;
     }
 }

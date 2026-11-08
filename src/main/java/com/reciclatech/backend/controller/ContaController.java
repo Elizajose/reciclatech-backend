@@ -2,7 +2,6 @@ package com.reciclatech.backend.controller;
 
 import com.reciclatech.backend.model.Armazem;
 import com.reciclatech.backend.model.Parceiro;
-import com.reciclatech.backend.service.DatabaseService;
 import com.reciclatech.backend.service.LoginThrottle;
 import com.reciclatech.backend.service.ParceiroService;
 import com.reciclatech.backend.service.RecuperacaoSenhaService;
@@ -13,7 +12,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -29,14 +27,12 @@ public class ContaController {
     private static final String S_PARCEIRO_NOME = "parceiroNome";
 
     private final ParceiroService parceiroService;
-    private final DatabaseService databaseService;
     private final LoginThrottle throttle;
     private final RecuperacaoSenhaService recuperacaoSenhaService;
 
-    public ContaController(ParceiroService parceiroService, DatabaseService databaseService,
+    public ContaController(ParceiroService parceiroService,
                            LoginThrottle throttle, RecuperacaoSenhaService recuperacaoSenhaService) {
         this.parceiroService = parceiroService;
-        this.databaseService = databaseService;
         this.throttle = throttle;
         this.recuperacaoSenhaService = recuperacaoSenhaService;
     }
@@ -195,29 +191,6 @@ public class ContaController {
         }
         session.removeAttribute("bloqueadoPagamento");
         return "redirect:/admin/coletas";
-    }
-
-    /** Ponte para quem já tem armazém com login/senha antigos: prova a posse e liga o armazém à conta. */
-    @PostMapping("/armazens/vincular")
-    public String vincular(@RequestParam String login, @RequestParam String senha, HttpSession session) {
-        Long parceiroId = parceiroLogado(session);
-        if (parceiroId == null) return "redirect:/conta/login";
-
-        String chave = "vincular:" + parceiroId;
-        if (throttle.bloqueado(chave)) return "redirect:/conta/armazens?erro=tentativas";
-
-        Map<String, String> dados = databaseService.autenticarSaaS(login, senha);
-        if (dados == null || !"GESTOR".equals(dados.get("perfil")) || dados.get("idPlanilha") == null) {
-            throttle.falhou(chave);
-            return "redirect:/conta/armazens?erro=vinculo";
-        }
-        try {
-            parceiroService.vincularArmazemLegado(parceiroId, Long.valueOf(dados.get("idPlanilha")));
-            throttle.sucesso(chave);
-            return "redirect:/conta/armazens?vinculado=true";
-        } catch (IllegalArgumentException e) {
-            return "redirect:/conta/armazens?erro=ja_vinculado";
-        }
     }
 
     // ---------------- recuperação de senha ----------------

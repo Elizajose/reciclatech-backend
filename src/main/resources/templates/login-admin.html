@@ -85,6 +85,9 @@
                 <div th:if="${param.erro != null and param.erro[0] == 'suspenso'}" class="alert alert-warning p-2 small fw-bold d-flex align-items-center gap-2 rounded-3">
                     <i class="bi bi-lock-fill"></i> Conta suspensa. Contate o suporte.
                 </div>
+                <div th:if="${param.erro != null and param.erro[0] == 'tentativas'}" class="alert alert-warning p-2 small fw-bold d-flex align-items-center gap-2 rounded-3">
+                    <i class="bi bi-clock-history"></i> Muitas tentativas. Aguarde alguns minutos.
+                </div>
 
                 <form action="/login-admin" method="post">
 

@@ -23,11 +23,7 @@
     <h1 class="h4 fw-bold mb-3">Meus armazéns</h1>
 
     <div th:if="${param.criado != null}" class="alert alert-success small fw-bold py-2">Armazém cadastrado!</div>
-    <div th:if="${param.vinculado != null}" class="alert alert-success small fw-bold py-2">Armazém vinculado à sua conta!</div>
-    <div th:if="${param.erro != null and param.erro[0] == acesso}" class="alert alert-danger small fw-bold py-2">Você não tem acesso a esse armazém.</div>
-    <div th:if="${param.erro != null and param.erro[0] == vinculo}" class="alert alert-danger small fw-bold py-2">Login ou senha do armazém incorretos.</div>
-    <div th:if="${param.erro != null and param.erro[0] == ja_vinculado}" class="alert alert-warning small fw-bold py-2">Esse armazém já está vinculado a uma conta.</div>
-    <div th:if="${param.erro != null and param.erro[0] == tentativas}" class="alert alert-warning small fw-bold py-2">Muitas tentativas. Aguarde alguns minutos.</div>
+    <div th:if="${param.erro != null and param.erro[0] == 'acesso'}" class="alert alert-danger small fw-bold py-2">Você não tem acesso a esse armazém.</div>
 
     <div th:if="${#lists.isEmpty(armazens)}" class="card border-0 shadow-sm rounded-4 mb-3"><div class="card-body text-center text-muted py-4">
         Você ainda não tem armazéns nesta conta.</div></div>
@@ -46,15 +42,6 @@
 
     <a th:href="@{/conta/armazens/novo}" class="btn btn-outline-success fw-bold mb-4"><i class="bi bi-plus-lg"></i> Cadastrar novo armazém</a>
 
-    <div class="card border-0 shadow-sm rounded-4"><div class="card-body">
-        <h2 class="h6 fw-bold">Já tenho um armazém cadastrado (acesso antigo)</h2>
-        <p class="small text-muted">Informe o login e a senha que você usava para entrar. O armazém passa a fazer parte desta conta.</p>
-        <form th:action="@{/conta/armazens/vincular}" method="post" class="row g-2">
-            <div class="col-sm-5"><input type="text" name="login" class="form-control" placeholder="Login do armazém" required autocomplete="off"></div>
-            <div class="col-sm-5"><input type="password" name="senha" class="form-control" placeholder="Senha" required autocomplete="off"></div>
-            <div class="col-sm-2 d-grid"><button type="submit" class="btn btn-outline-secondary">Vincular</button></div>
-        </form>
-    </div></div>
 </div>
 </body>
 </html>

@@ -27,8 +27,8 @@
             <div class="mb-3"><label class="form-label small fw-bold">Endereço</label>
                 <input type="text" name="endereco" class="form-control" th:value="${endereco}" maxlength="255" required></div>
             <div class="mb-4"><label class="form-label small fw-bold d-block">Plano</label>
-                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="plano" id="pStart" value="START" th:checked="${plano == null or plano != PRO}"><label class="form-check-label" for="pStart">START</label></div>
-                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="plano" id="pPro" value="PRO" th:checked="${plano == PRO}"><label class="form-check-label" for="pPro">PRO</label></div></div>
+                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="plano" id="pStart" value="START" th:checked="${plano == null or plano != 'PRO'}"><label class="form-check-label" for="pStart">START</label></div>
+                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="plano" id="pPro" value="PRO" th:checked="${plano == 'PRO'}"><label class="form-check-label" for="pPro">PRO</label></div></div>
             <button type="submit" class="btn btn-success w-100 fw-bold">Cadastrar armazém</button>
         </form>
     </div></div>

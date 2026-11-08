@@ -3,6 +3,8 @@ package com.reciclatech.backend.controller;
 import com.reciclatech.backend.model.*;
 import com.reciclatech.backend.repository.*;
 import com.reciclatech.backend.service.DatabaseService;
+import com.reciclatech.backend.service.LoginThrottle;
+import com.reciclatech.backend.service.ParceiroService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,8 @@ public class TelaController {
     @Autowired(required = false) private MaterialRepository materialRepository;
 
     @Autowired private DatabaseService googleSheetsService;
+    @Autowired private ParceiroService parceiroService;
+    @Autowired private LoginThrottle throttle;
 
     @Autowired(required = false)
     private org.springframework.mail.javamail.JavaMailSender mailSender;
@@ -35,7 +39,10 @@ public class TelaController {
     private String senhaMasterConfigurada;
 
     private boolean senhaMasterValida(String senha) {
-        return !senhaMasterConfigurada.isBlank() && senhaMasterConfigurada.equals(senha);
+        return !senhaMasterConfigurada.isBlank() && senha != null
+                && java.security.MessageDigest.isEqual(
+                        senhaMasterConfigurada.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                        senha.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     // E-mail que recebe os chamados de suporte (variável EMAIL_SUPORTE)
@@ -63,25 +70,8 @@ public class TelaController {
     }
 
     @PostMapping("/salvar-cadastro")
-    public String salvarNovoCadastro(@RequestParam String nomeArmazem, @RequestParam String nomeProprietario,
-                                     @RequestParam(required = false) String cnpj, @RequestParam String telefone,
-                                     @RequestParam String endereco, @RequestParam String login, @RequestParam String senha,
-                                     @RequestParam(required = false, defaultValue = "START") String planoEscolhido) {
-
-        if (cnpj != null && !cnpj.trim().isEmpty() && !isCpfCnpjValido(cnpj)) {
-            return "redirect:/cadastro?erro=documento_invalido";
-        }
-        try {
-            boolean sucesso = googleSheetsService.cadastrarParceiroSaaS(nomeArmazem, nomeProprietario, cnpj, telefone, endereco, login, senha, planoEscolhido);
-            if (sucesso) {
-                return "redirect:/cadastro?sucesso=true";
-            } else {
-                return "redirect:/cadastro?erro=usuario_existe";
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "redirect:/cadastro?erro=true";
-        }
+    public String salvarNovoCadastro() {
+        return "redirect:/conta/cadastro"; // cadastro antigo desativado: contas novas só em /conta/cadastro
     }
 
     @GetMapping("/login")
@@ -95,14 +85,17 @@ public class TelaController {
 
     @PostMapping("/login-admin")
     public String login(@RequestParam String login, @RequestParam String senha, HttpSession session) {
+        String chaveLogin = "op:" + login;
+        if (throttle.bloqueado(chaveLogin)) return "redirect:/login?erro=tentativas";
         if ("master".equals(login) && senhaMasterValida(senha)) {
             session.setAttribute("masterLogado", true);
             return "redirect:/master/painel";
         }
 
         try {
-            Map<String, String> dadosUser = googleSheetsService.autenticarSaaS(login, senha);
+            Map<String, String> dadosUser = googleSheetsService.autenticarOperador(login, senha);
             if (dadosUser != null) {
+                throttle.sucesso(chaveLogin);
                 session.setAttribute("adminLogado", true);
                 session.setAttribute("perfilUser", dadosUser.get("perfil"));
                 session.setAttribute("idPlanilhaAtiva", dadosUser.get("idPlanilha"));
@@ -140,6 +133,7 @@ public class TelaController {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        throttle.falhou(chaveLogin);
         return "redirect:/login?erro=true";
     }
 
@@ -915,23 +909,30 @@ public class TelaController {
 
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
 
-        String senhaLoginCriptografada = (String) session.getAttribute("senhaLogin");
-
-        if (!senhaLoginCriptografada.equals(googleSheetsService.criptografarSenha(senhaAtual))) {
-            ra.addFlashAttribute("erroPerfil", "Operação Negada: A Senha Atual informada está incorreta.");
+        if (!(session.getAttribute("parceiroId") instanceof Long parceiroId)) {
+            ra.addFlashAttribute("erroPerfil", "Somente o dono da conta pode alterar a senha. Entre pela sua conta e tente de novo.");
+            return "redirect:/admin/coletas";
+        }
+        if (novaSenha == null || novaSenha.isBlank()) {
+            ra.addFlashAttribute("sucessoPerfil", "Nenhuma alteração: a nova senha estava em branco.");
             return "redirect:/admin/coletas";
         }
 
+        String chave = "senha:" + parceiroId;
+        if (throttle.bloqueado(chave)) {
+            ra.addFlashAttribute("erroPerfil", "Muitas tentativas. Aguarde alguns minutos.");
+            return "redirect:/admin/coletas";
+        }
         try {
-            Long idArmazem = Long.parseLong(session.getAttribute("idPlanilhaAtiva").toString());
-            googleSheetsService.atualizarSenhasArmazem(idArmazem, novaSenha);
-
-            if (novaSenha != null && !novaSenha.trim().isEmpty()) {
-                session.setAttribute("senhaLogin", googleSheetsService.criptografarSenha(novaSenha));
+            if (parceiroService.alterarSenha(parceiroId, senhaAtual, novaSenha)) {
+                throttle.sucesso(chave);
+                ra.addFlashAttribute("sucessoPerfil", "Senha atualizada com sucesso!");
+            } else {
+                throttle.falhou(chave);
+                ra.addFlashAttribute("erroPerfil", "Operação negada: a senha atual informada está incorreta.");
             }
-            ra.addFlashAttribute("sucessoPerfil", "Credenciais atualizadas com sucesso!");
-        } catch (Exception e) {
-            ra.addFlashAttribute("erroPerfil", "Não foi possível atualizar as senhas.");
+        } catch (IllegalArgumentException e) {
+            ra.addFlashAttribute("erroPerfil", e.getMessage());
         }
         return "redirect:/admin/coletas";
     }
