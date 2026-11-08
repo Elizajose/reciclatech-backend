@@ -13,7 +13,7 @@
 <body>
 <div class="container py-4" style="max-width:760px">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div class="fs-3 brand"><i class="bi bi-recycle"></i> Coletaê</div>
+        <a th:href="@{/}" class="fs-3 brand text-decoration-none"><i class="bi bi-recycle"></i> Coletaê</a>
         <form th:action="@{/conta/sair}" method="post" class="m-0 d-flex align-items-center gap-2">
             <span class="small text-muted d-none d-sm-inline" th:text="${parceiroNome}"></span>
             <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-box-arrow-right"></i> Sair</button>
