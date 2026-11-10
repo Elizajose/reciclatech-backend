@@ -119,6 +119,20 @@ function iniciarFiltroRegiao() {
         uf: (o.dataset.uf || "").toUpperCase(),
         cidade: o.dataset.cidade || ""
     }));
+    // sem nenhum armazém disponível: deixa a mensagem clara em vez de campos vazios
+    if (todos.length === 0) {
+        [selUf, selCidade, selArmazem].forEach(select => {
+            select.innerHTML = "";
+            const o = document.createElement("option");
+            o.value = "";
+            o.disabled = true;
+            o.selected = true;
+            o.textContent = "Nenhum armazém disponível no momento";
+            select.appendChild(o);
+            select.disabled = true;
+        });
+        return;
+    }
     const semRegiao = todos.filter(a => !a.uf || !a.cidade);
     const comRegiao = todos.filter(a => a.uf && a.cidade);
 
