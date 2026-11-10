@@ -15,6 +15,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /** Regras da conta do dono (Parceiro): cadastro, login e armazéns do dono. */
@@ -79,11 +80,14 @@ public class ParceiroService {
 
     /** Cadastra um armazém já vinculado ao dono. Mensagens de erro prontas para a tela. */
     @Transactional
-    public Armazem cadastrarArmazem(Long parceiroId, String nome, String cnpj, String telefone, String endereco, String plano) {
+    public Armazem cadastrarArmazem(Long parceiroId, String nome, String cnpj, String telefone, String endereco,
+                                    String uf, String cidade, String plano) {
         if (nome == null || nome.isBlank()) throw new IllegalArgumentException("Informe o nome do armazém.");
         if (nome.trim().length() > 150) throw new IllegalArgumentException("Nome do armazém muito longo.");
         if (telefone == null || telefone.isBlank()) throw new IllegalArgumentException("Informe o telefone do armazém.");
         if (endereco == null || endereco.isBlank()) throw new IllegalArgumentException("Informe o endereço do armazém.");
+        String ufValida = validarUf(uf);
+        String cidadeValida = validarCidade(cidade);
 
         String documento = (cnpj == null || cnpj.isBlank()) ? null : cnpj.trim();
         if (documento != null) {
@@ -100,6 +104,8 @@ public class ParceiroService {
         a.setCnpj(documento);
         a.setTelefone(telefone.trim());
         a.setEndereco(endereco.trim());
+        a.setUf(ufValida);
+        a.setCidade(cidadeValida);
         a.setPerfil("GESTOR");
         a.setStatus("TRIAL");
         a.setPlano("PRO".equalsIgnoreCase(plano) ? "PRO" : "START");
@@ -126,5 +132,40 @@ public class ParceiroService {
         if (senhaAtual == null || !encoder.matches(senhaAtual, p.getSenhaHash())) return false;
         definirSenha(parceiroId, novaSenha); // valida o tamanho e grava
         return true;
+    }
+
+    private static final Set<String> UFS = Set.of("AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
+            "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO");
+    private static final Set<String> PARTICULAS = Set.of("de", "da", "do", "das", "dos", "e");
+
+    private static String validarUf(String uf) {
+        String v = uf == null ? "" : uf.trim().toUpperCase(Locale.ROOT);
+        if (!UFS.contains(v)) throw new IllegalArgumentException("Selecione um estado válido.");
+        return v;
+    }
+
+    /** Remove espaços extras e padroniza maiúsculas (ex.: "santa  cruz DO capibaribe" -> "Santa Cruz do Capibaribe"). */
+    private static String validarCidade(String cidade) {
+        String limpo = cidade == null ? "" : cidade.trim().replaceAll("\\s+", " ");
+        if (limpo.length() < 2 || limpo.length() > 100) throw new IllegalArgumentException("Informe o município.");
+        String[] palavras = limpo.toLowerCase(Locale.forLanguageTag("pt-BR")).split(" ");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < palavras.length; i++) {
+            String w = palavras[i];
+            if (i > 0) sb.append(' ');
+            if (i > 0 && PARTICULAS.contains(w)) sb.append(w);
+            else sb.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1));
+        }
+        return sb.toString();
+    }
+
+    /** Define estado e município de um armazém, só se ele for do dono informado. */
+    @Transactional
+    public void definirRegiao(Long parceiroId, Long armazemId, String uf, String cidade) {
+        Armazem a = armazemRepository.findByIdAndProprietarioId(armazemId, parceiroId)
+                .orElseThrow(() -> new IllegalArgumentException("Armazém não encontrado."));
+        a.setUf(validarUf(uf));
+        a.setCidade(validarCidade(cidade));
+        armazemRepository.save(a);
     }
 }

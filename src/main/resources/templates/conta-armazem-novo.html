@@ -24,6 +24,16 @@
                 <input type="text" name="cnpj" class="form-control" th:value="${cnpj}" maxlength="20"></div>
             <div class="mb-3"><label class="form-label small fw-bold">Telefone / WhatsApp</label>
                 <input type="text" name="telefone" class="form-control" th:value="${telefone}" maxlength="30" required></div>
+            <div class="row g-2 mb-3">
+                <div class="col-5"><label class="form-label small fw-bold">Estado</label>
+                    <select name="uf" id="ufSelect" class="form-select" required th:attr="data-valor=${uf}">
+                        <option value="" disabled selected>UF</option><option value="AC">Acre (AC)</option><option value="AL">Alagoas (AL)</option><option value="AP">Amapá (AP)</option><option value="AM">Amazonas (AM)</option><option value="BA">Bahia (BA)</option><option value="CE">Ceará (CE)</option><option value="DF">Distrito Federal (DF)</option><option value="ES">Espírito Santo (ES)</option><option value="GO">Goiás (GO)</option><option value="MA">Maranhão (MA)</option><option value="MT">Mato Grosso (MT)</option><option value="MS">Mato Grosso do Sul (MS)</option><option value="MG">Minas Gerais (MG)</option><option value="PR">Paraná (PR)</option><option value="PB">Paraíba (PB)</option><option value="PA">Pará (PA)</option><option value="PE">Pernambuco (PE)</option><option value="PI">Piauí (PI)</option><option value="RN">Rio Grande do Norte (RN)</option><option value="RS">Rio Grande do Sul (RS)</option><option value="RJ">Rio de Janeiro (RJ)</option><option value="RO">Rondônia (RO)</option><option value="RR">Roraima (RR)</option><option value="SC">Santa Catarina (SC)</option><option value="SE">Sergipe (SE)</option><option value="SP">São Paulo (SP)</option><option value="TO">Tocantins (TO)</option>
+                    </select></div>
+                <div class="col-7"><label class="form-label small fw-bold">Município</label>
+                    <input type="text" name="cidade" id="cidadeInput" list="listaCidades" class="form-control" th:value="${cidade}" maxlength="100" required autocomplete="off">
+                    <datalist id="listaCidades"></datalist></div>
+                <div class="form-text">Os catadores filtram os armazéns por estado e município na página inicial.</div>
+            </div>
             <div class="mb-3"><label class="form-label small fw-bold">Endereço</label>
                 <input type="text" name="endereco" class="form-control" th:value="${endereco}" maxlength="255" required></div>
             <div class="mb-4"><label class="form-label small fw-bold d-block">Plano</label>
@@ -33,5 +43,28 @@
         </form>
     </div></div>
 </div>
+<script>
+(function () {
+    var uf = document.getElementById('ufSelect');
+    var lista = document.getElementById('listaCidades');
+    if (uf.dataset.valor) uf.value = uf.dataset.valor;
+    function carregar() {
+        lista.innerHTML = '';
+        if (!uf.value) return;
+        fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados/' + uf.value + '/municipios')
+            .then(function (r) { return r.json(); })
+            .then(function (ms) {
+                ms.forEach(function (m) {
+                    var o = document.createElement('option');
+                    o.value = m.nome;
+                    lista.appendChild(o);
+                });
+            })
+            .catch(function () { /* sem internet/IBGE: o município pode ser digitado livremente */ });
+    }
+    uf.addEventListener('change', carregar);
+    carregar();
+})();
+</script>
 </body>
 </html>

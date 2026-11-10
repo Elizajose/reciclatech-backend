@@ -59,6 +59,10 @@ function enviarZap(event) {
     let end = document.getElementById("endZap").value.trim();
 
     let combo = document.getElementById("armazemDestino");
+    if (!combo.value) {
+        alert("Selecione o estado, o município e o armazém para agendar a coleta.");
+        return;
+    }
     let nomeArmazem = combo.options[combo.selectedIndex].text;
 
     // Pega o telefone sujo que veio do banco de dados, ex: "(87) 99191-9496"
@@ -91,3 +95,106 @@ function enviarZap(event) {
     // Envia o formulário para o Java salvar no painel interno do armazém
     setTimeout(() => { event.target.submit(); }, 300);
 }
+
+
+// ==========================================
+// FILTRO POR REGIÃO: Estado > Município > Armazém
+// ==========================================
+const NOMES_UF = {AC:"Acre",AL:"Alagoas",AP:"Amapá",AM:"Amazonas",BA:"Bahia",CE:"Ceará",DF:"Distrito Federal",ES:"Espírito Santo",GO:"Goiás",MA:"Maranhão",MT:"Mato Grosso",MS:"Mato Grosso do Sul",MG:"Minas Gerais",PA:"Pará",PB:"Paraíba",PR:"Paraná",PE:"Pernambuco",PI:"Piauí",RJ:"Rio de Janeiro",RN:"Rio Grande do Norte",RS:"Rio Grande do Sul",RO:"Rondônia",RR:"Roraima",SC:"Santa Catarina",SP:"São Paulo",SE:"Sergipe",TO:"Tocantins"};
+
+function chaveTexto(t) {
+    return (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+}
+
+function iniciarFiltroRegiao() {
+    const selUf = document.getElementById("ufZap");
+    const selCidade = document.getElementById("cidadeZap");
+    const selArmazem = document.getElementById("armazemDestino");
+    if (!selUf || !selCidade || !selArmazem) return;
+
+    // guarda as opções originais (com telefone do armazém) antes de filtrar
+    const todos = Array.from(selArmazem.options).slice(1).map(o => ({
+        el: o,
+        nome: o.textContent,
+        uf: (o.dataset.uf || "").toUpperCase(),
+        cidade: o.dataset.cidade || ""
+    }));
+    const semRegiao = todos.filter(a => !a.uf || !a.cidade);
+    const comRegiao = todos.filter(a => a.uf && a.cidade);
+
+    function limpar(select, rotulo) {
+        select.innerHTML = "";
+        const ph = document.createElement("option");
+        ph.value = "";
+        ph.disabled = true;
+        ph.selected = true;
+        ph.textContent = rotulo;
+        select.appendChild(ph);
+    }
+    function addOpcao(select, valor, texto) {
+        const o = document.createElement("option");
+        o.value = valor;
+        o.textContent = texto;
+        select.appendChild(o);
+    }
+    function mostrarCidade(visivel) {
+        const caixa = selCidade.closest(".form-floating");
+        if (caixa) caixa.classList.toggle("d-none", !visivel);
+        selCidade.required = visivel;
+    }
+    function mostrarArmazens(lista) {
+        limpar(selArmazem, lista.length ? "Selecione um Armazém..." : "Nenhum armazém nessa região");
+        lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).forEach(a => selArmazem.appendChild(a.el));
+    }
+
+    function aoMudarCidade() {
+        const chave = selCidade.value;
+        mostrarArmazens(comRegiao.filter(a => a.uf === selUf.value && chaveTexto(a.cidade) === chave));
+    }
+
+    function aoMudarUf() {
+        const uf = selUf.value;
+        limpar(selCidade, "Selecione o município...");
+        limpar(selArmazem, "Selecione um Armazém...");
+        if (uf === "__SEM__") {            // armazéns antigos, sem região cadastrada
+            mostrarCidade(false);
+            mostrarArmazens(semRegiao.slice());
+            return;
+        }
+        mostrarCidade(true);
+        if (!uf) return;
+        const cidades = new Map();
+        comRegiao.filter(a => a.uf === uf).forEach(a => {
+            const k = chaveTexto(a.cidade);
+            if (!cidades.has(k)) cidades.set(k, a.cidade.trim());
+        });
+        const lista = Array.from(cidades.entries()).sort((a, b) => a[1].localeCompare(b[1], "pt-BR"));
+        lista.forEach(([k, nome]) => addOpcao(selCidade, k, nome));
+        if (lista.length === 1) {
+            selCidade.value = lista[0][0];
+            aoMudarCidade();
+        }
+    }
+
+    // monta a lista de estados só com os que têm armazém cadastrado
+    limpar(selUf, "Selecione o estado...");
+    const ufs = Array.from(new Set(comRegiao.map(a => a.uf)))
+        .sort((a, b) => (NOMES_UF[a] || a).localeCompare(NOMES_UF[b] || b, "pt-BR"));
+    ufs.forEach(uf => addOpcao(selUf, uf, (NOMES_UF[uf] || uf) + " (" + uf + ")"));
+    if (semRegiao.length) addOpcao(selUf, "__SEM__", "Outros (região não informada)");
+
+    limpar(selCidade, "Selecione o município...");
+    limpar(selArmazem, "Selecione um Armazém...");
+    selUf.required = true;
+    selCidade.required = true;
+
+    selUf.addEventListener("change", aoMudarUf);
+    selCidade.addEventListener("change", aoMudarCidade);
+
+    if (ufs.length === 1 && !semRegiao.length) {
+        selUf.value = ufs[0];
+        aoMudarUf();
+    }
+}
+
+document.addEventListener("DOMContentLoaded", iniciarFiltroRegiao);

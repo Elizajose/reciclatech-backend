@@ -107,6 +107,19 @@
                             <label><i class="bi bi-geo-alt text-muted me-1"></i> Bairro/Localização</label>
                         </div>
 
+                        <div class="form-floating mb-3">
+                            <select class="form-select notranslate" id="ufZap" aria-label="Estado">
+                                <option value="" disabled selected>Selecione o estado...</option>
+                            </select>
+                            <label><i class="bi bi-map text-muted me-1"></i> Estado</label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <select class="form-select notranslate" id="cidadeZap" aria-label="Município">
+                                <option value="" disabled selected>Selecione o município...</option>
+                            </select>
+                            <label><i class="bi bi-buildings text-muted me-1"></i> Município</label>
+                        </div>
+
                         <!-- O Catador escolhe para qual armazém vai a coleta -->
                         <div class="form-floating mb-4">
                             <select class="form-select fw-bold text-primary notranslate" id="armazemDestino" name="idPlanilhaDestino" required>
@@ -114,6 +127,8 @@
                                 <option th:each="armazem : ${listaArmazens}"
                                         th:value="${armazem.idPlanilha}"
                                         th:data-telefone="${armazem.telefone}"
+                                        th:data-uf="${armazem.uf}"
+                                        th:data-cidade="${armazem.cidade}"
                                         th:text="${armazem.nome}"></option>
                             </select>
                             <label><i class="bi bi-shop text-muted me-1"></i> Para qual Armazém?</label>

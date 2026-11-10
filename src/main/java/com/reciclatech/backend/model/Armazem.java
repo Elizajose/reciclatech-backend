@@ -20,6 +20,13 @@ public class Armazem {
     private String telefone;
     private String endereco;
 
+    /** Estado (sigla) e município: usados no filtro por região da página inicial. */
+    @Column(length = 2)
+    private String uf;
+
+    @Column(length = 100)
+    private String cidade;
+
     @Column(unique = true)
     private String login;
 
@@ -52,6 +59,10 @@ public class Armazem {
     public String getTelefone() { return telefone; }
     public void setTelefone(String telefone) { this.telefone = telefone; }
     public String getEndereco() { return endereco; }
+    public String getUf() { return uf; }
+    public void setUf(String uf) { this.uf = uf; }
+    public String getCidade() { return cidade; }
+    public void setCidade(String cidade) { this.cidade = cidade; }
     public void setEndereco(String endereco) { this.endereco = endereco; }
 
     public String getLogin() { return login; }

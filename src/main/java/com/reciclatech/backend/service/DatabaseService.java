@@ -167,6 +167,8 @@ public class DatabaseService {
             dados.put("nome", a.getNome());
             dados.put("htmlId", a.getNome().replaceAll("[^a-zA-Z0-9]", "").toLowerCase());
             dados.put("telefone", a.getTelefone());
+            dados.put("uf", a.getUf());
+            dados.put("cidade", a.getCidade());
             dados.put("materiais", materialRepository.findAllByArmazemIdOrderByNomeAsc(a.getId()));
             cotacoes.add(dados);
         }

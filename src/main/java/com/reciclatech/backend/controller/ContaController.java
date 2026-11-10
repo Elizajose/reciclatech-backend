@@ -141,12 +141,13 @@ public class ContaController {
     @PostMapping("/armazens/novo")
     public String novoSalvar(@RequestParam String nome, @RequestParam(required = false) String cnpj,
                              @RequestParam String telefone, @RequestParam String endereco,
+                             @RequestParam String uf, @RequestParam String cidade,
                              @RequestParam(required = false, defaultValue = "START") String plano,
                              HttpSession session, Model model) {
         Long id = parceiroLogado(session);
         if (id == null) return "redirect:/conta/login";
         try {
-            parceiroService.cadastrarArmazem(id, nome, cnpj, telefone, endereco, plano);
+            parceiroService.cadastrarArmazem(id, nome, cnpj, telefone, endereco, uf, cidade, plano);
             return "redirect:/conta/armazens?criado=true";
         } catch (IllegalArgumentException e) {
             model.addAttribute("erro", e.getMessage());
@@ -154,8 +155,24 @@ public class ContaController {
             model.addAttribute("cnpj", cnpj);
             model.addAttribute("telefone", telefone);
             model.addAttribute("endereco", endereco);
+            model.addAttribute("uf", uf);
+            model.addAttribute("cidade", cidade);
             model.addAttribute("plano", plano);
             return "conta-armazem-novo";
+        }
+    }
+
+    /** Informa (ou corrige) estado e município de um armazém do próprio dono. */
+    @PostMapping("/armazens/{id}/regiao")
+    public String salvarRegiao(@PathVariable Long id, @RequestParam String uf, @RequestParam String cidade,
+                               HttpSession session) {
+        Long parceiroId = parceiroLogado(session);
+        if (parceiroId == null) return "redirect:/conta/login";
+        try {
+            parceiroService.definirRegiao(parceiroId, id, uf, cidade);
+            return "redirect:/conta/armazens?regiao=ok";
+        } catch (IllegalArgumentException e) {
+            return "redirect:/conta/armazens?erro=regiao";
         }
     }
 
