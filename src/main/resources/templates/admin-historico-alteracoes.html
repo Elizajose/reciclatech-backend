@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
+<head>
+    <title>Histórico de Alterações - Coletaê</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-body-tertiary p-3 p-md-5">
+<div class="container-lg">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="fw-bold text-body-emphasis m-0">
+            <i class="bi bi-clock-history text-success me-2"></i> Histórico de Alterações
+        </h3>
+        <a href="/admin/precos" class="btn btn-secondary shadow-sm"><i class="bi bi-arrow-left"></i> Voltar aos Preços</a>
+    </div>
+
+    <p class="text-body-secondary small">
+        Cada vez que um preço, material, despesa ou preço VIP é criado, alterado ou excluído, o sistema registra aqui
+        o valor antigo, o novo, quem fez e quando. Este registro não pode ser editado nem apagado pelo sistema.
+    </p>
+
+    <ul class="nav nav-pills mb-3 gap-1">
+        <li class="nav-item"><a class="nav-link" th:classappend="${tipo == 'TODOS'} ? 'active'" href="/admin/historico-alteracoes">Tudo</a></li>
+        <li class="nav-item"><a class="nav-link" th:classappend="${tipo == 'MATERIAL'} ? 'active'" href="/admin/historico-alteracoes?tipo=MATERIAL">Materiais e preços</a></li>
+        <li class="nav-item"><a class="nav-link" th:classappend="${tipo == 'PRECO_VIP'} ? 'active'" href="/admin/historico-alteracoes?tipo=PRECO_VIP">Preços VIP</a></li>
+        <li class="nav-item"><a class="nav-link" th:classappend="${tipo == 'DESPESA'} ? 'active'" href="/admin/historico-alteracoes?tipo=DESPESA">Despesas</a></li>
+    </ul>
+
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 bg-body">
+                <thead class="table-light">
+                <tr>
+                    <th class="ps-3">Quando</th>
+                    <th>O que</th>
+                    <th>Ação</th>
+                    <th>Antes</th>
+                    <th>Depois</th>
+                    <th class="pe-3">Quem</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="r : ${registros}">
+                    <td class="ps-3 text-nowrap small" th:text="${#temporals.format(r.dataHora, 'dd/MM/yyyy HH:mm')}">11/11/2026 09:00</td>
+                    <td>
+                        <span class="fw-bold text-uppercase" th:text="${r.referencia}">LATINHA</span>
+                        <span th:if="${r.unidade != null}" class="badge bg-secondary-subtle text-secondary border ms-1" th:text="${r.unidade}">KG</span>
+                        <div class="small text-body-secondary"
+                             th:text="${r.entidade == 'MATERIAL' ? 'Material' : (r.entidade == 'DESPESA' ? 'Despesa' : 'Preço VIP')}">Material</div>
+                    </td>
+                    <td>
+                        <span th:if="${r.acao == 'CRIADO'}" class="badge bg-success">Criado</span>
+                        <span th:if="${r.acao == 'PRECO_ALTERADO'}" class="badge bg-warning text-dark">Preço alterado</span>
+                        <span th:if="${r.acao == 'EXCLUIDO'}" class="badge bg-danger">Excluído</span>
+                    </td>
+                    <td class="text-nowrap">
+                        <span th:if="${r.valorAnterior != null}" th:text="${'R$ ' + #numbers.formatDecimal(r.valorAnterior, 1, 'POINT', 2, 'COMMA')}">R$ 7,50</span>
+                        <span th:if="${r.valorAnterior == null}" class="text-muted">-</span>
+                    </td>
+                    <td class="text-nowrap fw-bold">
+                        <span th:if="${r.valorNovo != null}" th:text="${'R$ ' + #numbers.formatDecimal(r.valorNovo, 1, 'POINT', 2, 'COMMA')}">R$ 8,00</span>
+                        <span th:if="${r.valorNovo == null}" class="text-muted">-</span>
+                        <span th:if="${r.variacaoPercentual != null}"
+                              th:class="${r.variacaoPercentual.signum() >= 0} ? 'badge bg-success-subtle text-success ms-1' : 'badge bg-danger-subtle text-danger ms-1'"
+                              th:text="${(r.variacaoPercentual.signum() >= 0 ? '+' : '') + r.variacaoPercentual + '%'}">+6,7%</span>
+                    </td>
+                    <td class="pe-3 small" th:text="${r.responsavel}">Proprietário</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(registros)}">
+                    <td colspan="6" class="text-center py-4 text-muted fst-italic">
+                        Nenhuma alteração registrada ainda. As próximas aparecerão aqui.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <p class="small text-body-secondary mt-2">Mostrando até as 500 alterações mais recentes.</p>
+</div>
+</body>
+</html>

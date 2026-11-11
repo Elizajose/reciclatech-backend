@@ -30,6 +30,8 @@ public class DatabaseService {
     @Autowired private PrecoVipRepository precoVipRepository;
     @Autowired private FuncionarioRepository funcionarioRepository;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private HistoricoAlteracaoRepository historicoRepository;
+    @Autowired private ParceiroRepository parceiroRepository;
     @Autowired private HttpSession session;
 
 
@@ -45,6 +47,48 @@ public class DatabaseService {
 
     private Armazem getArmazemLogado() {
         return armazemRepository.findById(getArmazemIdLogado()).orElse(null);
+    }
+
+    // ---- AUDITORIA (fase 8.5): grava na mesma transação da alteração; se um falhar, os dois voltam atrás ----
+
+    private String responsavelAtual() {
+        try {
+            Object parceiroId = session.getAttribute("parceiroId");
+            if (parceiroId != null) {
+                String email = parceiroRepository.findById(Long.parseLong(parceiroId.toString()))
+                        .map(Parceiro::getEmail).orElse(null);
+                if (email != null) return "Proprietário (" + email + ")";
+            }
+            Object nome = session.getAttribute("nomeFuncionarioLogado");
+            if (nome != null) return nome.toString();
+        } catch (RuntimeException e) { /* sem sessão */ }
+        return "Não identificado";
+    }
+
+    private void auditar(String entidade, String acao, String referencia, String unidade, BigDecimal anterior, BigDecimal novo) {
+        HistoricoAlteracao h = new HistoricoAlteracao();
+        h.setArmazemId(getArmazemIdLogado());
+        h.setDataHora(java.time.LocalDateTime.now(ZoneId.of("America/Recife")));
+        h.setEntidade(entidade);
+        h.setAcao(acao);
+        h.setReferencia(referencia != null && referencia.length() > 255 ? referencia.substring(0, 255) : referencia);
+        h.setUnidade(unidade);
+        h.setValorAnterior(anterior);
+        h.setValorNovo(novo);
+        h.setResponsavel(responsavelAtual());
+        historicoRepository.save(h);
+    }
+
+    public List<HistoricoAlteracao> listarHistorico(String entidade, int limite) {
+        org.springframework.data.domain.Pageable p = org.springframework.data.domain.PageRequest.of(0, Math.max(1, Math.min(limite, 1000)));
+        return (entidade == null || entidade.isBlank())
+                ? historicoRepository.findByArmazemIdOrderByDataHoraDescIdDesc(getArmazemIdLogado(), p)
+                : historicoRepository.findByArmazemIdAndEntidadeOrderByDataHoraDescIdDesc(getArmazemIdLogado(), entidade, p);
+    }
+
+    private static String mascararCpf(String cpf) {
+        String d = cpf == null ? "" : cpf.replaceAll("\\D", "");
+        return d.length() >= 4 ? "CPF final " + d.substring(d.length() - 4) : "CPF";
     }
 
     private Optional<Usuario> buscarUsuarioPorIdOuTelefone(String idOuTelefone) {
@@ -205,24 +249,34 @@ public class DatabaseService {
         return materialRepository.findAllByArmazemIdOrderByNomeAsc(Long.parseLong(sheetId));
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void salvarMaterial(Material material) throws IOException {
         material.setArmazem(getArmazemLogado());
         materialRepository.save(material);
+        auditar(HistoricoAlteracao.MATERIAL, HistoricoAlteracao.CRIADO, material.getNome(), material.getUnidade(), null, material.getPrecoPorKg());
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void atualizarPrecoMaterial(Long id, BigDecimal novoPreco) throws IOException {
-        materialRepository.findById(id).ifPresent(m -> {
-            if (m.getArmazem().getId().equals(getArmazemIdLogado())) {
-                m.setPrecoPorKg(novoPreco);
-                materialRepository.save(m);
-            }
-        });
+        Optional<Material> achado = materialRepository.findById(id);
+        if (achado.isEmpty() || achado.get().getArmazem() == null
+                || !achado.get().getArmazem().getId().equals(getArmazemIdLogado())) return;
+        Material m = achado.get();
+        BigDecimal anterior = m.getPrecoPorKg();
+        if (anterior != null && anterior.compareTo(novoPreco) == 0) return; // nada mudou: nada a registrar
+        m.setPrecoPorKg(novoPreco);
+        materialRepository.save(m);
+        auditar(HistoricoAlteracao.MATERIAL, HistoricoAlteracao.PRECO_ALTERADO, m.getNome(), m.getUnidade(), anterior, novoPreco);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void deletarMaterial(Long id) throws IOException {
-        materialRepository.findById(id).ifPresent(m -> {
-            if (m.getArmazem().getId().equals(getArmazemIdLogado())) materialRepository.delete(m);
-        });
+        Optional<Material> achado = materialRepository.findById(id);
+        if (achado.isEmpty() || achado.get().getArmazem() == null
+                || !achado.get().getArmazem().getId().equals(getArmazemIdLogado())) return;
+        Material m = achado.get();
+        auditar(HistoricoAlteracao.MATERIAL, HistoricoAlteracao.EXCLUIDO, m.getNome(), m.getUnidade(), m.getPrecoPorKg(), null);
+        materialRepository.delete(m);
     }
 
 
@@ -447,6 +501,7 @@ public class DatabaseService {
     // 6. FINANCEIRO, CAIXA E DESPESAS
     // =========================================================================
 
+    @Transactional(rollbackFor = Exception.class)
     public void salvarDespesa(String descricao, BigDecimal valor) throws IOException {
         Despesa d = new Despesa();
         d.setArmazem(getArmazemLogado());
@@ -454,6 +509,7 @@ public class DatabaseService {
         d.setValor(valor);
         d.setDataDespesa(LocalDate.now(ZoneId.of("America/Recife")));
         despesaRepository.save(d);
+        auditar(HistoricoAlteracao.DESPESA, HistoricoAlteracao.CRIADO, descricao, null, null, valor);
     }
 
     public List<Map<String, String>> listarDespesas() throws IOException {
@@ -473,13 +529,16 @@ public class DatabaseService {
                 .mapToDouble(d -> d.getValor().doubleValue()).sum();
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void deletarDespesa(String id) throws IOException {
         // só apaga se a despesa for do armazém logado
-        despesaRepository.findById(Long.parseLong(id)).ifPresent(d -> {
-            if (d.getArmazem() != null && d.getArmazem().getId().equals(getArmazemIdLogado())) {
-                despesaRepository.delete(d);
-            }
-        });
+        Optional<Despesa> achada = despesaRepository.findById(Long.parseLong(id));
+        if (achada.isPresent() && achada.get().getArmazem() != null
+                && achada.get().getArmazem().getId().equals(getArmazemIdLogado())) {
+            Despesa d = achada.get();
+            auditar(HistoricoAlteracao.DESPESA, HistoricoAlteracao.EXCLUIDO, d.getDescricao(), null, d.getValor(), null);
+            despesaRepository.delete(d);
+        }
     }
 
     /** Mesmo critério da lista pública da home: armazém ATIVO, ou TRIAL com até 7 dias de uso. */
@@ -553,19 +612,30 @@ public class DatabaseService {
         }).collect(Collectors.toList());
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void salvarFornecedorVip(String cpf, String material, BigDecimal preco) throws IOException {
-        PrecoVip p = new PrecoVip();
-        p.setArmazem(getArmazemLogado());
-        p.setCpfCatador(cpf.replaceAll("\\D", ""));
+        String cpfLimpo = cpf.replaceAll("\\D", "");
+        Optional<PrecoVip> existente = precoVipRepository.findByArmazemIdAndCpfCatadorAndMaterialNome(getArmazemIdLogado(), cpfLimpo, material);
+        String ref = material + " - " + mascararCpf(cpfLimpo);
+        BigDecimal anterior = existente.map(PrecoVip::getPrecoEspecial).orElse(null);
+        PrecoVip p = existente.orElseGet(PrecoVip::new);
+        if (existente.isEmpty()) p.setArmazem(getArmazemLogado());
+        p.setCpfCatador(cpfLimpo);
         p.setMaterialNome(material);
         p.setPrecoEspecial(preco);
         precoVipRepository.save(p);
+        if (anterior == null) auditar(HistoricoAlteracao.PRECO_VIP, HistoricoAlteracao.CRIADO, ref, null, null, preco);
+        else if (anterior.compareTo(preco) != 0) auditar(HistoricoAlteracao.PRECO_VIP, HistoricoAlteracao.PRECO_ALTERADO, ref, null, anterior, preco);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void deletarFornecedorVip(String cpf, String material) throws IOException {
         String cpfLimpo = cpf.replaceAll("\\D", "");
         precoVipRepository.findByArmazemIdAndCpfCatadorAndMaterialNome(getArmazemIdLogado(), cpfLimpo, material)
-                .ifPresent(precoVipRepository::delete);
+                .ifPresent(p -> {
+                    auditar(HistoricoAlteracao.PRECO_VIP, HistoricoAlteracao.EXCLUIDO, material + " - " + mascararCpf(cpfLimpo), null, p.getPrecoEspecial(), null);
+                    precoVipRepository.delete(p);
+                });
     }
 
 

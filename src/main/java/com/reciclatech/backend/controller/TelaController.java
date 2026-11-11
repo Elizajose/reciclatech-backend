@@ -525,7 +525,7 @@ public class TelaController {
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
 
         Material m = new Material(); m.setNome(nome); m.setUnidade(unidade); m.setPrecoPorKg(BigDecimal.valueOf(preco));
-        try { googleSheetsService.salvarMaterial(m); } catch (Exception e) { }
+        try { googleSheetsService.salvarMaterial(m); } catch (Exception e) { System.err.println("Erro ao salvar material: " + e.getMessage()); }
         return "redirect:/admin/precos";
     }
 
@@ -534,7 +534,7 @@ public class TelaController {
         if(session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
-        try { googleSheetsService.atualizarPrecoMaterial(id, BigDecimal.valueOf(novoPreco)); } catch (Exception e) { }
+        try { googleSheetsService.atualizarPrecoMaterial(id, BigDecimal.valueOf(novoPreco)); } catch (Exception e) { System.err.println("Erro ao atualizar preço: " + e.getMessage()); }
         return "redirect:/admin/precos";
     }
 
@@ -543,8 +543,23 @@ public class TelaController {
         if(session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
-        try { googleSheetsService.deletarMaterial(id); } catch (Exception e) { }
+        try { googleSheetsService.deletarMaterial(id); } catch (Exception e) { System.err.println("Erro ao excluir material: " + e.getMessage()); }
         return "redirect:/admin/precos";
+    }
+
+    /** Histórico de alterações de preços e despesas: somente leitura, somente para o dono (GESTOR). */
+    @GetMapping("/admin/historico-alteracoes")
+    public String historicoAlteracoes(@RequestParam(required = false) String tipo, Model model, HttpSession s, HttpServletResponse response) {
+        if (s.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (s.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
+        if (!"GESTOR".equalsIgnoreCase((String) s.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
+        String entidade = null;
+        if ("MATERIAL".equals(tipo) || "DESPESA".equals(tipo) || "PRECO_VIP".equals(tipo)) entidade = tipo;
+        model.addAttribute("tipo", entidade == null ? "TODOS" : entidade);
+        model.addAttribute("registros", googleSheetsService.listarHistorico(entidade, 500));
+        return "admin-historico-alteracoes";
     }
 
     @GetMapping("/admin/fornecedores-vip")
