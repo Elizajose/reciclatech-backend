@@ -307,13 +307,8 @@ public class TelaController {
                 );
                 loteDeVendas.add(row);
             }
-            googleSheetsService.registrarVendasEmLote(loteDeVendas);
-
-            if(cpfFinal != null && !cpfFinal.trim().isEmpty()) {
-                googleSheetsService.atualizarCpfUsuario(idVendedor, cpfFinal);
-            }
-
-            googleSheetsService.marcarSolicitacaoComoConcluida(idVendedor);
+            boolean gravou = googleSheetsService.finalizarAtendimento(idVendedor, cpfFinal, loteDeVendas);
+            if (!gravou) return "redirect:/admin/coletas?aviso=ja_finalizado";
             return "redirect:/extrato/" + idVendedor;
         } catch (Exception e) {
             System.err.println("Erro ao finalizar coleta: " + e.getMessage());
@@ -322,10 +317,11 @@ public class TelaController {
         }
     }
 
-    @GetMapping("/admin/cancelar/{id}")
-    public String cancelarColeta(@PathVariable String id, HttpSession session) {
+    @PostMapping("/admin/cancelar")
+    public String cancelarColeta(@RequestParam String id, HttpSession session) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
-        try { googleSheetsService.marcarSolicitacaoComoConcluida(id); } catch (Exception e) { }
+        try { googleSheetsService.cancelarSolicitacao(id); }
+        catch (Exception e) { System.err.println("Erro ao cancelar coleta: " + e.getMessage()); return "redirect:/admin/coletas?erro=cancelar"; }
         return "redirect:/admin/coletas";
     }
 
@@ -612,8 +608,8 @@ public class TelaController {
             Double totalPagoCatadores = 0.0;
             Double pesoCompradoHoje = 0.0;
 
-            Set<Long> clientesReaisSet = new HashSet<>();
-            Set<Long> expedicoesSet = new HashSet<>();
+            Set<String> clientesReaisSet = new HashSet<>();
+            Set<String> expedicoesSet = new HashSet<>();
 
             for (Oferta o : historico) {
                 if (o.getMaterial() == null || o.getPeso() == null) continue;
@@ -631,9 +627,9 @@ public class TelaController {
 
                 if (o.getUsuario() != null) {
                     if (status.equals("VENDIDO") || status.equals("AJUSTE_POSITIVO")) {
-                        clientesReaisSet.add(o.getUsuario().getId());
+                        clientesReaisSet.add(o.getUsuario().getId() + "|" + o.getData());
                     } else if (status.equals("SAIDA_INDUSTRIA")) {
-                        expedicoesSet.add(o.getUsuario().getId());
+                        expedicoesSet.add(o.getUsuario().getId() + "|" + o.getData());
                     }
                 }
 

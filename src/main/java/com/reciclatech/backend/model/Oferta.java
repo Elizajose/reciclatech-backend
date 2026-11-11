@@ -30,7 +30,7 @@ public class Oferta {
     private LocalDate dataCriacao = LocalDate.now();
 
     public enum StatusOferta {
-        DISPONIVEL, EM_ATENDIMENTO, FINALIZADO, VENDIDO, SAIDA_INDUSTRIA, AJUSTE_POSITIVO, AJUSTE_NEGATIVO
+        DISPONIVEL, EM_ATENDIMENTO, FINALIZADO, CANCELADO, VENDIDO, SAIDA_INDUSTRIA, AJUSTE_POSITIVO, AJUSTE_NEGATIVO
     }
 
     public Oferta() {}

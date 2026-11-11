@@ -30,7 +30,7 @@
             <h4 class="m-0 fw-bold"><i class="bi bi-check-all me-2"></i> Fechamento e Pagamento</h4>
         </div>
 
-        <form action="/admin/confirmar-finalizacao" method="post">
+        <form action="/admin/confirmar-finalizacao" method="post" onsubmit="var b=this.querySelector('button[type=submit]'); if(b.disabled) return false; b.disabled=true; b.innerText='Gravando...';">
             <input type="hidden" name="idVendedor" th:value="${vendedor.id}">
 
             <div class="card-body p-4 p-md-5 bg-body">

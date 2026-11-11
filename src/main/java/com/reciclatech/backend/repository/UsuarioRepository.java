@@ -8,5 +8,6 @@ import java.util.Optional;
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByTelefoneAndArmazemId(String telefone, Long armazemId);
+    List<Usuario> findAllByTelefoneAndArmazemIdOrderByIdAsc(String telefone, Long armazemId);
     List<Usuario> findAllByArmazemId(Long armazemId);
 }

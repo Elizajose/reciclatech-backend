@@ -53,14 +53,31 @@ public class DatabaseService {
         try {
             Long id = Long.parseLong(idOuTelefone);
             Optional<Usuario> u = usuarioRepository.findById(id);
-            if (u.isPresent() && u.get().getArmazem().getId().equals(getArmazemIdLogado())) {
+            if (u.isPresent() && u.get().getArmazem() != null && u.get().getArmazem().getId().equals(getArmazemIdLogado())) {
                 return u;
             }
         } catch (NumberFormatException e) {
             // Não é ID numérico, busca pelo telefone
         }
 
-        return usuarioRepository.findByTelefoneAndArmazemId(idOuTelefone, getArmazemIdLogado());
+        // Tolerante a duplicados antigos (um Usuario novo por pedido): pega o mais recente.
+        List<Usuario> porTelefone = usuarioRepository.findAllByTelefoneAndArmazemIdOrderByIdAsc(idOuTelefone, getArmazemIdLogado());
+        return porTelefone.isEmpty() ? Optional.empty() : Optional.of(porTelefone.get(porTelefone.size() - 1));
+    }
+
+    /** IDs de todos os Usuarios que a chave (id ou telefone) representa neste armazém. */
+    private List<Long> idsUsuariosPorChave(String idOuTelefone) {
+        List<Long> ids = new ArrayList<>();
+        if (idOuTelefone == null || idOuTelefone.trim().isEmpty()) return ids;
+        try {
+            Optional<Usuario> u = usuarioRepository.findById(Long.parseLong(idOuTelefone));
+            if (u.isPresent() && u.get().getArmazem() != null && u.get().getArmazem().getId().equals(getArmazemIdLogado())) {
+                ids.add(u.get().getId());
+                return ids;
+            }
+        } catch (NumberFormatException e) { /* é telefone */ }
+        for (Usuario u : usuarioRepository.findAllByTelefoneAndArmazemIdOrderByIdAsc(idOuTelefone, getArmazemIdLogado())) ids.add(u.getId());
+        return ids;
     }
 
 
@@ -235,46 +252,73 @@ public class DatabaseService {
         });
     }
 
+    /** Atendimento de balcão: sempre cria um cliente novo (telefone é chave temporária). */
+    @Transactional(rollbackFor = Exception.class)
     public void salvarSolicitacaoInicial(Usuario usuario, String endereco) throws IOException {
-        salvarSolicitacaoInicial(usuario, endereco, getArmazemIdLogado().toString());
+        salvarSolicitacaoInicial(usuario, endereco, getArmazemIdLogado().toString(), false);
     }
 
+    /** Pedido vindo do formulário público: reaproveita o cliente pelo telefone naquele armazém. */
+    @Transactional(rollbackFor = Exception.class)
     public void salvarSolicitacaoInicial(Usuario usuario, String endereco, String idArmazemDestino) throws IOException {
+        salvarSolicitacaoInicial(usuario, endereco, idArmazemDestino, true);
+    }
+
+    private void salvarSolicitacaoInicial(Usuario usuario, String endereco, String idArmazemDestino, boolean reaproveitar) throws IOException {
         Long armazemId = idArmazemDestino != null ? Long.parseLong(idArmazemDestino) : getArmazemIdLogado();
         Armazem destino = armazemRepository.findById(armazemId)
                 .orElseThrow(() -> new IOException("Armazém de destino não encontrado"));
 
-        usuario.setArmazem(destino);
-        usuario.setEndereco(endereco);
-        usuario.prePersist();
-        usuario = usuarioRepository.save(usuario);
+        if (reaproveitar && usuario.getTelefone() != null) {
+            List<Usuario> existentes = usuarioRepository.findAllByTelefoneAndArmazemIdOrderByIdAsc(usuario.getTelefone(), armazemId);
+            if (!existentes.isEmpty()) {
+                Usuario atual = existentes.get(existentes.size() - 1);
+                atual.setNome(usuario.getNome());
+                atual.setEndereco(endereco);
+                usuarioRepository.save(atual);
+                // já existe pedido aberto deste cliente? então é duplo clique/reenvio: não cria outro.
+                if (!ofertaRepository.findAllByUsuarioIdAndStatusIn(atual.getId(), STATUS_ABERTOS).isEmpty()) return;
+                usuario = atual;
+            }
+        }
+
+        if (usuario.getId() == null) {
+            usuario.setArmazem(destino);
+            usuario.setEndereco(endereco);
+            usuario.prePersist();
+            usuario = usuarioRepository.save(usuario);
+        }
 
         Oferta oferta = new Oferta();
         oferta.setArmazem(destino);
         oferta.setUsuario(usuario);
         oferta.setMaterial("Solicitação de Coleta");
         oferta.setPeso(0.0);
+        oferta.setEndereco(endereco);
         oferta.setPrecoEstimado(BigDecimal.ZERO);
         oferta.setStatus(Oferta.StatusOferta.DISPONIVEL);
         oferta.setData(LocalDate.now(ZoneId.of("America/Recife")).toString());
         ofertaRepository.save(oferta);
     }
 
-    public List<Usuario> buscarUsuariosComColetasPendentes() throws IOException {
-        String hoje = LocalDate.now(ZoneId.of("America/Recife")).toString();
-        List<Oferta> pendentes = ofertaRepository.findAllByArmazemIdOrderByDataCriacaoDesc(getArmazemIdLogado()).stream()
-                .filter(o -> (o.getStatus() == Oferta.StatusOferta.DISPONIVEL || o.getStatus() == Oferta.StatusOferta.EM_ATENDIMENTO) && o.getData().equals(hoje))
-                .collect(Collectors.toList());
+    private static final List<Oferta.StatusOferta> STATUS_ABERTOS =
+            Arrays.asList(Oferta.StatusOferta.DISPONIVEL, Oferta.StatusOferta.EM_ATENDIMENTO);
 
-        Set<Usuario> usuarios = new HashSet<>();
-        for (Oferta o : pendentes) {
-            if(o.getUsuario() != null) {
-                Usuario u = o.getUsuario();
+    public List<Usuario> buscarUsuariosComColetasPendentes() throws IOException {
+        // Fila = todo pedido ainda aberto, de qualquer data (antes só aparecia o de hoje).
+        Map<Long, Usuario> porId = new LinkedHashMap<>();
+        for (Oferta o : ofertaRepository.findAllByArmazemIdOrderByDataCriacaoDesc(getArmazemIdLogado())) {
+            if (o.getUsuario() == null || !STATUS_ABERTOS.contains(o.getStatus())) continue;
+            Usuario u = o.getUsuario();
+            Usuario existente = porId.get(u.getId());
+            if (existente == null) {
                 u.setStatusPlanilha(o.getStatus().toString());
-                usuarios.add(u);
+                porId.put(u.getId(), u);
+            } else if (o.getStatus() == Oferta.StatusOferta.EM_ATENDIMENTO) {
+                existente.setStatusPlanilha("EM_ATENDIMENTO");
             }
         }
-        return new ArrayList<>(usuarios);
+        return new ArrayList<>(porId.values());
     }
 
     public List<Usuario> buscarUsuariosComVendasHoje() throws IOException {
@@ -328,23 +372,50 @@ public class DatabaseService {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void marcarComoEmAtendimento(String idVendedor) throws IOException {
-        mudarStatusOferta(idVendedor, Oferta.StatusOferta.DISPONIVEL, Oferta.StatusOferta.EM_ATENDIMENTO);
+        mudarStatusOferta(idVendedor, Collections.singletonList(Oferta.StatusOferta.DISPONIVEL), Oferta.StatusOferta.EM_ATENDIMENTO);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void marcarSolicitacaoComoConcluida(String idVendedor) throws IOException {
-        mudarStatusOferta(idVendedor, Oferta.StatusOferta.EM_ATENDIMENTO, Oferta.StatusOferta.FINALIZADO);
-        mudarStatusOferta(idVendedor, Oferta.StatusOferta.DISPONIVEL, Oferta.StatusOferta.FINALIZADO);
+        mudarStatusOferta(idVendedor, STATUS_ABERTOS, Oferta.StatusOferta.FINALIZADO);
     }
 
-    private void mudarStatusOferta(String idVendedor, Oferta.StatusOferta de, Oferta.StatusOferta para) {
-        buscarUsuarioPorIdOuTelefone(idVendedor).ifPresent(u -> {
-            List<Oferta> ofertas = ofertaRepository.findAllByUsuarioIdAndStatusIn(u.getId(), Arrays.asList(de));
-            for(Oferta o : ofertas) {
-                o.setStatus(para);
-                ofertaRepository.save(o);
-            }
-        });
+    /**
+     * Fecha o atendimento inteiro numa única transação: grava as vendas, atualiza o CPF e
+     * encerra o pedido. Se qualquer passo falhar, nada é gravado. Se o pedido já foi
+     * encerrado (duplo clique, aba repetida), não grava nada e devolve false.
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean finalizarAtendimento(String idVendedor, String cpfFinal, List<List<Object>> linhasParaSalvar) throws IOException {
+        List<Long> ids = idsUsuariosPorChave(idVendedor);
+        if (ids.isEmpty()) return false;
+        List<Oferta> abertos = ofertaRepository.travarPorUsuariosEStatus(ids, STATUS_ABERTOS);
+        if (abertos.isEmpty()) return false;
+
+        registrarVendasEmLote(linhasParaSalvar);
+        atualizarCpfUsuario(idVendedor, cpfFinal);
+        for (Oferta o : abertos) {
+            o.setStatus(Oferta.StatusOferta.FINALIZADO);
+            ofertaRepository.save(o);
+        }
+        return true;
+    }
+
+    /** Cancela pedido aberto. Fica registrado como CANCELADO (não some nem vira "finalizado"). */
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelarSolicitacao(String idVendedor) throws IOException {
+        mudarStatusOferta(idVendedor, STATUS_ABERTOS, Oferta.StatusOferta.CANCELADO);
+    }
+
+    private void mudarStatusOferta(String idVendedor, List<Oferta.StatusOferta> de, Oferta.StatusOferta para) {
+        List<Long> ids = idsUsuariosPorChave(idVendedor);
+        if (ids.isEmpty()) return;
+        for (Oferta o : ofertaRepository.travarPorUsuariosEStatus(ids, de)) {
+            o.setStatus(para);
+            ofertaRepository.save(o);
+        }
     }
 
     public List<Oferta> buscarVendasPorUsuario(String idOuTelefone) throws IOException {
