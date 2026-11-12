@@ -525,6 +525,11 @@ public class DatabaseService {
         }).collect(Collectors.toList());
     }
 
+    /** Despesas do armazém logado (entidades), usadas no cálculo de lucro por período. */
+    public List<Despesa> listarDespesasBrutas() throws IOException {
+        return despesaRepository.findAllByArmazemIdOrderByDataDespesaDesc(getArmazemIdLogado());
+    }
+
     public Double calcularDespesasDoDia(String dataHoje) throws IOException {
         LocalDate data = LocalDate.parse(dataHoje);
         return despesaRepository.findAllByArmazemIdAndDataDespesa(getArmazemIdLogado(), data).stream()

@@ -2,6 +2,7 @@ package com.reciclatech.backend.controller;
 
 import com.reciclatech.backend.model.*;
 import com.reciclatech.backend.repository.*;
+import com.reciclatech.backend.service.AnaliseFinanceira;
 import com.reciclatech.backend.service.DatabaseService;
 import com.reciclatech.backend.service.LimitadorPublico;
 import com.reciclatech.backend.service.LoginThrottle;
@@ -616,7 +617,10 @@ public class TelaController {
     // =========================================================================
 
     @GetMapping("/admin/analises")
-    public String mostrarAnalises(Model model, HttpSession session, HttpServletResponse response) {
+    public String mostrarAnalises(@RequestParam(required = false) String periodo,
+                                  @RequestParam(required = false) String de,
+                                  @RequestParam(required = false) String ate,
+                                  Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
@@ -741,6 +745,48 @@ public class TelaController {
 
             model.addAttribute("mapaPrecos", mapaPrecos);
             model.addAttribute("patrimonioTotal", patrimonioTotal);
+
+            // ---- Resultado do período (lucro real com custo médio) ----
+            LocalDate hojeData = LocalDate.parse(dataHoje);
+            LocalDate periodoDe = hojeData, periodoAte = hojeData;
+            String periodoSel = periodo == null ? "hoje" : periodo;
+            switch (periodoSel) {
+                case "7d": periodoDe = hojeData.minusDays(6); break;
+                case "30d": periodoDe = hojeData.minusDays(29); break;
+                case "mes": periodoDe = hojeData.withDayOfMonth(1); break;
+                case "custom":
+                    try {
+                        periodoDe = LocalDate.parse(de);
+                        periodoAte = LocalDate.parse(ate);
+                    } catch (Exception e) {
+                        periodoDe = hojeData; periodoAte = hojeData; periodoSel = "hoje";
+                    }
+                    break;
+                default: periodoSel = "hoje";
+            }
+            if (periodoAte.isAfter(hojeData)) periodoAte = hojeData;
+            if (periodoDe.isAfter(periodoAte)) periodoDe = periodoAte;
+            if (java.time.temporal.ChronoUnit.DAYS.between(periodoDe, periodoAte) > 366) periodoDe = periodoAte.minusDays(366);
+
+            List<AnaliseFinanceira.Movimento> movimentos = new ArrayList<>();
+            for (Oferta o : historico) {
+                if (o.getMaterial() == null || o.getPeso() == null || o.getStatus() == null || o.getData() == null) continue;
+                try {
+                    movimentos.add(new AnaliseFinanceira.Movimento(o.getId(), o.getMaterial(), o.getStatus().name(),
+                            BigDecimal.valueOf(o.getPeso()), o.getPrecoEstimado(), LocalDate.parse(o.getData()),
+                            o.getUsuario() != null ? o.getUsuario().getNome() : null));
+                } catch (Exception e) {
+                    log.debug("Movimento com data inválida ignorado na análise: id={}", o.getId());
+                }
+            }
+            List<AnaliseFinanceira.DespesaMov> despesasMov = new ArrayList<>();
+            for (Despesa d : googleSheetsService.listarDespesasBrutas()) {
+                despesasMov.add(new AnaliseFinanceira.DespesaMov(d.getDataDespesa(), d.getValor()));
+            }
+            model.addAttribute("fin", AnaliseFinanceira.calcular(movimentos, despesasMov, periodoDe, periodoAte));
+            model.addAttribute("periodoSel", periodoSel);
+            model.addAttribute("periodoDe", periodoDe.toString());
+            model.addAttribute("periodoAte", periodoAte.toString());
 
             return "analises";
 
