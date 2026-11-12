@@ -72,11 +72,14 @@
                     <td class="text-uppercase" th:text="${vip.material}"></td>
                     <td class="text-success fw-bold">R$ <span th:text="${vip.preco}"></span></td>
                     <td class="text-end pe-4">
-                        <a th:href="@{'/admin/fornecedores-vip/deletar?cpf=' + ${vip.cpf} + '&material=' + ${vip.material}}"
-                           class="btn btn-outline-danger btn-sm shadow-sm"
-                           onclick="confirmarRemocaoVip(event)">
-                            <i class="bi bi-trash3-fill"></i>
-                        </a>
+                        <form action="/admin/fornecedores-vip/deletar" method="post" class="d-inline m-0"
+                              onsubmit="return confirm('Deseja remover este preço especial?')">
+                            <input type="hidden" name="cpf" th:value="${vip.cpf}">
+                            <input type="hidden" name="material" th:value="${vip.material}">
+                            <button type="submit" class="btn btn-outline-danger btn-sm shadow-sm">
+                                <i class="bi bi-trash3-fill"></i>
+                            </button>
+                        </form>
                     </td>
                 </tr>
                 <tr th:if="${vips == null || vips.isEmpty()}">

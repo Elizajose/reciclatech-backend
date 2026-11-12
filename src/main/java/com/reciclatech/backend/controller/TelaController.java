@@ -3,6 +3,7 @@ package com.reciclatech.backend.controller;
 import com.reciclatech.backend.model.*;
 import com.reciclatech.backend.repository.*;
 import com.reciclatech.backend.service.DatabaseService;
+import com.reciclatech.backend.service.LimitadorPublico;
 import com.reciclatech.backend.service.LoginThrottle;
 import com.reciclatech.backend.service.ParceiroService;
 import jakarta.servlet.http.HttpSession;
@@ -22,6 +23,8 @@ import java.util.stream.Collectors;
 
 @Controller
 public class TelaController {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TelaController.class);
+
 
     @Autowired(required = false) private OfertaRepository ofertaRepository;
     @Autowired(required = false) private UsuarioRepository usuarioRepository;
@@ -30,6 +33,7 @@ public class TelaController {
     @Autowired private DatabaseService googleSheetsService;
     @Autowired private ParceiroService parceiroService;
     @Autowired private LoginThrottle throttle;
+    @Autowired private LimitadorPublico limitadorPublico;
 
     @Autowired(required = false)
     private org.springframework.mail.javamail.JavaMailSender mailSender;
@@ -84,10 +88,12 @@ public class TelaController {
     }
 
     @PostMapping("/login-admin")
-    public String login(@RequestParam String login, @RequestParam String senha, HttpSession session) {
+    public String login(@RequestParam String login, @RequestParam String senha, jakarta.servlet.http.HttpServletRequest request) {
+        HttpSession session = request.getSession(true);
         String chaveLogin = "op:" + login;
         if (throttle.bloqueado(chaveLogin)) return "redirect:/login?erro=tentativas";
         if ("master".equals(login) && senhaMasterValida(senha)) {
+            request.changeSessionId(); // evita fixação de sessão
             session.setAttribute("masterLogado", true);
             return "redirect:/master/painel";
         }
@@ -96,6 +102,7 @@ public class TelaController {
             Map<String, String> dadosUser = googleSheetsService.autenticarOperador(login, senha);
             if (dadosUser != null) {
                 throttle.sucesso(chaveLogin);
+                request.changeSessionId(); // evita fixação de sessão
                 session.setAttribute("adminLogado", true);
                 session.setAttribute("perfilUser", dadosUser.get("perfil"));
                 session.setAttribute("idPlanilhaAtiva", dadosUser.get("idPlanilha"));
@@ -131,21 +138,28 @@ public class TelaController {
         } catch (RuntimeException e) {
             return "redirect:/login?erro=suspenso";
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Erro inesperado", e);
         }
         throttle.falhou(chaveLogin);
         return "redirect:/login?erro=true";
     }
 
-    @GetMapping("/sair")
+    @PostMapping("/sair")
     public String logout(HttpSession session) {
         session.invalidate();
         return "redirect:/login";
     }
 
+    /** Links antigos de "sair" (GET) não encerram mais a sessão: apenas levam à tela de login. */
+    @GetMapping("/sair")
+    public String logoutLinkAntigo() {
+        return "redirect:/login";
+    }
+
     @PostMapping("/publicar")
     public String solicitarColeta(@RequestParam String endereco, @RequestParam String nomeVendedor,
-                                  @RequestParam String telefoneVendedor, @RequestParam String idPlanilhaDestino) {
+                                  @RequestParam String telefoneVendedor, @RequestParam String idPlanilhaDestino,
+                                  jakarta.servlet.http.HttpServletRequest request) {
         String zapLimpo = telefoneVendedor.replaceAll("\\D", "");
         if (nomeVendedor.isBlank() || nomeVendedor.length() > 120 || endereco.isBlank() || endereco.length() > 255
                 || zapLimpo.length() < 10 || zapLimpo.length() > 13) {
@@ -154,10 +168,15 @@ public class TelaController {
         if (!googleSheetsService.armazemAceitaSolicitacoes(idPlanilhaDestino)) {
             return "redirect:/?erro=armazem";
         }
+        // Freio contra abuso: 6 pedidos por 10 min por origem e 3 por hora por telefone/armazém
+        if (!limitadorPublico.permitir("ip:" + request.getRemoteAddr(), 6, 10 * 60 * 1000L)
+                || !limitadorPublico.permitir("tel:" + idPlanilhaDestino + ":" + zapLimpo, 3, 60 * 60 * 1000L)) {
+            return "redirect:/?erro=limite";
+        }
         Usuario novo = new Usuario();
         novo.setNome(nomeVendedor); novo.setTelefone(zapLimpo); novo.setEndereco(endereco); novo.setTipo(Usuario.TipoUsuario.CATADOR);
         try { googleSheetsService.salvarSolicitacaoInicial(novo, endereco, idPlanilhaDestino); }
-        catch (IOException e) { System.err.println("Erro ao publicar: " + e.getMessage()); }
+        catch (IOException e) { log.error("Erro ao publicar", e); }
         return "redirect:/?sucesso=true";
     }
 
@@ -211,7 +230,7 @@ public class TelaController {
             googleSheetsService.salvarSolicitacaoInicial(usuarioBalcao, "Atendimento Avulso");
             return "redirect:/admin/atender/" + chaveTemporaria;
         } catch (Exception e) {
-            System.err.println("Erro pesagem rápida: " + e.getMessage());
+            log.error("Erro pesagem rápida", e);
             return "redirect:/admin/coletas?erro=pesagem_rapida";
         }
     }
@@ -234,7 +253,7 @@ public class TelaController {
             model.addAttribute("precosVip", googleSheetsService.buscarPrecosEspeciais(vendedor.getCpf()));
 
         } catch (Exception e) {
-            System.err.println("Erro ao carregar checklist: " + e.getMessage());
+            log.error("Erro ao carregar checklist", e);
             return "redirect:/admin/coletas?erro=usuario";
         }
         return "admin-checklist";
@@ -270,7 +289,7 @@ public class TelaController {
                                 totalEstimado = totalEstimado.add(totalItem);
                             }
                         }
-                    } catch (Exception e) {}
+                    } catch (Exception e) { log.debug("Quantidade inválida ignorada", e); }
                 }
             }
             model.addAttribute("vendedor", vendedor);
@@ -311,8 +330,7 @@ public class TelaController {
             if (!gravou) return "redirect:/admin/coletas?aviso=ja_finalizado";
             return "redirect:/extrato/" + idVendedor;
         } catch (Exception e) {
-            System.err.println("Erro ao finalizar coleta: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Erro ao finalizar coleta", e);
             return "redirect:/admin/coletas?erro=venda";
         }
     }
@@ -321,7 +339,7 @@ public class TelaController {
     public String cancelarColeta(@RequestParam String id, HttpSession session) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         try { googleSheetsService.cancelarSolicitacao(id); }
-        catch (Exception e) { System.err.println("Erro ao cancelar coleta: " + e.getMessage()); return "redirect:/admin/coletas?erro=cancelar"; }
+        catch (Exception e) { log.error("Erro ao cancelar coleta", e); return "redirect:/admin/coletas?erro=cancelar"; }
         return "redirect:/admin/coletas";
     }
 
@@ -373,7 +391,7 @@ public class TelaController {
             List<Usuario> usuarios = googleSheetsService.buscarUsuariosComVendasHoje();
             model.addAttribute("usuarios", usuarios);
         } catch (Exception e) {
-            System.err.println("Erro na Central de Extratos: " + e.getMessage());
+            log.error("Erro na Central de Extratos", e);
             model.addAttribute("usuarios", new ArrayList<>());
         }
         return "lista-extratos";
@@ -486,7 +504,7 @@ public class TelaController {
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
 
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        try { model.addAttribute("materiais", googleSheetsService.listarMateriais()); } catch (Exception e) {}
+        try { model.addAttribute("materiais", googleSheetsService.listarMateriais()); } catch (Exception e) { log.warn("Falha ignorada", e); }
         return "admin-ajuste-estoque";
     }
 
@@ -494,7 +512,7 @@ public class TelaController {
     public String salvarAjusteEstoque(@RequestParam String material, @RequestParam Double peso, @RequestParam String tipoAjuste, @RequestParam String motivo, HttpSession session) {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
-        try { googleSheetsService.salvarAjusteEstoque(material, peso, tipoAjuste, motivo); } catch (Exception e) {}
+        try { googleSheetsService.salvarAjusteEstoque(material, peso, tipoAjuste, motivo); } catch (Exception e) { log.warn("Falha ignorada", e); }
         return "redirect:/admin/analises";
     }
 
@@ -525,7 +543,7 @@ public class TelaController {
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
 
         Material m = new Material(); m.setNome(nome); m.setUnidade(unidade); m.setPrecoPorKg(BigDecimal.valueOf(preco));
-        try { googleSheetsService.salvarMaterial(m); } catch (Exception e) { System.err.println("Erro ao salvar material: " + e.getMessage()); }
+        try { googleSheetsService.salvarMaterial(m); } catch (Exception e) { log.error("Erro ao salvar material", e); }
         return "redirect:/admin/precos";
     }
 
@@ -534,16 +552,16 @@ public class TelaController {
         if(session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
-        try { googleSheetsService.atualizarPrecoMaterial(id, BigDecimal.valueOf(novoPreco)); } catch (Exception e) { System.err.println("Erro ao atualizar preço: " + e.getMessage()); }
+        try { googleSheetsService.atualizarPrecoMaterial(id, BigDecimal.valueOf(novoPreco)); } catch (Exception e) { log.error("Erro ao atualizar preço", e); }
         return "redirect:/admin/precos";
     }
 
-    @GetMapping("/admin/material/deletar/{id}")
-    public String deletarMaterial(@PathVariable Long id, HttpSession session) {
+    @PostMapping("/admin/material/deletar")
+    public String deletarMaterial(@RequestParam Long id, HttpSession session) {
         if(session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
-        try { googleSheetsService.deletarMaterial(id); } catch (Exception e) { System.err.println("Erro ao excluir material: " + e.getMessage()); }
+        try { googleSheetsService.deletarMaterial(id); } catch (Exception e) { log.error("Erro ao excluir material", e); }
         return "redirect:/admin/precos";
     }
 
@@ -572,7 +590,7 @@ public class TelaController {
         try {
             model.addAttribute("vips", googleSheetsService.listarFornecedoresVip());
             model.addAttribute("materiais", googleSheetsService.listarMateriais());
-        } catch (Exception e) {}
+        } catch (Exception e) { log.warn("Falha ignorada", e); }
         return "admin-fornecedores-vip";
     }
 
@@ -580,15 +598,15 @@ public class TelaController {
     public String salvarFornecedorVip(@RequestParam String cpf, @RequestParam String material, @RequestParam Double preco, HttpSession session) {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/login";
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
-        try { googleSheetsService.salvarFornecedorVip(cpf, material, BigDecimal.valueOf(preco)); } catch (Exception e) {}
+        try { googleSheetsService.salvarFornecedorVip(cpf, material, BigDecimal.valueOf(preco)); } catch (Exception e) { log.warn("Falha ignorada", e); }
         return "redirect:/admin/fornecedores-vip";
     }
 
-    @GetMapping("/admin/fornecedores-vip/deletar")
+    @PostMapping("/admin/fornecedores-vip/deletar")
     public String deletarFornecedorVip(@RequestParam String cpf, @RequestParam String material, HttpSession session) {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/login";
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
-        try { googleSheetsService.deletarFornecedorVip(cpf, material); } catch (Exception e) {}
+        try { googleSheetsService.deletarFornecedorVip(cpf, material); } catch (Exception e) { log.warn("Falha ignorada", e); }
         return "redirect:/admin/fornecedores-vip";
     }
 
@@ -767,17 +785,17 @@ public class TelaController {
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
 
         try { googleSheetsService.salvarDespesa(descricao, BigDecimal.valueOf(valor)); }
-        catch (Exception e) { System.err.println("Erro despesa: " + e.getMessage()); }
+        catch (Exception e) { log.error("Erro despesa", e); }
         return "redirect:/admin/despesas";
     }
 
-    @GetMapping("/admin/despesas/deletar/{id}")
-    public String deletarDespesa(@PathVariable String id, HttpSession session) {
+    @PostMapping("/admin/despesas/deletar")
+    public String deletarDespesa(@RequestParam String id, HttpSession session) {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) {
             return "redirect:/admin/coletas";
         }
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
-        try { googleSheetsService.deletarDespesa(id); } catch (Exception e) {}
+        try { googleSheetsService.deletarDespesa(id); } catch (Exception e) { log.warn("Falha ignorada", e); }
         return "redirect:/admin/despesas";
     }
 
@@ -796,7 +814,7 @@ public class TelaController {
         try {
             googleSheetsService.fecharCaixaDoDia(dataHoje, BigDecimal.valueOf(entradas), BigDecimal.valueOf(saidas), BigDecimal.valueOf(despesas), BigDecimal.valueOf(lucro), pesoTotal);
         } catch (Exception e) {
-            System.err.println("Erro ao fechar caixa: " + e.getMessage());
+            log.error("Erro ao fechar caixa", e);
         }
 
         return "redirect:/admin/analises";
@@ -892,7 +910,7 @@ public class TelaController {
         try {
             googleSheetsService.salvarFuncionario(nome, login, senha);
         } catch (Exception e) {
-            System.err.println("Erro ao criar funcionário. Login talvez já exista: " + e.getMessage());
+            log.error("Erro ao criar funcionário. Login talvez já exista", e);
             return "redirect:/admin/operadores?erro=login_duplicado";
         }
         return "redirect:/admin/operadores";
@@ -907,7 +925,7 @@ public class TelaController {
         try {
             googleSheetsService.alterarStatusFuncionario(id, ativo);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Erro inesperado", e);
         }
         return "redirect:/admin/operadores";
     }
@@ -972,6 +990,22 @@ public class TelaController {
         return "admin-assinatura";
     }
 
+    private static final Set<String> EXTENSOES_ANEXO = Set.of("png", "jpg", "jpeg", "webp", "gif", "pdf");
+    private static final Set<String> TIPOS_ANEXO = Set.of("image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf");
+
+    private static boolean anexoPermitido(org.springframework.web.multipart.MultipartFile f) {
+        String nome = f.getOriginalFilename() == null ? "" : f.getOriginalFilename().toLowerCase();
+        int ponto = nome.lastIndexOf('.');
+        String ext = ponto >= 0 ? nome.substring(ponto + 1) : "";
+        String tipo = f.getContentType() == null ? "" : f.getContentType().toLowerCase();
+        return EXTENSOES_ANEXO.contains(ext) && TIPOS_ANEXO.contains(tipo);
+    }
+
+    private static String nomeAnexoSeguro(String original) {
+        String n = original == null ? "anexo" : original.replaceAll("[^A-Za-z0-9._-]", "_");
+        return n.length() > 80 ? n.substring(n.length() - 80) : n;
+    }
+
     @PostMapping("/admin/suporte/enviar")
     public String enviarChamado(
             @RequestParam String assunto,
@@ -983,6 +1017,13 @@ public class TelaController {
             org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
 
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (printTela != null && !printTela.isEmpty() && !anexoPermitido(printTela)) {
+            redirectAttributes.addFlashAttribute("erroSuporte", "Anexo não permitido. Envie apenas imagem (PNG, JPG, WEBP, GIF) ou PDF de até 5 MB.");
+            return "redirect:/admin/coletas";
+        }
+        // evita quebra de linha no assunto do e-mail (injeção de cabeçalho)
+        assunto = assunto.replaceAll("[\\r\\n]+", " ").trim();
+        prioridade = prioridade.replaceAll("[\\r\\n]+", " ").trim();
         try {
             String nomeArmazem = (String) session.getAttribute("nomeArmazem");
             String telefoneAdmin = (String) session.getAttribute("telefone");
@@ -994,7 +1035,7 @@ public class TelaController {
             helper.setSubject("[CHAMADO " + prioridade.toUpperCase() + "] " + assunto);
 
             if (emailRetorno != null && !emailRetorno.trim().isEmpty()) {
-                helper.setReplyTo(emailRetorno);
+                helper.setReplyTo(emailRetorno.replaceAll("[\\r\\n]+", "").trim());
             }
 
             String linkZap = "<em>Telefone não encontrado na sessão.</em>";
@@ -1004,23 +1045,23 @@ public class TelaController {
             }
 
             String corpoHTML = "<h2 style='color:#198754;'>Novo Chamado Técnico - Coletaê</h2>"
-                    + "<p><b>Armazém:</b> " + (nomeArmazem != null ? nomeArmazem : "Desconhecido") + "</p>"
-                    + "<p><b>E-mail de Retorno:</b> " + (emailRetorno != null && !emailRetorno.isEmpty() ? emailRetorno : "Não informado") + "</p>"
-                    + "<p><b>Descrição do Problema:</b><br>" + descricao + "</p>"
+                    + "<p><b>Armazém:</b> " + (nomeArmazem != null ? org.springframework.web.util.HtmlUtils.htmlEscape(nomeArmazem) : "Desconhecido") + "</p>"
+                    + "<p><b>E-mail de Retorno:</b> " + (emailRetorno != null && !emailRetorno.isEmpty() ? org.springframework.web.util.HtmlUtils.htmlEscape(emailRetorno) : "Não informado") + "</p>"
+                    + "<p><b>Descrição do Problema:</b><br>" + org.springframework.web.util.HtmlUtils.htmlEscape(descricao).replace("\n", "<br>") + "</p>"
                     + "<hr style='border:1px solid #eee; margin:20px 0;'>"
                     + "<p>" + linkZap + "</p>";
 
             helper.setText(corpoHTML, true);
 
             if (printTela != null && !printTela.isEmpty()) {
-                helper.addAttachment(printTela.getOriginalFilename(), printTela);
+                helper.addAttachment(nomeAnexoSeguro(printTela.getOriginalFilename()), printTela);
             }
 
             mailSender.send(message);
             redirectAttributes.addFlashAttribute("sucessoSuporte", "Chamado enviado com sucesso! Nossa equipe técnica analisará o caso.");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("erroSuporte", "Ocorreu um erro ao enviar seu chamado. Tente novamente ou chame no WhatsApp.");
-            e.printStackTrace();
+            log.error("Erro inesperado", e);
         }
 
         return "redirect:/admin/coletas";
@@ -1090,7 +1131,7 @@ public class TelaController {
                     }
                 }
             } catch (Exception e) {
-                System.err.println("Aviso BI: Ainda sem transações suficientes ou erro de leitura.");
+                log.info("BI: ainda sem transações suficientes ou erro de leitura.");
             }
 
             model.addAttribute("listaClientes", clientesFormatados);
@@ -1109,7 +1150,7 @@ public class TelaController {
             model.addAttribute("clientesEmRisco", clientesEmRisco);
 
         } catch (Exception e) {
-            System.err.println("Erro ao carregar o painel master: " + e.getMessage());
+            log.error("Erro ao carregar o painel master", e);
             model.addAttribute("listaClientes", new ArrayList<>());
         }
 

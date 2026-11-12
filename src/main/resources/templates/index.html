@@ -93,6 +93,15 @@
                         <h3 class="fw-bold text-dark m-0">Agendar Coleta</h3>
                         <p class="text-muted small">Catador, agende sua entrega direto no galpão!</p>
                     </div>
+                    <div th:if="${param.sucesso != null}" class="alert alert-success small fw-bold" role="alert">
+                        Pedido enviado! O armazém verá sua solicitação e entrará em contato pelo WhatsApp.
+                    </div>
+                    <div th:if="${param.erro != null}" class="alert alert-danger small fw-bold" role="alert">
+                        <span th:if="${param.erro[0] == 'limite'}">Muitos pedidos em pouco tempo. Aguarde alguns minutos e tente de novo.</span>
+                        <span th:if="${param.erro[0] == 'dados'}">Confira nome, endereço e telefone (com DDD) e tente de novo.</span>
+                        <span th:if="${param.erro[0] == 'armazem'}">Este armazém não está recebendo pedidos agora. Escolha outro.</span>
+                        <span th:unless="${param.erro[0] == 'limite' or param.erro[0] == 'dados' or param.erro[0] == 'armazem'}">Não foi possível enviar o pedido. Tente novamente.</span>
+                    </div>
                     <form action="/publicar" method="post" onsubmit="enviarZap(event)">
                         <div class="form-floating mb-3">
                             <input type="text" id="nomeZap" name="nomeVendedor" class="form-control" placeholder="Nome" required>
@@ -577,7 +586,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<script th:src="@{/js/index.js}"></script>
+<script th:src="@{/js/index.js(v=9.1)}"></script>
 
 <!-- CARREGA A API DO GOOGLE TRANSLATE -->
 <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>

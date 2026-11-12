@@ -17,6 +17,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class DatabaseService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DatabaseService.class);
+
 
     @Autowired
     private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
@@ -202,7 +204,7 @@ public class DatabaseService {
             return true;
 
         } catch (Exception e) {
-            System.err.println("Erro ao cadastrar parceiro: " + e.getMessage());
+            log.error("Erro ao cadastrar parceiro", e);
             throw new RuntimeException("Erro no banco de dados ao salvar o cadastro.");
         }
     }
@@ -648,7 +650,7 @@ public class DatabaseService {
             String sql = "SELECT * FROM armazem ORDER BY id DESC";
             return jdbcTemplate.queryForList(sql);
         } catch (Exception e) {
-            System.err.println("Erro ao listar armazéns: " + e.getMessage());
+            log.error("Erro ao listar armazéns", e);
             return new ArrayList<>();
         }
     }
@@ -658,7 +660,7 @@ public class DatabaseService {
             String sql = "UPDATE armazem SET status = ? WHERE id = ?";
             jdbcTemplate.update(sql, novoStatus, id);
         } catch (Exception e) {
-            System.err.println("Erro ao atualizar status: " + e.getMessage());
+            log.error("Erro ao atualizar status", e);
         }
     }
 

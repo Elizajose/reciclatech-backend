@@ -140,12 +140,13 @@
                             <span class="d-none d-print-inline fw-bold text-success fs-5">R$ <span th:text="${mat.precoPorKg}">0.00</span></span>
                         </td>
                         <td class="text-end pe-4 d-print-none">
-                            <a th:href="@{'/admin/material/deletar/' + ${mat.id}}"
-                               class="btn btn-outline-danger btn-sm shadow-sm"
-                               title="Excluir Material"
-                               onclick="return confirm('Tem certeza que deseja excluir este item? Isso removerá o material das opções de venda.')">
-                                <i class="bi bi-trash3-fill"></i>
-                            </a>
+                            <form action="/admin/material/deletar" method="post" class="d-inline m-0"
+                                  onsubmit="return confirm('Tem certeza que deseja excluir este item? Isso removerá o material das opções de venda.')">
+                                <input type="hidden" name="id" th:value="${mat.id}">
+                                <button type="submit" class="btn btn-outline-danger btn-sm shadow-sm" title="Excluir Material">
+                                    <i class="bi bi-trash3-fill"></i>
+                                </button>
+                            </form>
                         </td>
                     </tr>
                     <tr id="msgVazia" style="display: none;" class="d-print-none">
