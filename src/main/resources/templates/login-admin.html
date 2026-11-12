@@ -76,11 +76,11 @@
                 </div>
 
                 <h2 class="fw-bold text-dark mb-1">Acesse sua conta</h2>
-                <p class="text-muted small mb-4">Entre com suas credenciais para continuar.</p>
+                <p class="text-muted small mb-4">Dono: entre com seu e-mail. Operador: entre com seu usuário.</p>
 
                 <!-- Alertas Dinâmicos -->
                 <div th:if="${param.erro != null and param.erro[0] == 'true'}" class="alert alert-danger p-2 small fw-bold d-flex align-items-center gap-2 rounded-3">
-                    <i class="bi bi-exclamation-triangle-fill"></i> Usuário ou senha incorretos.
+                    <i class="bi bi-exclamation-triangle-fill"></i> E-mail, usuário ou senha incorretos.
                 </div>
                 <div th:if="${param.erro != null and param.erro[0] == 'suspenso'}" class="alert alert-warning p-2 small fw-bold d-flex align-items-center gap-2 rounded-3">
                     <i class="bi bi-lock-fill"></i> Conta suspensa. Contate o suporte.
@@ -104,7 +104,7 @@
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <label class="form-label small fw-bold text-dark m-0">Senha</label>
-                            <a href="#" class="text-success small text-decoration-none">Esqueceu a senha?</a>
+                            <a href="/conta/esqueci-senha" class="text-success small text-decoration-none">Esqueceu a senha?</a>
                         </div>
                         <div class="input-group input-group-lg shadow-sm">
                             <span class="input-group-text border-end-0"><i class="bi bi-lock"></i></span>

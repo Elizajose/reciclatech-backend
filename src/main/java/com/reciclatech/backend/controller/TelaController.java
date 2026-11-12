@@ -7,6 +7,7 @@ import com.reciclatech.backend.service.DatabaseService;
 import com.reciclatech.backend.service.LimitadorPublico;
 import com.reciclatech.backend.service.LoginThrottle;
 import com.reciclatech.backend.service.ParceiroService;
+import com.reciclatech.backend.util.ExportacaoCsv;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,6 +100,23 @@ public class TelaController {
             return "redirect:/master/painel";
         }
 
+        // Conta do dono (e-mail + senha): o mesmo login serve para operador (usuário) e para dono (e-mail)
+        String emailDono = login.trim();
+        String chaveDono = "login:" + emailDono;
+        boolean pareceEmail = emailDono.contains("@");
+        if (pareceEmail) {
+            if (throttle.bloqueado(chaveDono)) return "redirect:/login?erro=tentativas";
+            Optional<Parceiro> dono = parceiroService.autenticar(emailDono, senha);
+            if (dono.isPresent()) {
+                throttle.sucesso(chaveDono);
+                throttle.sucesso(chaveLogin);
+                request.changeSessionId(); // evita fixação de sessão
+                session.setAttribute("parceiroId", dono.get().getId());
+                session.setAttribute("parceiroNome", dono.get().getNome());
+                return "redirect:/conta/armazens";
+            }
+        }
+
         try {
             Map<String, String> dadosUser = googleSheetsService.autenticarOperador(login, senha);
             if (dadosUser != null) {
@@ -142,6 +160,7 @@ public class TelaController {
             log.error("Erro inesperado", e);
         }
         throttle.falhou(chaveLogin);
+        if (pareceEmail) throttle.falhou(chaveDono);
         return "redirect:/login?erro=true";
     }
 
@@ -747,52 +766,102 @@ public class TelaController {
             model.addAttribute("patrimonioTotal", patrimonioTotal);
 
             // ---- Resultado do período (lucro real com custo médio) ----
-            LocalDate hojeData = LocalDate.parse(dataHoje);
-            LocalDate periodoDe = hojeData, periodoAte = hojeData;
-            String periodoSel = periodo == null ? "hoje" : periodo;
-            switch (periodoSel) {
-                case "7d": periodoDe = hojeData.minusDays(6); break;
-                case "30d": periodoDe = hojeData.minusDays(29); break;
-                case "mes": periodoDe = hojeData.withDayOfMonth(1); break;
-                case "custom":
-                    try {
-                        periodoDe = LocalDate.parse(de);
-                        periodoAte = LocalDate.parse(ate);
-                    } catch (Exception e) {
-                        periodoDe = hojeData; periodoAte = hojeData; periodoSel = "hoje";
-                    }
-                    break;
-                default: periodoSel = "hoje";
-            }
-            if (periodoAte.isAfter(hojeData)) periodoAte = hojeData;
-            if (periodoDe.isAfter(periodoAte)) periodoDe = periodoAte;
-            if (java.time.temporal.ChronoUnit.DAYS.between(periodoDe, periodoAte) > 366) periodoDe = periodoAte.minusDays(366);
-
-            List<AnaliseFinanceira.Movimento> movimentos = new ArrayList<>();
-            for (Oferta o : historico) {
-                if (o.getMaterial() == null || o.getPeso() == null || o.getStatus() == null || o.getData() == null) continue;
-                try {
-                    movimentos.add(new AnaliseFinanceira.Movimento(o.getId(), o.getMaterial(), o.getStatus().name(),
-                            BigDecimal.valueOf(o.getPeso()), o.getPrecoEstimado(), LocalDate.parse(o.getData()),
-                            o.getUsuario() != null ? o.getUsuario().getNome() : null));
-                } catch (Exception e) {
-                    log.debug("Movimento com data inválida ignorado na análise: id={}", o.getId());
-                }
-            }
-            List<AnaliseFinanceira.DespesaMov> despesasMov = new ArrayList<>();
-            for (Despesa d : googleSheetsService.listarDespesasBrutas()) {
-                despesasMov.add(new AnaliseFinanceira.DespesaMov(d.getDataDespesa(), d.getValor()));
-            }
-            model.addAttribute("fin", AnaliseFinanceira.calcular(movimentos, despesasMov, periodoDe, periodoAte));
-            model.addAttribute("periodoSel", periodoSel);
-            model.addAttribute("periodoDe", periodoDe.toString());
-            model.addAttribute("periodoAte", periodoAte.toString());
+            PeriodoFinanceiro pf = calcularPeriodoFinanceiro(historico, dataHoje, periodo, de, ate);
+            model.addAttribute("fin", pf.resultado);
+            model.addAttribute("periodoSel", pf.selecionado);
+            model.addAttribute("periodoDe", pf.de.toString());
+            model.addAttribute("periodoAte", pf.ate.toString());
 
             return "analises";
 
         } catch (Exception e) {
             return "redirect:/admin/coletas?erro=analises";
         }
+    }
+
+    /** Resultado financeiro de um período + o período efetivamente usado (já ajustado aos limites). */
+    private static final class PeriodoFinanceiro {
+        AnaliseFinanceira.Resultado resultado;
+        String selecionado;
+        LocalDate de, ate;
+    }
+
+    private PeriodoFinanceiro calcularPeriodoFinanceiro(List<Oferta> historico, String dataHoje,
+                                                        String periodo, String de, String ate) throws IOException {
+        LocalDate hojeData = LocalDate.parse(dataHoje);
+        LocalDate periodoDe = hojeData, periodoAte = hojeData;
+        String periodoSel = periodo == null ? "hoje" : periodo;
+        switch (periodoSel) {
+            case "7d": periodoDe = hojeData.minusDays(6); break;
+            case "30d": periodoDe = hojeData.minusDays(29); break;
+            case "mes": periodoDe = hojeData.withDayOfMonth(1); break;
+            case "custom":
+                try {
+                    periodoDe = LocalDate.parse(de);
+                    periodoAte = LocalDate.parse(ate);
+                } catch (Exception e) {
+                    periodoDe = hojeData; periodoAte = hojeData; periodoSel = "hoje";
+                }
+                break;
+            default: periodoSel = "hoje";
+        }
+        if (periodoAte.isAfter(hojeData)) periodoAte = hojeData;
+        if (periodoDe.isAfter(periodoAte)) periodoDe = periodoAte;
+        if (java.time.temporal.ChronoUnit.DAYS.between(periodoDe, periodoAte) > 366) periodoDe = periodoAte.minusDays(366);
+
+        List<AnaliseFinanceira.Movimento> movimentos = new ArrayList<>();
+        for (Oferta o : historico) {
+            if (o.getMaterial() == null || o.getPeso() == null || o.getStatus() == null || o.getData() == null) continue;
+            try {
+                movimentos.add(new AnaliseFinanceira.Movimento(o.getId(), o.getMaterial(), o.getStatus().name(),
+                        BigDecimal.valueOf(o.getPeso()), o.getPrecoEstimado(), LocalDate.parse(o.getData()),
+                        o.getUsuario() != null ? o.getUsuario().getNome() : null));
+            } catch (Exception e) {
+                log.debug("Movimento com data inválida ignorado na análise: id={}", o.getId());
+            }
+        }
+        List<AnaliseFinanceira.DespesaMov> despesasMov = new ArrayList<>();
+        for (Despesa d : googleSheetsService.listarDespesasBrutas()) {
+            despesasMov.add(new AnaliseFinanceira.DespesaMov(d.getDataDespesa(), d.getValor()));
+        }
+
+        PeriodoFinanceiro pf = new PeriodoFinanceiro();
+        pf.resultado = AnaliseFinanceira.calcular(movimentos, despesasMov, periodoDe, periodoAte);
+        pf.selecionado = periodoSel;
+        pf.de = periodoDe;
+        pf.ate = periodoAte;
+        return pf;
+    }
+
+    /** Baixa o resultado do período em CSV (planilha). Mesmas regras de acesso da tela de análises. */
+    @GetMapping("/admin/analises/exportar")
+    public org.springframework.http.ResponseEntity<byte[]> exportarAnalises(
+            @RequestParam(required = false) String periodo,
+            @RequestParam(required = false) String de,
+            @RequestParam(required = false) String ate,
+            HttpSession session) {
+        if (session.getAttribute("adminLogado") == null) return redirecionar("/login");
+        if (session.getAttribute("bloqueadoPagamento") != null) return redirecionar("/admin/assinatura");
+        if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return redirecionar("/admin/coletas");
+
+        try {
+            String dataHoje = LocalDate.now(ZoneId.of("America/Recife")).toString();
+            PeriodoFinanceiro pf = calcularPeriodoFinanceiro(googleSheetsService.getHistoricoCompleto(), dataHoje, periodo, de, ate);
+            byte[] corpo = ExportacaoCsv.resultado(pf.resultado).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            String nome = "coletae-resultado-" + pf.de + "_a_" + pf.ate + ".csv";
+            return org.springframework.http.ResponseEntity.ok()
+                    .header("Content-Type", "text/csv; charset=UTF-8")
+                    .header("Content-Disposition", "attachment; filename=\"" + nome + "\"")
+                    .header("Cache-Control", "no-store")
+                    .body(corpo);
+        } catch (Exception e) {
+            log.error("Falha ao exportar o resultado do período", e);
+            return redirecionar("/admin/analises");
+        }
+    }
+
+    private static org.springframework.http.ResponseEntity<byte[]> redirecionar(String destino) {
+        return org.springframework.http.ResponseEntity.status(302).header("Location", destino).build();
     }
 
     @GetMapping("/admin/historico")
