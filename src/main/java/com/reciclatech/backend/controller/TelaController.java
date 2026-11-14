@@ -7,6 +7,7 @@ import com.reciclatech.backend.service.DatabaseService;
 import com.reciclatech.backend.service.LimitadorPublico;
 import com.reciclatech.backend.service.LoginThrottle;
 import com.reciclatech.backend.service.ParceiroService;
+import com.reciclatech.backend.service.VariacaoPrecoException;
 import com.reciclatech.backend.util.BuscaCliente;
 import com.reciclatech.backend.util.CodigoArmazem;
 import com.reciclatech.backend.util.Assinatura;
@@ -619,6 +620,16 @@ public class TelaController {
         return "redirect:" + destino;
     }
 
+    /** Preço muito diferente do anterior: volta para a tela mostrando o valor e pedindo confirmação (nada foi gravado). */
+    private String pedirConfirmacaoPreco(RedirectAttributes ra, String destino, String acao, String mensagem, Map<String, String> campos) {
+        Map<String, Object> pedido = new HashMap<>();
+        pedido.put("acao", acao);
+        pedido.put("mensagem", mensagem);
+        pedido.put("campos", campos);
+        ra.addFlashAttribute("confirmarPreco", pedido);
+        return "redirect:" + destino;
+    }
+
     @PostMapping("/admin/material/novo")
     public String novoMaterial(@RequestParam String nome, @RequestParam String unidade, @RequestParam Double preco, HttpSession session, RedirectAttributes ra) {
         if(session.getAttribute("adminLogado") == null) return "redirect:/login";
@@ -637,15 +648,19 @@ public class TelaController {
     }
 
     @PostMapping("/admin/atualizar")
-    public String upd(@RequestParam Long id, @RequestParam Double novoPreco, HttpSession session, RedirectAttributes ra) {
+    public String upd(@RequestParam Long id, @RequestParam Double novoPreco,
+                      @RequestParam(required = false, defaultValue = "false") boolean confirmar, HttpSession session, RedirectAttributes ra) {
         if(session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
         try {
             BigDecimal precoValido = Valores.preco(novoPreco);
             if (precoValido == null) throw new IllegalArgumentException("Informe um preço maior que zero.");
-            googleSheetsService.atualizarPrecoMaterial(id, precoValido);
+            googleSheetsService.atualizarPrecoMaterial(id, precoValido, confirmar);
             return voltarComAviso(ra, "/admin/precos", "Preço atualizado.", null);
+        } catch (VariacaoPrecoException e) {
+            return pedirConfirmacaoPreco(ra, "/admin/precos", "/admin/atualizar", e.getMessage(),
+                    Map.of("id", String.valueOf(id), "novoPreco", String.valueOf(novoPreco)));
         } catch (Exception e) {
             return voltarComAviso(ra, "/admin/precos", null, e);
         }
@@ -694,14 +709,18 @@ public class TelaController {
     }
 
     @PostMapping("/admin/fornecedores-vip/novo")
-    public String salvarFornecedorVip(@RequestParam String cpf, @RequestParam String material, @RequestParam Double preco, HttpSession session, RedirectAttributes ra) {
+    public String salvarFornecedorVip(@RequestParam String cpf, @RequestParam String material, @RequestParam Double preco,
+                                      @RequestParam(required = false, defaultValue = "false") boolean confirmar, HttpSession session, RedirectAttributes ra) {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/login";
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         try {
             BigDecimal precoValido = Valores.preco(preco);
             if (precoValido == null) throw new IllegalArgumentException("Informe um preço maior que zero.");
-            googleSheetsService.salvarFornecedorVip(cpf, material, precoValido);
+            googleSheetsService.salvarFornecedorVip(cpf, material, precoValido, confirmar);
             return voltarComAviso(ra, "/admin/fornecedores-vip", "Preço VIP salvo.", null);
+        } catch (VariacaoPrecoException e) {
+            return pedirConfirmacaoPreco(ra, "/admin/fornecedores-vip", "/admin/fornecedores-vip/novo", e.getMessage(),
+                    Map.of("cpf", cpf, "material", material, "preco", String.valueOf(preco)));
         } catch (Exception e) {
             return voltarComAviso(ra, "/admin/fornecedores-vip", null, e);
         }
@@ -1309,6 +1328,12 @@ public class TelaController {
             double faturamentoMensal = 0.0;
 
             List<Armazem> clientesFormatados = new ArrayList<>();
+            LocalDate hojeMaster = LocalDate.now(ZoneId.of("America/Recife"));
+            Map<Long, String> infoCadastro = new HashMap<>();   // id -> "Cadastro em 01/11/2026 · teste vence em 2 dias"
+            Map<Long, String> ultimoAcesso = new HashMap<>();   // id -> "Último acesso do dono: 13/11/2026 09:30"
+            List<Map<String, Object>> testesVencendo = new ArrayList<>();
+            java.time.format.DateTimeFormatter fData = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            java.time.format.DateTimeFormatter fDataHora = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
             for (Map<String, Object> c : clientesBanco) {
                 String status = c.get("status") != null ? c.get("status").toString().toUpperCase() : "ATIVO";
@@ -1334,6 +1359,27 @@ public class TelaController {
                 a.setLogin(c.get("login") != null ? c.get("login").toString() : "");
                 a.setStatus(status);
 
+                LocalDate cadastro = c.get("data_cadastro") instanceof java.sql.Date d ? d.toLocalDate() : null;
+                a.setDataCadastro(cadastro);
+                if (cadastro != null) {
+                    String texto = "Cadastro em " + cadastro.format(fData);
+                    if ("TRIAL".equals(status)) {
+                        long restam = Assinatura.DIAS_TRIAL - java.time.temporal.ChronoUnit.DAYS.between(cadastro, hojeMaster);
+                        if (restam >= 0) texto += " · teste vence em " + restam + (restam == 1 ? " dia" : " dias");
+                        else texto += " · teste vencido há " + (-restam) + (restam == -1 ? " dia" : " dias");
+                        if (restam <= 3) {
+                            Map<String, Object> aviso = new HashMap<>();
+                            aviso.put("id", a.getId()); aviso.put("nome", a.getNome()); aviso.put("restam", restam);
+                            aviso.put("texto", restam >= 0 ? "vence em " + restam + (restam == 1 ? " dia" : " dias") : "vencido há " + (-restam) + (restam == -1 ? " dia" : " dias"));
+                            testesVencendo.add(aviso);
+                        }
+                    }
+                    infoCadastro.put(a.getId(), texto);
+                }
+                if (c.get("ultimo_acesso_dono") instanceof java.sql.Timestamp t) {
+                    ultimoAcesso.put(a.getId(), "Último acesso do dono: " + t.toLocalDateTime().format(fDataHora));
+                }
+
                 clientesFormatados.add(a);
             }
 
@@ -1351,6 +1397,10 @@ public class TelaController {
                 log.warn("Painel master: não consegui somar o volume do mês", e);
             }
 
+            testesVencendo.sort(Comparator.comparingLong(m -> (Long) m.get("restam")));
+            model.addAttribute("infoCadastro", infoCadastro);
+            model.addAttribute("ultimoAcesso", ultimoAcesso);
+            model.addAttribute("testesVencendo", testesVencendo);
             model.addAttribute("listaClientes", clientesFormatados);
             model.addAttribute("totalClientes", totalClientes);
             model.addAttribute("ativos", ativos);
@@ -1388,6 +1438,21 @@ public class TelaController {
         }
         throttle.falhou(chave);
         return "redirect:/login?erro=true";
+    }
+
+    @PostMapping("/master/mudar-plano")
+    public String mudarPlanoCliente(@RequestParam Long id, @RequestParam String plano, HttpSession session, RedirectAttributes ra) {
+        if (session.getAttribute("masterLogado") == null) return "redirect:/login";
+        try {
+            if (googleSheetsService.atualizarPlanoArmazem(id, plano)) ra.addFlashAttribute("sucessoTela", "Plano atualizado.");
+            else ra.addFlashAttribute("erroTela", "Armazém não encontrado.");
+        } catch (IllegalArgumentException e) {
+            ra.addFlashAttribute("erroTela", e.getMessage());
+        } catch (Exception e) {
+            log.error("Erro ao mudar plano", e);
+            ra.addFlashAttribute("erroTela", "Não foi possível mudar o plano.");
+        }
+        return "redirect:/master/painel";
     }
 
     @PostMapping("/master/mudar-status")

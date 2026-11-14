@@ -210,7 +210,7 @@
                         </div>
                     </div>
                     <span class="badge bg-light text-dark border border-secondary border-opacity-25 mt-2 px-2 py-1">
-                        <i class="bi bi-box-seam text-muted me-1"></i> <span th:text="${volumeToneladas}">0</span> Toneladas recicladas
+                        <i class="bi bi-box-seam text-muted me-1"></i> <span th:text="${#numbers.formatDecimal(volumeToneladas, 1, 'POINT', 2, 'COMMA')}">0</span> Toneladas recicladas
                     </span>
                     <p class="small text-muted mt-3 mb-0 lh-sm">Todo o capital e peso movimentado dentro da plataforma neste mês.</p>
                 </div>
@@ -260,6 +260,14 @@
         </div>
     </div>
 
+    <!-- TESTES QUE VENCEM LOGO -->
+    <div th:if="${testesVencendo != null and !testesVencendo.isEmpty()}" class="alert alert-warning shadow-sm mb-4" role="alert">
+        <div class="fw-bold mb-2"><i class="bi bi-hourglass-split me-1"></i> Testes grátis para acompanhar (vencem em até 3 dias ou já venceram)</div>
+        <ul class="mb-0 small">
+            <li th:each="t : ${testesVencendo}"><strong th:text="${t.nome}">Armazém</strong> <span class="text-muted">(#<span th:text="${t.id}"></span>)</span>: <span th:text="${t.texto}">vence em 2 dias</span></li>
+        </ul>
+    </div>
+
     <!-- ÁREA DA TABELA LIMPA -->
     <div class="d-flex justify-content-between align-items-end mb-4">
         <div>
@@ -276,7 +284,7 @@
                     <th style="width: 40%;">Armazém / Galpão</th>
                     <th style="width: 20%;">Plano Assinado</th>
                     <th style="width: 20%;">Saúde da Conta</th>
-                    <th style="width: 20%;" class="text-end">Ações de Segurança</th>
+                    <th style="width: 20%;" class="text-end">Situação e Plano</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -290,6 +298,8 @@
                             <div>
                                 <div class="fw-bold text-dark fs-6" th:text="${cliente.nome}"></div>
                                 <div class="small text-muted">ID Sistema: #<span th:text="${cliente.id}"></span></div>
+                                <div class="small text-muted" th:if="${infoCadastro != null and infoCadastro[cliente.id] != null}" th:text="${infoCadastro[cliente.id]}"></div>
+                                <div class="small text-muted" th:if="${ultimoAcesso != null and ultimoAcesso[cliente.id] != null}" th:text="${ultimoAcesso[cliente.id]}"></div>
                             </div>
                         </div>
                     </td>
@@ -307,14 +317,23 @@
                     </td>
 
                     <td class="text-end">
-                        <form action="/master/mudar-status" method="post" class="d-inline">
+                        <form action="/master/mudar-status" method="post" class="d-flex justify-content-end gap-1 mb-1">
                             <input type="hidden" name="id" th:value="${cliente.id}">
-                            <input type="hidden" name="status" th:value="${cliente.status == 'SUSPENSO' ? 'ATIVO' : 'SUSPENSO'}">
-
-                            <button type="submit" class="btn btn-sm fw-bold px-3 py-1 rounded-pill transition" th:classappend="${cliente.status == 'SUSPENSO'} ? 'btn-outline-success' : 'btn-outline-danger'">
-                                <i class="bi" th:classappend="${cliente.status == 'SUSPENSO'} ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
-                                <span th:text="${cliente.status == 'SUSPENSO'} ? ' Restaurar' : ' Suspender'"></span>
-                            </button>
+                            <select name="status" class="form-select form-select-sm w-auto" aria-label="Situação">
+                                <option value="ATIVO" th:selected="${cliente.status == 'ATIVO'}">Ativo</option>
+                                <option value="TRIAL" th:selected="${cliente.status == 'TRIAL'}">Teste (renova 7 dias)</option>
+                                <option value="SUSPENSO" th:selected="${cliente.status == 'SUSPENSO'}">Suspenso</option>
+                                <option value="BLOQUEADO" th:selected="${cliente.status == 'BLOQUEADO'}">Bloqueado</option>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-outline-dark fw-bold">Aplicar</button>
+                        </form>
+                        <form action="/master/mudar-plano" method="post" class="d-flex justify-content-end gap-1">
+                            <input type="hidden" name="id" th:value="${cliente.id}">
+                            <select name="plano" class="form-select form-select-sm w-auto" aria-label="Plano">
+                                <option value="START" th:selected="${cliente.plano == 'START'}">Plano Start</option>
+                                <option value="PRO" th:selected="${cliente.plano == 'PRO'}">Plano Pro</option>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-outline-dark fw-bold">Aplicar</button>
                         </form>
                     </td>
                 </tr>

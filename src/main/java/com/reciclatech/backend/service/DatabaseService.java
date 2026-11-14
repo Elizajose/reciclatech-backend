@@ -347,6 +347,12 @@ public class DatabaseService {
 
     @Transactional(rollbackFor = Exception.class)
     public void atualizarPrecoMaterial(Long id, BigDecimal novoPreco) throws IOException {
+        atualizarPrecoMaterial(id, novoPreco, false);
+    }
+
+    /** {@code confirmado=false} e variação grande (mais que o dobro / menos da metade) => VariacaoPrecoException, nada é gravado. */
+    @Transactional(rollbackFor = Exception.class)
+    public void atualizarPrecoMaterial(Long id, BigDecimal novoPreco, boolean confirmado) throws IOException {
         if (!com.reciclatech.backend.util.Valores.positivoAte(novoPreco, com.reciclatech.backend.util.Valores.PRECO_MAX)) {
             throw new IllegalArgumentException("Informe um preço maior que zero.");
         }
@@ -356,6 +362,9 @@ public class DatabaseService {
         Material m = achado.get();
         BigDecimal anterior = m.getPrecoPorKg();
         if (anterior != null && anterior.compareTo(novoPreco) == 0) return; // nada mudou: nada a registrar
+        if (!confirmado && com.reciclatech.backend.util.RegrasVenda.variacaoSuspeita(anterior, novoPreco)) {
+            throw new VariacaoPrecoException(com.reciclatech.backend.util.RegrasVenda.textoVariacao(m.getNome(), anterior, novoPreco));
+        }
         m.setPrecoPorKg(novoPreco);
         materialRepository.save(m);
         auditar(HistoricoAlteracao.MATERIAL, HistoricoAlteracao.PRECO_ALTERADO, m.getNome(), m.getUnidade(), anterior, novoPreco);
@@ -957,6 +966,11 @@ public class DatabaseService {
 
     @Transactional(rollbackFor = Exception.class)
     public void salvarFornecedorVip(String cpf, String material, BigDecimal preco) throws IOException {
+        salvarFornecedorVip(cpf, material, preco, false);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void salvarFornecedorVip(String cpf, String material, BigDecimal preco, boolean confirmado) throws IOException {
         if (!com.reciclatech.backend.util.DocumentoValidator.valido(cpf)) throw new IllegalArgumentException("CPF inválido.");
         if (!com.reciclatech.backend.util.Valores.positivoAte(preco, com.reciclatech.backend.util.Valores.PRECO_MAX)) {
             throw new IllegalArgumentException("Informe um preço maior que zero.");
@@ -971,6 +985,9 @@ public class DatabaseService {
         Optional<PrecoVip> existente = precoVipRepository.findByArmazemIdAndCpfCatadorAndMaterialNome(getArmazemIdLogado(), cpfLimpo, material);
         String ref = material + " - " + mascararCpf(cpfLimpo);
         BigDecimal anterior = existente.map(PrecoVip::getPrecoEspecial).orElse(null);
+        if (!confirmado && com.reciclatech.backend.util.RegrasVenda.variacaoSuspeita(anterior, preco)) {
+            throw new VariacaoPrecoException(com.reciclatech.backend.util.RegrasVenda.textoVariacao(ref, anterior, preco));
+        }
         PrecoVip p = existente.orElseGet(PrecoVip::new);
         if (existente.isEmpty()) p.setArmazem(getArmazemLogado());
         p.setCpfCatador(cpfLimpo);
@@ -999,7 +1016,8 @@ public class DatabaseService {
     public List<Map<String, Object>> listarTodosArmazensSaaS() {
         try {
             // só as colunas do painel: nunca carrega hash de senha
-            String sql = "SELECT id, nome, cnpj, telefone, login, status, plano, data_cadastro FROM armazem ORDER BY id DESC";
+            String sql = "SELECT a.id, a.nome, a.cnpj, a.telefone, a.login, a.status, a.plano, a.data_cadastro, " +
+                    "p.ultimo_login AS ultimo_acesso_dono FROM armazem a LEFT JOIN parceiro p ON p.id = a.proprietario_id ORDER BY a.id DESC";
             return jdbcTemplate.queryForList(sql);
         } catch (Exception e) {
             log.error("Erro ao listar armazéns", e);
@@ -1019,6 +1037,13 @@ public class DatabaseService {
                     java.sql.Date.valueOf(LocalDate.now(ZoneId.of("America/Recife"))), id) > 0;
         }
         return jdbcTemplate.update("UPDATE armazem SET status = ? WHERE id = ?", status, id) > 0;
+    }
+
+    /** Troca o plano (START/PRO) de um armazém. Os dados não mudam; só o acesso aos recursos Pro. false = armazém não existe. */
+    public boolean atualizarPlanoArmazem(Long id, String novoPlano) {
+        String plano = novoPlano == null ? "" : novoPlano.trim().toUpperCase(Locale.ROOT);
+        if (!"START".equals(plano) && !"PRO".equals(plano)) throw new IllegalArgumentException("Plano inválido.");
+        return jdbcTemplate.update("UPDATE armazem SET plano = ? WHERE id = ?", plano, id) > 0;
     }
 
     /** Volume do mês (todos os armazéns): GMV = compras + vendas à indústria; toneladas = material comprado (kg / 1000). */

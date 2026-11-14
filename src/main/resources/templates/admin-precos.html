@@ -30,8 +30,11 @@
             <a href="/admin/historico-alteracoes" class="btn btn-outline-dark shadow-sm fw-bold">
                 <i class="bi bi-clock-history me-1"></i> Histórico
             </a>
-            <a href="/admin/fornecedores-vip" class="btn btn-warning shadow-sm fw-bold">
+            <a th:if="${session.planoAssinatura == 'PRO' or session.statusAssinatura == 'TRIAL'}" href="/admin/fornecedores-vip" class="btn btn-warning shadow-sm fw-bold">
                 <i class="bi bi-star-fill text-dark me-1"></i> Preços VIP
+            </a>
+            <a th:unless="${session.planoAssinatura == 'PRO' or session.statusAssinatura == 'TRIAL'}" href="/admin/assinatura?aviso=pro" class="btn btn-outline-secondary shadow-sm fw-bold" title="Recurso exclusivo do plano Pro">
+                <i class="bi bi-lock-fill me-1"></i> Preços VIP <span class="badge bg-warning text-dark ms-1">PRO</span>
             </a>
             <a href="/admin/coletas" class="btn btn-secondary shadow-sm">
                 <i class="bi bi-arrow-left"></i> Voltar ao Painel

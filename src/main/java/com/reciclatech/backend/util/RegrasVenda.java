@@ -36,4 +36,21 @@ public final class RegrasVenda {
     public static BigDecimal total(BigDecimal preco, BigDecimal peso) {
         return preco.multiply(peso).setScale(2, RoundingMode.HALF_UP);
     }
+
+    /** Mudança de preço grande demais para ser rotina (mais que o dobro ou menos que a metade do valor anterior): pedir confirmação. */
+    public static final double VARIACAO_LIMITE = 2.0;
+
+    public static boolean variacaoSuspeita(BigDecimal anterior, BigDecimal novo) {
+        if (anterior == null || novo == null || anterior.signum() <= 0 || novo.signum() <= 0) return false;
+        BigDecimal limite = BigDecimal.valueOf(VARIACAO_LIMITE);
+        return novo.compareTo(anterior.multiply(limite)) > 0 || novo.compareTo(anterior.divide(limite, 4, RoundingMode.HALF_UP)) < 0;
+    }
+
+    /** Texto de confirmação mostrado ao dono, ex.: "Latinha: de R$ 8,00 para R$ 800,00 (100,0 vezes o valor anterior)". */
+    public static String textoVariacao(String nome, BigDecimal anterior, BigDecimal novo) {
+        String fator = novo.divide(anterior, 1, RoundingMode.HALF_UP).toPlainString().replace('.', ',');
+        return nome + ": de R$ " + anterior.setScale(2, RoundingMode.HALF_UP).toPlainString().replace('.', ',')
+                + " para R$ " + novo.setScale(2, RoundingMode.HALF_UP).toPlainString().replace('.', ',')
+                + " (" + fator + " vez(es) o valor anterior).";
+    }
 }

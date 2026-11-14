@@ -138,4 +138,24 @@ class ValidadorSessaoTest {
         s.put("credFp", Impressao.de("h1"));
         assertEquals(ValidadorSessao.Resultado.ENCERRAR, new ValidadorSessao(db).verificar(sessao(s)));
     }
+
+    @Test void planoTrocadoPeloMasterChegaNaSessaoSemSairEEntrar() {
+        BancoFalso db = new BancoFalso();
+        Map<String, Object> linha = linha("ATIVO", hoje(), true, "h1");
+        linha.put("plano", "PRO");
+        db.linhas.add(linha);
+        Map<String, Object> s = sessaoDeOperador("h1");
+        s.put("planoAssinatura", "START");
+        assertEquals(ValidadorSessao.Resultado.OK, new ValidadorSessao(db).verificar(sessao(s)));
+        assertEquals("PRO", s.get("planoAssinatura"));
+    }
+
+    @Test void semPlanoNoBancoMantemOQueJaEstavaNaSessao() {
+        BancoFalso db = new BancoFalso();
+        db.linhas.add(linha("ATIVO", hoje(), true, "h1"));
+        Map<String, Object> s = sessaoDeOperador("h1");
+        s.put("planoAssinatura", "PRO");
+        new ValidadorSessao(db).verificar(sessao(s));
+        assertEquals("PRO", s.get("planoAssinatura"));
+    }
 }

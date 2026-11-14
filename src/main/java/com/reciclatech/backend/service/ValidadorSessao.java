@@ -80,18 +80,18 @@ public class ValidadorSessao {
         switch (origem) {
             case "FUNC" -> {
                 if (credId == null) return Resultado.ENCERRAR;
-                l = jdbc.queryForList("SELECT a.status, a.data_cadastro, f.ativo, f.senha AS hash FROM funcionario f " +
+                l = jdbc.queryForList("SELECT a.status, a.plano, a.data_cadastro, f.ativo, f.senha AS hash FROM funcionario f " +
                         "JOIN armazem a ON a.id = f.armazem_id WHERE f.id = ? AND a.id = ?", credId, armazemId);
             }
             case "DONO" -> {
                 Object p = s.getAttribute("parceiroId");
                 if (!(p instanceof Long parceiroId)) return Resultado.ENCERRAR;
-                l = jdbc.queryForList("SELECT a.status, a.data_cadastro, p.ativo, p.senha_hash AS hash FROM armazem a " +
+                l = jdbc.queryForList("SELECT a.status, a.plano, a.data_cadastro, p.ativo, p.senha_hash AS hash FROM armazem a " +
                         "JOIN parceiro p ON p.id = a.proprietario_id WHERE a.id = ? AND p.id = ?", armazemId, parceiroId);
             }
-            case "LEGADO" -> l = jdbc.queryForList("SELECT status, data_cadastro, TRUE AS ativo, senha AS hash FROM armazem " +
+            case "LEGADO" -> l = jdbc.queryForList("SELECT status, plano, data_cadastro, TRUE AS ativo, senha AS hash FROM armazem " +
                     "WHERE id = ? AND proprietario_id IS NULL", armazemId);
-            default -> l = jdbc.queryForList("SELECT status, data_cadastro, TRUE AS ativo, NULL AS hash FROM armazem WHERE id = ?", armazemId);
+            default -> l = jdbc.queryForList("SELECT status, plano, data_cadastro, TRUE AS ativo, NULL AS hash FROM armazem WHERE id = ?", armazemId);
         }
         if (l.isEmpty()) return Resultado.ENCERRAR;
         Map<String, Object> linha = l.get(0);
@@ -102,6 +102,10 @@ public class ValidadorSessao {
         LocalDate cadastro = linha.get("data_cadastro") instanceof java.sql.Date d ? d.toLocalDate() : null;
         boolean bloqueado = Assinatura.bloqueado(status, cadastro, LocalDate.now(ZoneId.of("America/Recife")));
         s.setAttribute("statusAssinatura", status);
+        // o plano também é relido: o master pode trocar START/PRO com o cliente logado
+        Object plano = linha.get("plano");
+        if (plano != null && !plano.toString().isBlank()) s.setAttribute("planoAssinatura", plano.toString().trim().toUpperCase());
+        else if (s.getAttribute("planoAssinatura") == null) s.setAttribute("planoAssinatura", "START");
         if (bloqueado) s.setAttribute("bloqueadoPagamento", true);
         else s.removeAttribute("bloqueadoPagamento");
         return Resultado.OK;

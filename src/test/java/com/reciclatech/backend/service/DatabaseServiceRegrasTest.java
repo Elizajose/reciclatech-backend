@@ -372,4 +372,25 @@ class DatabaseServiceRegrasTest {
         recusa("texto livre", () -> s.atualizarStatusArmazem(1L, "QUALQUER COISA"));
         recusa("vazio", () -> s.atualizarStatusArmazem(1L, ""));
     }
+
+    // ------------------------------------------------------------------ fase 18: trava de variação de preço
+
+    @Test void precoComVariacaoGrandeExigeConfirmacaoENaoGravaAntes() throws Exception {
+        DatabaseService s = preparar();
+        Material m = new Material();
+        m.setId(5L); m.setNome("Latinha"); m.setUnidade("KG"); m.setPrecoPorKg(new BigDecimal("8.00")); m.setArmazem(arm);
+        materiais.add(m);
+
+        // 8 -> 800: recusado até o dono confirmar; o preço continua 8
+        assertThrows(VariacaoPrecoException.class, () -> s.atualizarPrecoMaterial(5L, new BigDecimal("800"), false));
+        assertEquals(0, new BigDecimal("8.00").compareTo(m.getPrecoPorKg()));
+
+        // mudança normal (8 -> 9) passa direto
+        s.atualizarPrecoMaterial(5L, new BigDecimal("9.00"), false);
+        assertEquals(0, new BigDecimal("9.00").compareTo(m.getPrecoPorKg()));
+
+        // com a confirmação do dono, o valor grande é gravado
+        s.atualizarPrecoMaterial(5L, new BigDecimal("30.00"), true);
+        assertEquals(0, new BigDecimal("30.00").compareTo(m.getPrecoPorKg()));
+    }
 }

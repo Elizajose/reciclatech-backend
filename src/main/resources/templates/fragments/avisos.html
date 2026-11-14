@@ -10,6 +10,17 @@
     <div th:if="${avisoTela}" class="alert alert-warning fw-bold shadow-sm d-flex align-items-start gap-2 mb-3" role="alert">
         <i class="bi bi-info-circle-fill mt-1"></i> <span th:text="${avisoTela}"></span>
     </div>
+    <div th:if="${confirmarPreco != null}" class="alert alert-warning border-warning border-2 shadow-sm mb-3" role="alert">
+        <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i> Confira o preço antes de salvar</div>
+        <div class="mb-2" th:text="${confirmarPreco['mensagem']}"></div>
+        <div class="small mb-3">A mudança é maior que o dobro ou menor que a metade do valor atual. Nada foi salvo ainda.</div>
+        <form th:action="${confirmarPreco['acao']}" method="post" class="d-inline">
+            <input type="hidden" th:each="c : ${confirmarPreco['campos']}" th:name="${c.key}" th:value="${c.value}">
+            <input type="hidden" name="confirmar" value="true">
+            <button type="submit" class="btn btn-sm btn-warning fw-bold">Sim, o valor está certo</button>
+        </form>
+        <span class="small ms-2 text-muted">Para corrigir, é só digitar de novo o valor na tela.</span>
+    </div>
     <div th:if="${sucessoTela}" class="alert alert-success fw-bold shadow-sm d-flex align-items-start gap-2 mb-3" role="alert">
         <i class="bi bi-check-circle-fill mt-1"></i> <span th:text="${sucessoTela}"></span>
     </div>

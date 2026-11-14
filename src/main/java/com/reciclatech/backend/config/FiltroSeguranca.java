@@ -2,6 +2,7 @@ package com.reciclatech.backend.config;
 
 import com.reciclatech.backend.service.ValidadorSessao;
 import com.reciclatech.backend.util.OrigemConfiavel;
+import com.reciclatech.backend.util.PlanoAcesso;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.servlet.FilterChain;
@@ -86,8 +87,19 @@ public class FiltroSeguranca extends OncePerRequestFilter {
                 }
                 return;
             }
+            // Recursos exclusivos do PRO: o plano START (fora do período de teste) é mandado para a tela de assinatura.
+            if (sessao != null && sessao.getAttribute("adminLogado") != null && PlanoAcesso.recursoPro(uri)
+                    && !PlanoAcesso.liberaPro((String) atributoTexto(sessao, "planoAssinatura"), (String) atributoTexto(sessao, "statusAssinatura"))) {
+                res.sendRedirect(req.getContextPath() + "/admin/assinatura?aviso=pro");
+                return;
+            }
         }
         chain.doFilter(req, res);
+    }
+
+    private static Object atributoTexto(HttpSession s, String nome) {
+        Object v = s.getAttribute(nome);
+        return v instanceof String ? v : null;
     }
 
     private static boolean ehEstatico(String uri) {
