@@ -12,6 +12,7 @@ import com.reciclatech.backend.util.BuscaCliente;
 import com.reciclatech.backend.util.CodigoArmazem;
 import com.reciclatech.backend.util.Assinatura;
 import com.reciclatech.backend.util.DocumentoValidator;
+import com.reciclatech.backend.util.Engajamento;
 import com.reciclatech.backend.util.ExportacaoCsv;
 import com.reciclatech.backend.util.Impressao;
 import com.reciclatech.backend.util.Valores;
@@ -1332,6 +1333,10 @@ public class TelaController {
             Map<Long, String> infoCadastro = new HashMap<>();   // id -> "Cadastro em 01/11/2026 · teste vence em 2 dias"
             Map<Long, String> ultimoAcesso = new HashMap<>();   // id -> "Último acesso do dono: 13/11/2026 09:30"
             List<Map<String, Object>> testesVencendo = new ArrayList<>();
+            Map<Long, Object[]> movimento = googleSheetsService.movimentoPorArmazem();
+            Map<Long, String> infoMovimento = new HashMap<>();   // id -> "Última movimentação: ... · 12 no mês"
+            List<String> ociosos = new ArrayList<>();
+            int testesVencidos = 0;
             java.time.format.DateTimeFormatter fData = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
             java.time.format.DateTimeFormatter fDataHora = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
@@ -1376,6 +1381,13 @@ public class TelaController {
                     }
                     infoCadastro.put(a.getId(), texto);
                 }
+                LocalDate ultimaMov = null;
+                Object[] mov = movimento.get(a.getId());
+                if (mov != null) ultimaMov = (LocalDate) mov[0];
+                infoMovimento.put(a.getId(), mov == null || ultimaMov == null ? "Sem movimentação ainda"
+                        : "Última movimentação: " + ultimaMov.format(fData) + " · " + mov[1] + " no mês");
+                if (Engajamento.ocioso(status, cadastro, ultimaMov, hojeMaster)) ociosos.add(a.getNome());
+                if (Assinatura.trialVencido(status, cadastro, hojeMaster)) testesVencidos++;
                 if (c.get("ultimo_acesso_dono") instanceof java.sql.Timestamp t) {
                     ultimoAcesso.put(a.getId(), "Último acesso do dono: " + t.toLocalDateTime().format(fDataHora));
                 }
@@ -1385,8 +1397,8 @@ public class TelaController {
 
             double volumeGmv = 0.0;
             double volumeToneladas = 0.0;
-            int churnMes = bloqueados;
-            int clientesEmRisco = 0;
+            int churnMes = bloqueados + testesVencidos;   // hoje fora de operação: suspensos, bloqueados ou teste vencido
+            int clientesEmRisco = ociosos.size();
 
             try {
                 // Soma direto no banco, de TODOS os armazéns (antes lia o histórico do armazém da sessão: o master não tem, dava sempre 0)
@@ -1398,6 +1410,8 @@ public class TelaController {
             }
 
             testesVencendo.sort(Comparator.comparingLong(m -> (Long) m.get("restam")));
+            model.addAttribute("infoMovimento", infoMovimento);
+            model.addAttribute("ociosos", ociosos);
             model.addAttribute("infoCadastro", infoCadastro);
             model.addAttribute("ultimoAcesso", ultimoAcesso);
             model.addAttribute("testesVencendo", testesVencendo);

@@ -1039,6 +1039,26 @@ public class DatabaseService {
         return jdbcTemplate.update("UPDATE armazem SET status = ? WHERE id = ?", status, id) > 0;
     }
 
+    /** Por armazém: data da última compra/venda finalizada e quantidade no mês atual. Falha de banco = mapa vazio (painel segue). */
+    public Map<Long, Object[]> movimentoPorArmazem() {
+        try {
+            LocalDate primeiroDia = LocalDate.now(ZoneId.of("America/Recife")).withDayOfMonth(1);
+            String sql = "SELECT armazem_id, MAX(data_criacao) AS ultima, " +
+                    "COUNT(CASE WHEN data_criacao >= ? THEN 1 END) AS no_mes FROM oferta " +
+                    "WHERE armazem_id IS NOT NULL AND status IN ('VENDIDO','SAIDA_INDUSTRIA') GROUP BY armazem_id";
+            Map<Long, Object[]> mapa = new HashMap<>();
+            for (Map<String, Object> r : jdbcTemplate.queryForList(sql, java.sql.Date.valueOf(primeiroDia))) {
+                LocalDate ultima = r.get("ultima") instanceof java.sql.Date d ? d.toLocalDate() : null;
+                long noMes = r.get("no_mes") instanceof Number n ? n.longValue() : 0L;
+                mapa.put(((Number) r.get("armazem_id")).longValue(), new Object[]{ultima, noMes});
+            }
+            return mapa;
+        } catch (Exception e) {
+            log.warn("Painel master: não consegui ler o movimento por armazém", e);
+            return new HashMap<>();
+        }
+    }
+
     /** Troca o plano (START/PRO) de um armazém. Os dados não mudam; só o acesso aos recursos Pro. false = armazém não existe. */
     public boolean atualizarPlanoArmazem(Long id, String novoPlano) {
         String plano = novoPlano == null ? "" : novoPlano.trim().toUpperCase(Locale.ROOT);
