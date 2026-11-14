@@ -34,6 +34,8 @@ public class Usuario {
     private TipoUsuario tipo;
 
     // A MÁGICA AQUI: Ligando o usuário às suas solicitações/ofertas
+    // @JsonIgnore: Oferta aponta de volta para o Usuario; sem isso /api/usuarios entra em loop infinito no JSON
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "usuario")
     private List<Oferta> ofertas = new ArrayList<>();
 

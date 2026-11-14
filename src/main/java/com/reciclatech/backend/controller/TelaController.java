@@ -7,6 +7,7 @@ import com.reciclatech.backend.service.DatabaseService;
 import com.reciclatech.backend.service.LimitadorPublico;
 import com.reciclatech.backend.service.LoginThrottle;
 import com.reciclatech.backend.service.ParceiroService;
+import com.reciclatech.backend.util.BuscaCliente;
 import com.reciclatech.backend.util.CodigoArmazem;
 import com.reciclatech.backend.util.ExportacaoCsv;
 import jakarta.servlet.http.HttpSession;
@@ -278,7 +279,7 @@ public class TelaController {
         try {
             googleSheetsService.marcarComoEmAtendimento(idUsuario);
             Usuario vendedor = googleSheetsService.listarUsuarios().stream()
-                    .filter(u -> idUsuario.equals(u.getTelefone()) || idUsuario.equals(u.getId().toString()))
+                    .filter(u -> BuscaCliente.corresponde(u, idUsuario))
                     .findFirst().orElseThrow();
 
             model.addAttribute("vendedor", vendedor);
@@ -298,7 +299,7 @@ public class TelaController {
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         try {
             Usuario vendedor = googleSheetsService.listarUsuarios().stream()
-                    .filter(u -> u.getTelefone().equals(idVendedor) || u.getId().toString().equals(idVendedor))
+                    .filter(u -> BuscaCliente.corresponde(u, idVendedor))
                     .findFirst().orElseThrow();
 
             List<PreVendaDTO> itensRevisao = new ArrayList<>();
@@ -316,9 +317,14 @@ public class TelaController {
                             if (mat != null) {
                                 BigDecimal precoBase = precosVip.containsKey(mat.getNome()) ? precosVip.get(mat.getNome()) : mat.getPrecoPorKg();
                                 BigDecimal totalItem = precoBase.multiply(BigDecimal.valueOf(quantidade));
-                                mat.setPrecoPorKg(precoBase);
+                                // CÓPIA só para exibir o preço (VIP ou base): nunca altera a entidade do banco
+                                Material paraTela = new Material();
+                                paraTela.setId(mat.getId());
+                                paraTela.setNome(mat.getNome());
+                                paraTela.setUnidade(mat.getUnidade());
+                                paraTela.setPrecoPorKg(precoBase);
 
-                                itensRevisao.add(new PreVendaDTO(mat, quantidade, totalItem));
+                                itensRevisao.add(new PreVendaDTO(paraTela, quantidade, totalItem));
                                 totalEstimado = totalEstimado.add(totalItem);
                             }
                         }
@@ -371,6 +377,7 @@ public class TelaController {
     @PostMapping("/admin/cancelar")
     public String cancelarColeta(@RequestParam String id, HttpSession session) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         try { googleSheetsService.cancelarSolicitacao(id); }
         catch (Exception e) { log.error("Erro ao cancelar coleta", e); return "redirect:/admin/coletas?erro=cancelar"; }
         return "redirect:/admin/coletas";
@@ -385,7 +392,7 @@ public class TelaController {
     public String gerarExtratoIndividual(@PathVariable String id, Model model, HttpSession session) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         try {
-            Usuario usuario = googleSheetsService.listarUsuarios().stream().filter(u -> u.getTelefone().equals(id) || u.getId().toString().equals(id)).findFirst().orElse(null);
+            Usuario usuario = googleSheetsService.listarUsuarios().stream().filter(u -> BuscaCliente.corresponde(u, id)).findFirst().orElse(null);
             if (usuario == null) return "redirect:/";
 
             List<Oferta> vendasReais = googleSheetsService.buscarVendasPorUsuario(id);
@@ -1035,6 +1042,7 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) {
             return "redirect:/login";
         }
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
 
         try {
             googleSheetsService.salvarFuncionario(nome, login, senha);
@@ -1050,6 +1058,7 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null || !"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) {
             return "redirect:/login";
         }
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
 
         try {
             googleSheetsService.alterarStatusFuncionario(id, ativo);
