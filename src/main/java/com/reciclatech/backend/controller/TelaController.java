@@ -7,6 +7,7 @@ import com.reciclatech.backend.service.DatabaseService;
 import com.reciclatech.backend.service.LimitadorPublico;
 import com.reciclatech.backend.service.LoginThrottle;
 import com.reciclatech.backend.service.ParceiroService;
+import com.reciclatech.backend.util.CodigoArmazem;
 import com.reciclatech.backend.util.ExportacaoCsv;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpServletResponse;
@@ -82,6 +83,9 @@ public class TelaController {
 
     @GetMapping("/login")
     public String telaLogin(HttpSession session) {
+        if (session.getAttribute("adminLogado") == null && session.getAttribute("parceiroId") instanceof Long) {
+            return "redirect:/conta/armazens"; // dono já entrou: escolher o armazém
+        }
         if (session.getAttribute("adminLogado") != null) {
             if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
             return "redirect:/admin/coletas";
@@ -89,36 +93,46 @@ public class TelaController {
         return "login-admin";
     }
 
+    /**
+     * Entrada única. Aba "dono": e-mail + senha. Aba "operador": código do armazém + usuário + senha.
+     * Sem o campo "tipo" (formulário antigo), um texto com "@" é tratado como e-mail do dono.
+     */
     @PostMapping("/login-admin")
-    public String login(@RequestParam String login, @RequestParam String senha, jakarta.servlet.http.HttpServletRequest request) {
+    public String login(@RequestParam String login, @RequestParam String senha,
+                        @RequestParam(required = false) String tipo,
+                        @RequestParam(required = false) String codigo,
+                        jakarta.servlet.http.HttpServletRequest request) {
         HttpSession session = request.getSession(true);
-        String chaveLogin = "op:" + login;
-        if (throttle.bloqueado(chaveLogin)) return "redirect:/login?erro=tentativas";
+        String loginLimpo = login.trim();
+        boolean dono = "DONO".equalsIgnoreCase(tipo) || (tipo == null && loginLimpo.contains("@"));
+        String aba = dono ? "dono" : "operador";
+        String codigoNorm = CodigoArmazem.normalizar(codigo);
+        // dono compartilha o limite de tentativas com o fluxo antigo de conta; operador conta por armazém + usuário
+        String chaveLogin = dono ? "login:" + loginLimpo : "op:" + codigoNorm + ":" + loginLimpo;
+        if (throttle.bloqueado(chaveLogin)) return "redirect:/login?erro=tentativas&aba=" + aba;
         if ("master".equals(login) && senhaMasterValida(senha)) {
             request.changeSessionId(); // evita fixação de sessão
             session.setAttribute("masterLogado", true);
             return "redirect:/master/painel";
         }
 
-        // Conta do dono (e-mail + senha): o mesmo login serve para operador (usuário) e para dono (e-mail)
-        String emailDono = login.trim();
-        String chaveDono = "login:" + emailDono;
-        boolean pareceEmail = emailDono.contains("@");
-        if (pareceEmail) {
-            if (throttle.bloqueado(chaveDono)) return "redirect:/login?erro=tentativas";
-            Optional<Parceiro> dono = parceiroService.autenticar(emailDono, senha);
-            if (dono.isPresent()) {
-                throttle.sucesso(chaveDono);
+        if (dono) {
+            Optional<Parceiro> achado = parceiroService.autenticar(loginLimpo, senha);
+            if (achado.isPresent()) {
                 throttle.sucesso(chaveLogin);
                 request.changeSessionId(); // evita fixação de sessão
-                session.setAttribute("parceiroId", dono.get().getId());
-                session.setAttribute("parceiroNome", dono.get().getNome());
+                session.setAttribute("parceiroId", achado.get().getId());
+                session.setAttribute("parceiroNome", achado.get().getNome());
                 return "redirect:/conta/armazens";
             }
+            throttle.falhou(chaveLogin);
+            return "redirect:/login?erro=true&aba=dono";
         }
 
+        if (codigoNorm.isEmpty()) return "redirect:/login?erro=codigo&aba=operador";
+
         try {
-            Map<String, String> dadosUser = googleSheetsService.autenticarOperador(login, senha);
+            Map<String, String> dadosUser = googleSheetsService.autenticarOperador(codigoNorm, loginLimpo, senha);
             if (dadosUser != null) {
                 throttle.sucesso(chaveLogin);
                 request.changeSessionId(); // evita fixação de sessão
@@ -155,13 +169,12 @@ public class TelaController {
                 return "redirect:/admin/coletas";
             }
         } catch (RuntimeException e) {
-            return "redirect:/login?erro=suspenso";
+            return "redirect:/login?erro=suspenso&aba=operador";
         } catch (Exception e) {
             log.error("Erro inesperado", e);
         }
         throttle.falhou(chaveLogin);
-        if (pareceEmail) throttle.falhou(chaveDono);
-        return "redirect:/login?erro=true";
+        return "redirect:/login?erro=true&aba=operador";
     }
 
     @PostMapping("/sair")
@@ -1013,6 +1026,7 @@ public class TelaController {
         }
 
         model.addAttribute("operadores", googleSheetsService.listarFuncionarios());
+        model.addAttribute("codigoArmazem", googleSheetsService.obterCodigoArmazemLogado());
         return "admin-operadores";
     }
 

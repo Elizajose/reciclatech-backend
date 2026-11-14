@@ -37,6 +37,10 @@
             <div class="small text-muted" th:if="${a.uf != null and a.cidade != null}"><i class="bi bi-geo-alt"></i> <span th:text="|${a.cidade} - ${a.uf}|">Cidade - UF</span></div>
             <span class="badge bg-light text-dark border mt-1" th:text="${a.status}">TRIAL</span>
             <span class="badge bg-light text-dark border mt-1" th:text="${a.plano}">START</span>
+            <div class="small mt-2" th:if="${a.codigo != null}">
+                <i class="bi bi-key"></i> Código para os operadores entrarem:
+                <strong class="font-monospace user-select-all" th:text="${a.codigo}">K7M2QX</strong>
+            </div>
             <form th:if="${a.uf == null or a.cidade == null}" th:action="@{/conta/armazens/{id}/regiao(id=${a.id})}" method="post" class="row g-2 mt-2">
                 <div class="col-12 small text-warning fw-bold"><i class="bi bi-exclamation-triangle"></i> Informe a região para aparecer no filtro da página inicial.</div>
                 <div class="col-5"><select name="uf" class="form-select form-select-sm" required>

@@ -28,7 +28,14 @@
 
     <!-- ALERTAS DE ERRO OU SUCESSO -->
     <div th:if="${param.erro != null}" class="alert alert-danger" role="alert">
-        Erro: Não foi possível cadastrar. Verifique se o login já está em uso.
+        Não foi possível cadastrar. Esse usuário já existe neste armazém (ou está em branco).
+    </div>
+
+    <div class="alert alert-success d-flex flex-wrap align-items-center gap-2" th:if="${codigoArmazem != null and !codigoArmazem.isEmpty()}">
+        <i class="bi bi-key-fill"></i>
+        <span>Código do seu armazém para o login dos operadores:</span>
+        <strong class="fs-5 font-monospace user-select-all" th:text="${codigoArmazem}">K7M2QX</strong>
+        <span class="small text-muted w-100">Na tela de login, o operador escolhe "Sou operador" e digita este código, o usuário e a senha dele.</span>
     </div>
 
     <div class="row">
@@ -46,7 +53,7 @@
                             <input type="text" name="nome" class="form-control" placeholder="Ex: João da Silva" autocomplete="off" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold small">Login (Usuário)</label>
+                            <label class="form-label fw-bold small">Usuário (único neste armazém)</label>
                             <input type="text" name="login" class="form-control" placeholder="Ex: joao.balcao" autocomplete="off" required>
                         </div>
                         <div class="mb-4">

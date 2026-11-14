@@ -76,11 +76,24 @@
                 </div>
 
                 <h2 class="fw-bold text-dark mb-1">Acesse sua conta</h2>
-                <p class="text-muted small mb-4">Dono: entre com seu e-mail. Operador: entre com seu usuário.</p>
+                <p class="text-muted small mb-3">Escolha como você entra.</p>
+
+                <!-- Abas: dono x operador -->
+                <div class="btn-group w-100 mb-3" role="group" aria-label="Tipo de acesso">
+                    <button type="button" id="abaDono" class="btn btn-outline-success fw-bold" onclick="trocarAba('dono')">Sou dono</button>
+                    <button type="button" id="abaOperador" class="btn btn-outline-success fw-bold" onclick="trocarAba('operador')">Sou operador</button>
+                </div>
 
                 <!-- Alertas Dinâmicos -->
+                <div th:if="${param.criada != null}" class="alert alert-success p-2 small fw-bold rounded-3">Conta criada! Entre com seu e-mail e senha.</div>
+                <div th:if="${param.senhaRedefinida != null}" class="alert alert-success p-2 small fw-bold rounded-3">Senha alterada! Entre com a nova senha.</div>
                 <div th:if="${param.erro != null and param.erro[0] == 'true'}" class="alert alert-danger p-2 small fw-bold d-flex align-items-center gap-2 rounded-3">
-                    <i class="bi bi-exclamation-triangle-fill"></i> E-mail, usuário ou senha incorretos.
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <span th:if="${param.aba != null and param.aba[0] == 'operador'}">Código do armazém, usuário ou senha incorretos.</span>
+                    <span th:unless="${param.aba != null and param.aba[0] == 'operador'}">E-mail ou senha incorretos.</span>
+                </div>
+                <div th:if="${param.erro != null and param.erro[0] == 'codigo'}" class="alert alert-danger p-2 small fw-bold d-flex align-items-center gap-2 rounded-3">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Informe o código do armazém (peça ao dono).
                 </div>
                 <div th:if="${param.erro != null and param.erro[0] == 'suspenso'}" class="alert alert-warning p-2 small fw-bold d-flex align-items-center gap-2 rounded-3">
                     <i class="bi bi-lock-fill"></i> Conta suspensa. Contate o suporte.
@@ -89,18 +102,16 @@
                     <i class="bi bi-clock-history"></i> Muitas tentativas. Aguarde alguns minutos.
                 </div>
 
-                <form action="/login-admin" method="post">
-
-                    <!-- E-mail / Usuário -->
+                <!-- ===== DONO: e-mail + senha ===== -->
+                <form id="formDono" action="/login-admin" method="post">
+                    <input type="hidden" name="tipo" value="DONO">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-dark">E-mail ou Usuário</label>
+                        <label class="form-label small fw-bold text-dark">E-mail</label>
                         <div class="input-group input-group-lg shadow-sm">
                             <span class="input-group-text border-end-0"><i class="bi bi-envelope"></i></span>
-                            <input type="text" name="login" class="form-control border-start-0 fs-6" placeholder="exemplo@coletae.com" required autofocus>
+                            <input type="text" name="login" class="form-control border-start-0 fs-6" placeholder="seu@email.com" autocomplete="username" required>
                         </div>
                     </div>
-
-                    <!-- Senha -->
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <label class="form-label small fw-bold text-dark m-0">Senha</label>
@@ -108,34 +119,46 @@
                         </div>
                         <div class="input-group input-group-lg shadow-sm">
                             <span class="input-group-text border-end-0"><i class="bi bi-lock"></i></span>
-                            <input type="password" name="senha" id="senhaInput" class="form-control border-start-0 border-end-0 fs-6" placeholder="••••••••" required>
+                            <input type="password" name="senha" id="senhaInput" class="form-control border-start-0 border-end-0 fs-6" placeholder="••••••••" autocomplete="current-password" required>
                             <button class="btn btn-toggle-pass border-start-0" type="button" id="togglePassword">
                                 <i class="bi bi-eye-fill" id="eyeIcon"></i>
                             </button>
                         </div>
                     </div>
-
-                    <!-- Lembrar de mim -->
-                    <div class="form-check mb-4 mt-3">
-                        <input class="form-check-input text-success" type="checkbox" id="lembrar" style="cursor: pointer;">
-                        <label class="form-check-label small text-muted" for="lembrar" style="cursor: pointer;">
-                            Manter-me conectado
-                        </label>
-                    </div>
-
-                    <button type="submit" class="btn btn-success w-100 btn-lg fw-bold shadow-sm mb-4 rounded-3">
-                        Entrar
-                    </button>
-
-                    <!-- Link para Cadastro -->
-                    <div class="text-center small">
+                    <button type="submit" class="btn btn-success w-100 btn-lg fw-bold shadow-sm mb-3 mt-3 rounded-3">Entrar como dono</button>
+                    <div class="text-center small mb-3">
                         <span class="text-muted">Ainda não tem acesso?</span>
                         <a href="/conta/cadastro" class="text-success fw-bold text-decoration-none">Criar conta</a>
                     </div>
-                    <div class="text-center small mt-2">
-                        <span class="text-muted">Dono de armazém com e-mail e senha?</span>
-                        <a href="/conta/login" class="text-success fw-bold text-decoration-none">Entrar como dono</a>
+                </form>
+
+                <!-- ===== OPERADOR: código do armazém + usuário + senha ===== -->
+                <form id="formOperador" action="/login-admin" method="post" class="d-none">
+                    <input type="hidden" name="tipo" value="OPERADOR">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark">Código do armazém</label>
+                        <div class="input-group input-group-lg shadow-sm">
+                            <span class="input-group-text border-end-0"><i class="bi bi-shop"></i></span>
+                            <input type="text" name="codigo" class="form-control border-start-0 fs-6 text-uppercase" placeholder="Ex: K7M2QX" maxlength="12" autocomplete="off" autocapitalize="characters">
+                        </div>
+                        <div class="form-text">O dono vê esse código em "Meus armazéns" e em "Equipe".</div>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark">Usuário</label>
+                        <div class="input-group input-group-lg shadow-sm">
+                            <span class="input-group-text border-end-0"><i class="bi bi-person"></i></span>
+                            <input type="text" name="login" class="form-control border-start-0 fs-6" placeholder="seu usuário" autocomplete="username" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark">Senha</label>
+                        <div class="input-group input-group-lg shadow-sm">
+                            <span class="input-group-text border-end-0"><i class="bi bi-lock"></i></span>
+                            <input type="password" name="senha" class="form-control border-start-0 fs-6" placeholder="••••••••" autocomplete="current-password" required>
+                        </div>
+                        <div class="form-text">Esqueceu a senha? Peça ao dono do armazém.</div>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 btn-lg fw-bold shadow-sm mb-3 mt-3 rounded-3">Entrar como operador</button>
                 </form>
 
                 <div class="text-center mt-4">
@@ -293,6 +316,21 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- SCRIPT EXTERNO -->
+<script>
+function trocarAba(aba) {
+    var dono = aba !== 'operador';
+    document.getElementById('formDono').classList.toggle('d-none', !dono);
+    document.getElementById('formOperador').classList.toggle('d-none', dono);
+    document.getElementById('abaDono').classList.toggle('active', dono);
+    document.getElementById('abaOperador').classList.toggle('active', !dono);
+    var campo = document.querySelector(dono ? '#formDono input[name=login]' : '#formOperador input[name=codigo]');
+    if (campo) campo.focus();
+}
+(function () {
+    var p = new URLSearchParams(window.location.search);
+    trocarAba(p.get('aba') === 'operador' ? 'operador' : 'dono');
+})();
+</script>
 <script th:src="@{/js/admin-login.js}"></script>
 
 </body>

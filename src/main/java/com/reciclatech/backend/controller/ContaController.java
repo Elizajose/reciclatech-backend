@@ -67,7 +67,7 @@ public class ContaController {
         } else {
             try {
                 parceiroService.registrar(nome, email, senha);
-                return "redirect:/conta/login?criada=true";
+                return "redirect:/login?criada=true";
             } catch (IllegalArgumentException e) {
                 erro = e.getMessage();
             } catch (DataIntegrityViolationException e) {
@@ -82,43 +82,17 @@ public class ContaController {
 
     // ---------------- login / sair ----------------
 
+    /** O login do dono agora fica na tela única /login (aba "Sou dono"); este endereço antigo só redireciona. */
     @GetMapping("/login")
-    public String loginForm(HttpSession session) {
-        if (parceiroLogado(session) != null) return "redirect:/conta/armazens";
-        return "conta-login";
-    }
-
-    @PostMapping("/login")
-    public String login(@RequestParam String email, @RequestParam String senha,
-                        HttpServletRequest request, Model model) {
-        String chave = "login:" + email;
-        if (throttle.bloqueado(chave)) {
-            model.addAttribute("erro", "Muitas tentativas. Aguarde alguns minutos e tente de novo.");
-            model.addAttribute("email", email);
-            return "conta-login";
-        }
-
-        Optional<Parceiro> parceiro = parceiroService.autenticar(email, senha);
-        if (parceiro.isEmpty()) {
-            throttle.falhou(chave);
-            model.addAttribute("erro", "E-mail ou senha inválidos.");
-            model.addAttribute("email", email);
-            return "conta-login";
-        }
-
-        throttle.sucesso(chave);
-        request.getSession(true);
-        request.changeSessionId(); // evita fixação de sessão
-        HttpSession session = request.getSession();
-        session.setAttribute(S_PARCEIRO_ID, parceiro.get().getId());
-        session.setAttribute(S_PARCEIRO_NOME, parceiro.get().getNome());
-        return "redirect:/conta/armazens";
+    public String loginAntigo(HttpServletRequest request) {
+        String consulta = request.getQueryString();
+        return "redirect:/login" + (consulta == null || consulta.isBlank() ? "" : "?" + consulta);
     }
 
     @PostMapping("/sair")
     public String sair(HttpSession session) {
         session.invalidate();
-        return "redirect:/conta/login";
+        return "redirect:/login";
     }
 
     // ---------------- armazéns do dono ----------------
@@ -126,7 +100,7 @@ public class ContaController {
     @GetMapping("/armazens")
     public String armazens(HttpSession session, Model model) {
         Long id = parceiroLogado(session);
-        if (id == null) return "redirect:/conta/login";
+        if (id == null) return "redirect:/login";
         model.addAttribute("armazens", parceiroService.listarArmazens(id));
         model.addAttribute("parceiroNome", session.getAttribute(S_PARCEIRO_NOME));
         return "conta-armazens";
@@ -134,7 +108,7 @@ public class ContaController {
 
     @GetMapping("/armazens/novo")
     public String novoForm(HttpSession session) {
-        if (parceiroLogado(session) == null) return "redirect:/conta/login";
+        if (parceiroLogado(session) == null) return "redirect:/login";
         return "conta-armazem-novo";
     }
 
@@ -145,7 +119,7 @@ public class ContaController {
                              @RequestParam(required = false, defaultValue = "START") String plano,
                              HttpSession session, Model model) {
         Long id = parceiroLogado(session);
-        if (id == null) return "redirect:/conta/login";
+        if (id == null) return "redirect:/login";
         try {
             parceiroService.cadastrarArmazem(id, nome, cnpj, telefone, endereco, uf, cidade, plano);
             return "redirect:/conta/armazens?criado=true";
@@ -167,7 +141,7 @@ public class ContaController {
     public String salvarRegiao(@PathVariable Long id, @RequestParam String uf, @RequestParam String cidade,
                                HttpSession session) {
         Long parceiroId = parceiroLogado(session);
-        if (parceiroId == null) return "redirect:/conta/login";
+        if (parceiroId == null) return "redirect:/login";
         try {
             parceiroService.definirRegiao(parceiroId, id, uf, cidade);
             return "redirect:/conta/armazens?regiao=ok";
@@ -180,7 +154,7 @@ public class ContaController {
     @PostMapping("/armazens/{id}/entrar")
     public String entrar(@PathVariable Long id, HttpSession session) {
         Long parceiroId = parceiroLogado(session);
-        if (parceiroId == null) return "redirect:/conta/login";
+        if (parceiroId == null) return "redirect:/login";
 
         Optional<Armazem> achado = parceiroService.buscarArmazemDoDono(id, parceiroId);
         if (achado.isEmpty()) return "redirect:/conta/armazens?erro=acesso";
@@ -245,7 +219,7 @@ public class ContaController {
         } else {
             try {
                 if (recuperacaoSenhaService.redefinir(token, senha)) {
-                    return "redirect:/conta/login?senhaRedefinida=true";
+                    return "redirect:/login?senhaRedefinida=true";
                 }
                 model.addAttribute("tokenValido", false);
                 model.addAttribute("token", "");

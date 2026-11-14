@@ -67,9 +67,19 @@ public class ParceiroService {
         return achado;
     }
 
-    @Transactional(readOnly = true)
+    /** Lista os armazéns do dono; os que ainda não têm código de operador (cadastro antigo) recebem um agora. */
+    @Transactional
     public List<Armazem> listarArmazens(Long parceiroId) {
-        return armazemRepository.findByProprietarioIdOrderByNomeAsc(parceiroId);
+        List<Armazem> lista = armazemRepository.findByProprietarioIdOrderByNomeAsc(parceiroId);
+        for (Armazem a : lista) {
+            if (a.getCodigo() == null || a.getCodigo().isBlank()) {
+                String c;
+                do { c = com.reciclatech.backend.util.CodigoArmazem.gerar(); } while (armazemRepository.existsByCodigo(c));
+                a.setCodigo(c);
+                armazemRepository.save(a);
+            }
+        }
+        return lista;
     }
 
     /** Devolve o armazém SOMENTE se pertencer ao dono informado. */

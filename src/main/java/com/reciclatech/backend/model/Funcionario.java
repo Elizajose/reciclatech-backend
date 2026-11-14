@@ -3,6 +3,7 @@ package com.reciclatech.backend.model;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "funcionario", uniqueConstraints = @UniqueConstraint(name = "uk_funcionario_armazem_login", columnNames = {"armazem_id", "login"}))
 public class Funcionario {
 
     @Id
@@ -16,7 +17,8 @@ public class Funcionario {
 
     private String nome;
 
-    @Column(unique = true, nullable = false)
+    // Único DENTRO do armazém (dois armazéns podem ter um operador "caixa1")
+    @Column(nullable = false)
     private String login;
 
     @Column(nullable = false)

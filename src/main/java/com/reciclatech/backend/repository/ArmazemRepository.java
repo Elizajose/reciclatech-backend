@@ -14,4 +14,8 @@ public interface ArmazemRepository extends JpaRepository<Armazem, Long> {
     List<Armazem> findByProprietarioIdOrderByNomeAsc(Long proprietarioId);
     Optional<Armazem> findByIdAndProprietarioId(Long id, Long proprietarioId);
     boolean existsByCnpj(String cnpj);
+
+    // Fase 14: código do armazém usado no login do operador
+    boolean existsByCodigo(String codigo);
+    List<Armazem> findByCodigoIsNull();
 }

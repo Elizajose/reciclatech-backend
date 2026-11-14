@@ -132,17 +132,17 @@ public class DatabaseService {
     // =========================================================================
 
     /**
-     * Login de OPERADOR (funcionário). O dono entra pela conta (/conta/login), não por aqui.
+     * Login de OPERADOR (funcionário): código do armazém + usuário + senha (o usuário é único só dentro do armazém). O dono entra pela aba "Sou dono".
      * Senhas novas são BCrypt; senhas antigas (SHA-256) ainda entram uma vez e são convertidas para BCrypt.
      */
-    public Map<String, String> autenticarOperador(String login, String senhaPura) {
-        if (login == null || senhaPura == null) return null;
+    public Map<String, String> autenticarOperador(String codigoArmazem, String login, String senhaPura) {
+        if (codigoArmazem == null || codigoArmazem.isBlank() || login == null || senhaPura == null) return null;
         try {
             String sql = "SELECT f.id AS func_id, f.nome AS func_nome, f.senha AS func_senha, f.perfil, f.armazem_id, " +
                     "a.nome AS nome_armazem, a.cnpj, a.endereco, a.telefone, a.status, a.plano " +
                     "FROM funcionario f " +
                     "JOIN armazem a ON f.armazem_id = a.id " +
-                    "WHERE f.login = ? AND f.ativo = true";
+                    "WHERE a.codigo = ? AND f.login = ? AND f.ativo = true";
 
             List<Map<String, String>> achados = jdbcTemplate.query(sql, (rs, rowNum) -> {
                 Map<String, String> dados = new HashMap<>();
@@ -158,7 +158,7 @@ public class DatabaseService {
                 dados.put("plano", rs.getString("plano"));
                 dados.put("nomeFuncionarioLogado", rs.getString("func_nome"));
                 return dados;
-            }, login);
+            }, codigoArmazem, login);
             if (achados.isEmpty()) return null;
 
             Map<String, String> dados = achados.get(0);
@@ -691,15 +691,39 @@ public class DatabaseService {
         }
     }
 
+    /** Código que o operador digita no login. Se o armazém ainda não tem (cadastro antigo), gera e grava agora. */
+    public String obterCodigoArmazemLogado() {
+        Armazem a = getArmazemLogado();
+        if (a == null) return "";
+        if (a.getCodigo() == null || a.getCodigo().isBlank()) {
+            a.setCodigo(novoCodigoLivre());
+            armazemRepository.save(a);
+        }
+        return a.getCodigo();
+    }
+
+    private String novoCodigoLivre() {
+        for (int i = 0; i < 20; i++) {
+            String c = com.reciclatech.backend.util.CodigoArmazem.gerar();
+            if (!armazemRepository.existsByCodigo(c)) return c;
+        }
+        throw new IllegalStateException("Não foi possível gerar um código livre.");
+    }
+
     public List<Funcionario> listarFuncionarios() {
         return funcionarioRepository.findAllByArmazemId(getArmazemIdLogado());
     }
 
     public void salvarFuncionario(String nome, String login, String senhaPura) {
+        String loginLimpo = login == null ? "" : login.trim();
+        if (loginLimpo.isEmpty()) throw new IllegalArgumentException("Informe o usuário do operador.");
+        if (funcionarioRepository.existsByArmazemIdAndLogin(getArmazemIdLogado(), loginLimpo)) {
+            throw new IllegalArgumentException("login_duplicado");
+        }
         Funcionario f = new Funcionario();
         f.setArmazem(getArmazemLogado());
         f.setNome(nome);
-        f.setLogin(login);
+        f.setLogin(loginLimpo);
         f.setSenha(passwordEncoder.encode(senhaPura));
         f.setAtivo(true);
         f.setPerfil("OPERADOR");

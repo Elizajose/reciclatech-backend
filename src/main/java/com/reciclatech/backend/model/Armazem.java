@@ -30,6 +30,10 @@ public class Armazem {
     @Column(unique = true)
     private String login;
 
+    /** Código curto que o operador digita no login (único). Gerado automaticamente. */
+    @Column(length = 12, unique = true)
+    private String codigo;
+
     private String senha;
 
     @Column(name = "senha_financeira")
@@ -64,6 +68,14 @@ public class Armazem {
     public String getCidade() { return cidade; }
     public void setCidade(String cidade) { this.cidade = cidade; }
     public void setEndereco(String endereco) { this.endereco = endereco; }
+
+    public String getCodigo() { return codigo; }
+    public void setCodigo(String codigo) { this.codigo = codigo; }
+
+    @PrePersist
+    void gerarCodigoSeFaltar() {
+        if (codigo == null || codigo.isBlank()) codigo = com.reciclatech.backend.util.CodigoArmazem.gerar();
+    }
 
     public String getLogin() { return login; }
     public void setLogin(String login) { this.login = login; }
