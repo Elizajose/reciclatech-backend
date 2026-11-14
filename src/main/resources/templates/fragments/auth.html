@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Estilo comum das telas de entrada (animação da ilustração) -->
+<style th:fragment="estilo">
+    @keyframes float { 0% { transform: translateY(0); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0); } }
+    .img-float { animation: float 6s ease-in-out infinite; filter: drop-shadow(0 25px 25px rgba(0, 0, 0, 0.15)); }
+    @media (prefers-reduced-motion: reduce) { .img-float { animation: none; } }
+    .auth-logo-mobile { color: #059669; }
+</style>
+
+<!-- Metade verde (aparece de tablet para cima): logo, mensagem, ilustração e, se pedido, a lista de vantagens -->
+<div th:fragment="lateral(titulo, texto, imagem, beneficios)"
+     class="col-lg-6 col-md-5 d-none d-md-flex flex-column justify-content-between p-5 bg-coletae-primary text-white position-relative overflow-hidden"
+     style="min-height: 100vh;">
+
+    <div class="position-absolute" style="width: 800px; height: 800px; background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 60%); top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1;"></div>
+
+    <div style="z-index: 2;">
+        <a th:href="@{/}" class="d-flex align-items-center gap-2 fs-3 fw-bold text-white text-decoration-none"><i class="bi bi-recycle"></i> Coletaê</a>
+    </div>
+
+    <div class="pe-lg-5 mt-4" style="z-index: 2;">
+        <h1 class="fw-bold display-6 mb-3" th:text="${titulo}">Título</h1>
+        <p class="fs-5 opacity-75 pe-lg-4" th:text="${texto}">Texto</p>
+        <div th:if="${beneficios}" class="d-flex flex-column gap-3 mt-4">
+            <div class="d-flex align-items-center gap-3">
+                <div class="bg-white text-success rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 35px; height: 35px; min-width: 35px;"><i class="bi bi-graph-up-arrow fs-5"></i></div>
+                <span class="fs-6 fw-medium">Painel financeiro em tempo real</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="bg-white text-success rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 35px; height: 35px; min-width: 35px;"><i class="bi bi-receipt-cutoff fs-5"></i></div>
+                <span class="fs-6 fw-medium">Recibos digitais</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="bg-white text-success rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 35px; height: 35px; min-width: 35px;"><i class="bi bi-shield-check fs-5"></i></div>
+                <span class="fs-6 fw-medium">Controle de catadores e clientes VIP</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-auto mb-auto px-4 py-3" style="z-index: 2;">
+        <img th:src="@{${imagem}}" alt="Ilustração Coletaê" class="img-fluid img-float" style="max-height: 38vh; object-fit: contain;">
+    </div>
+
+    <div class="small opacity-75" style="z-index: 2;">© 2026 Coletaê. Todos os direitos reservados.</div>
+</div>
+
+</body>
+</html>

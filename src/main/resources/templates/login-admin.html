@@ -66,7 +66,7 @@
             <div class="w-100" style="max-width: 420px;">
 
                 <!-- BOTÃO DE VOLTAR -->
-                <a href="/" class="btn btn-link text-decoration-none text-muted px-0 mb-3 d-flex align-items-center gap-2" style="width: fit-content;">
+                <a href="/" data-voltar data-ignora-auth class="btn btn-link text-decoration-none text-muted px-0 mb-3 d-flex align-items-center gap-2" style="width: fit-content;">
                     <i class="bi bi-arrow-left"></i> Voltar
                 </a>
 
@@ -332,6 +332,7 @@ function trocarAba(aba) {
 })();
 </script>
 <script th:src="@{/js/admin-login.js}"></script>
+<script th:src="@{/js/voltar.js}"></script>
 
 </body>
 </html>
