@@ -12,6 +12,10 @@
 </head>
 <body class="bg-body-tertiary">
 <div class="container mt-4">
+<div class="container-lg mt-3" th:if="${erroTela != null or avisoTela != null or sucessoTela != null}">
+    <div th:replace="~{fragments/avisos :: avisos}"></div>
+</div>
+
 
     <!-- CABEÇALHO (Botões reorganizados) -->
     <div class="d-flex justify-content-between align-items-center mb-4 no-print flex-wrap gap-3">
@@ -268,12 +272,8 @@
     <!-- BOTÃO ENCERRAR DIA REPOSICIONADO -->
     <div class="d-flex justify-content-end mb-5 no-print">
         <form action="/admin/fechar-caixa" method="post" onsubmit="return confirm('Deseja realmente travar o caixa de hoje? Isso salvará o resumo para o histórico de comparação.')">
+            <!-- só a data vai para o servidor; os totais são recalculados lá com o que está gravado -->
             <input type="hidden" name="dataHoje" th:value="${dataHojeString}">
-            <input type="hidden" name="entradas" th:value="${caixaEntradaHoje}">
-            <input type="hidden" name="saidas" th:value="${caixaSaidaHoje}">
-            <input type="hidden" name="despesas" th:value="${totalDespesasHoje}">
-            <input type="hidden" name="lucro" th:value="${lucroDoDia}">
-            <input type="hidden" name="pesoTotal" th:value="${pesoCompradoHoje}">
 
             <button type="submit" class="btn btn-danger fw-bold shadow px-4 py-2">
                 <i class="bi bi-safe-fill me-1"></i> Finalizar e Travar Caixa do Dia

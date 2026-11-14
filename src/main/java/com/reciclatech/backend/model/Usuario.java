@@ -15,6 +15,7 @@ public class Usuario {
     // VÍNCULO COM O ARMAZÉM (Garante que os dados não se misturem entre galpões)
     @ManyToOne
     @JoinColumn(name = "armazem_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore // /api/usuarios não deve mostrar código e login do armazém
     private Armazem armazem;
 
     private String nome;
@@ -26,6 +27,11 @@ public class Usuario {
 
     @Transient
     private String statusPlanilha;
+
+    /** Só para a tela da fila: quem está atendendo este cliente agora. Não é gravado. */
+    @Transient
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String atendentePlanilha;
 
     @Enumerated(EnumType.STRING)
     private StatusColeta status;
@@ -45,7 +51,7 @@ public class Usuario {
 
     @PrePersist
     public void prePersist() {
-        if (this.dataColeta == null) this.dataColeta = LocalDateTime.now();
+        if (this.dataColeta == null) this.dataColeta = LocalDateTime.now(java.time.ZoneId.of("America/Recife"));
         if (this.status == null) this.status = StatusColeta.AGUARDANDO;
     }
 
@@ -73,6 +79,9 @@ public class Usuario {
 
     public LocalDateTime getDataColeta() { return dataColeta; }
     public void setDataColeta(LocalDateTime dataColeta) { this.dataColeta = dataColeta; }
+
+    public String getAtendentePlanilha() { return atendentePlanilha; }
+    public void setAtendentePlanilha(String atendentePlanilha) { this.atendentePlanilha = atendentePlanilha; }
 
     public String getStatusPlanilha() { return statusPlanilha; }
     public void setStatusPlanilha(String statusPlanilha) { this.statusPlanilha = statusPlanilha; }

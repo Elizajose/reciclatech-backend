@@ -32,4 +32,13 @@ class LoginThrottleTest {
         for (int i = 0; i < 5; i++) t.falhou("x");
         assertFalse(t.bloqueado("y"));
     }
+
+    @Test void inundacaoDeChavesNaoZeraUmBloqueioAtivo() {
+        LoginThrottle t = new LoginThrottle();
+        for (int i = 0; i < 5; i++) t.falhou("alvo");
+        assertTrue(t.bloqueado("alvo"));
+        for (int i = 0; i < 25_000; i++) t.falhou("lixo" + i);
+        assertTrue(t.bloqueado("alvo"), "o bloqueio de quem errou a senha tem de continuar valendo");
+        assertTrue(t.tamanho() <= 10_001, "memória continua limitada");
+    }
 }

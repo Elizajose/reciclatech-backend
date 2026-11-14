@@ -15,6 +15,10 @@
 <body class="bg-body-tertiary p-3 p-md-5">
 
 <div class="container-lg">
+<div class="container-lg mt-3" th:if="${erroTela != null or avisoTela != null or sucessoTela != null}">
+    <div th:replace="~{fragments/avisos :: avisos}"></div>
+</div>
+
 
     <!-- CABEÇALHO (Some na Impressão) -->
     <div class="d-flex justify-content-between align-items-center mb-4 d-print-none flex-wrap gap-2">

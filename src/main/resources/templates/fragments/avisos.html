@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Mensagens de sucesso/erro/aviso deixadas pelo servidor para a próxima tela (flash). Antes, falhas eram engolidas e a tela fingia sucesso. -->
+<div th:fragment="avisos" class="container-fluid px-0 no-print">
+    <div th:if="${erroTela}" class="alert alert-danger fw-bold shadow-sm d-flex align-items-start gap-2 mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill mt-1"></i> <span th:text="${erroTela}"></span>
+    </div>
+    <div th:if="${avisoTela}" class="alert alert-warning fw-bold shadow-sm d-flex align-items-start gap-2 mb-3" role="alert">
+        <i class="bi bi-info-circle-fill mt-1"></i> <span th:text="${avisoTela}"></span>
+    </div>
+    <div th:if="${sucessoTela}" class="alert alert-success fw-bold shadow-sm d-flex align-items-start gap-2 mb-3" role="alert">
+        <i class="bi bi-check-circle-fill mt-1"></i> <span th:text="${sucessoTela}"></span>
+    </div>
+</div>
+
+</body>
+</html>

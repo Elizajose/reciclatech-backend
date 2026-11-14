@@ -23,6 +23,10 @@
         <a href="/admin/coletas" class="btn btn-light btn-sm fw-bold">Voltar ao Balcão</a>
     </div>
 </nav>
+<div class="container-lg mt-3" th:if="${erroTela != null or avisoTela != null or sucessoTela != null}">
+    <div th:replace="~{fragments/avisos :: avisos}"></div>
+</div>
+
 
 <div class="container">
 

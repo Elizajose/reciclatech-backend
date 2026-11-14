@@ -21,7 +21,7 @@
     </style>
 </head>
 <body th:classappend="${param.view != null && param.view[0] == 'resumo'} ? 'modo-cliente' : ''"
-      th:with="isSaida=${vendedor.nome != null && vendedor.nome.contains('(SAÍDA)')}">
+      th:with="isSaida=${(vendedor.nome != null && vendedor.nome.contains('(SAÍDA)')) || (vendedor.tipo != null && vendedor.tipo.name() == 'INDUSTRIA')}">
 
 <!-- Botões do seu sistema (Voltar, Imprimir) -->
 <div class="text-center mb-4 no-print d-flex flex-wrap justify-content-center gap-2 botoes-topo mt-2">

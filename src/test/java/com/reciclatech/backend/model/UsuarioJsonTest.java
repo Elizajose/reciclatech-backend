@@ -24,4 +24,28 @@ class UsuarioJsonTest {
         assertTrue(json.contains("Joao"));
         assertFalse(json.contains("\"ofertas\""), "a lista de ofertas não deve ir no JSON do usuário");
     }
+
+    @Test
+    void jsonDoUsuarioNaoMostraArmazemCodigoNemLogin() throws Exception {
+        Armazem a = new Armazem();
+        a.setId(7L);
+        a.setCodigo("ABC123");
+        a.setLogin("login-secreto-do-armazem");
+        Usuario u = new Usuario();
+        u.setId(1L);
+        u.setNome("Joao");
+        u.setArmazem(a);
+
+        String json = new ObjectMapper().writeValueAsString(u);
+
+        assertFalse(json.contains("ABC123"));
+        assertFalse(json.contains("login-secreto-do-armazem"));
+        assertFalse(json.contains("\"armazem\""));
+    }
+
+    @Test
+    void usuarioRecebidoPorJsonIgnoraArmazemEnviado() throws Exception {
+        Usuario u = new ObjectMapper().readValue("{\"nome\":\"X\",\"armazem\":{\"id\":99}}", Usuario.class);
+        assertNull(u.getArmazem(), "quem chama a API não escolhe o armazém");
+    }
 }

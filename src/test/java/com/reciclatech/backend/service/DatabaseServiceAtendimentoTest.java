@@ -83,6 +83,13 @@ class DatabaseServiceAtendimentoTest {
         aberto.setStatus(Oferta.StatusOferta.EM_ATENDIMENTO);
         when(ofertaRepository.travarPorUsuariosEStatus(anyCollection(), anyCollection()))
                 .thenReturn(new ArrayList<>(List.of(aberto)));
+        // fase 17: o servidor confere se o material existe NESTE armazém (e o preço contra a tabela)
+        Material latinha = new Material();
+        latinha.setNome("Latinha");
+        latinha.setUnidade("KG");
+        latinha.setPrecoPorKg(new BigDecimal("8.00"));
+        latinha.setArmazem(armazem);
+        when(materialRepository.findAllByArmazemIdOrderByNomeAsc(1L)).thenReturn(new ArrayList<>(List.of(latinha)));
 
         boolean gravou = service.finalizarAtendimento("10", null, loteComUmaVenda());
 

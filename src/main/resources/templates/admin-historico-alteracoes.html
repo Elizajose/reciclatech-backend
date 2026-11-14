@@ -28,6 +28,7 @@
         <li class="nav-item"><a class="nav-link" th:classappend="${tipo == 'MATERIAL'} ? 'active'" href="/admin/historico-alteracoes?tipo=MATERIAL">Materiais e preços</a></li>
         <li class="nav-item"><a class="nav-link" th:classappend="${tipo == 'PRECO_VIP'} ? 'active'" href="/admin/historico-alteracoes?tipo=PRECO_VIP">Preços VIP</a></li>
         <li class="nav-item"><a class="nav-link" th:classappend="${tipo == 'DESPESA'} ? 'active'" href="/admin/historico-alteracoes?tipo=DESPESA">Despesas</a></li>
+        <li class="nav-item"><a class="nav-link" th:classappend="${tipo == 'ESTOQUE'} ? 'active'" href="/admin/historico-alteracoes?tipo=ESTOQUE">Ajustes de estoque</a></li>
     </ul>
 
     <div class="card shadow-sm border-0">
@@ -50,12 +51,14 @@
                         <span class="fw-bold text-uppercase" th:text="${r.referencia}">LATINHA</span>
                         <span th:if="${r.unidade != null}" class="badge bg-secondary-subtle text-secondary border ms-1" th:text="${r.unidade}">KG</span>
                         <div class="small text-body-secondary"
-                             th:text="${r.entidade == 'MATERIAL' ? 'Material' : (r.entidade == 'DESPESA' ? 'Despesa' : 'Preço VIP')}">Material</div>
+                             th:text="${r.entidade == 'MATERIAL' ? 'Material' : (r.entidade == 'DESPESA' ? 'Despesa' : (r.entidade == 'ESTOQUE' ? 'Estoque' : 'Preço VIP'))}">Material</div>
                     </td>
                     <td>
-                        <span th:if="${r.acao == 'CRIADO'}" class="badge bg-success">Criado</span>
+                        <span th:if="${r.acao == 'CRIADO' and r.entidade != 'ESTOQUE'}" class="badge bg-success">Criado</span>
+                        <span th:if="${r.acao == 'CRIADO' and r.entidade == 'ESTOQUE'}" class="badge bg-success">Entrada manual</span>
+                        <span th:if="${r.acao == 'EXCLUIDO' and r.entidade == 'ESTOQUE'}" class="badge bg-danger">Baixa manual</span>
                         <span th:if="${r.acao == 'PRECO_ALTERADO'}" class="badge bg-warning text-dark">Preço alterado</span>
-                        <span th:if="${r.acao == 'EXCLUIDO'}" class="badge bg-danger">Excluído</span>
+                        <span th:if="${r.acao == 'EXCLUIDO' and r.entidade != 'ESTOQUE'}" class="badge bg-danger">Excluído</span>
                     </td>
                     <td class="text-nowrap">
                         <span th:if="${r.valorAnterior != null}" th:text="${'R$ ' + #numbers.formatDecimal(r.valorAnterior, 1, 'POINT', 2, 'COMMA')}">R$ 7,50</span>

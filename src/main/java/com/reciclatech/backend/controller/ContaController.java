@@ -167,7 +167,12 @@ public class ContaController {
         session.setAttribute("nomeArmazem", nvl(a.getNome(), "Armazém Parceiro"));
         session.setAttribute("cnpjArmazem", nvl(a.getCnpj(), ""));
         session.setAttribute("telefone", nvl(a.getTelefone(), ""));
-        session.setAttribute("senhaLogin", nvl(a.getSenha(), ""));
+        // dados para a revalidação periódica da sessão (ValidadorSessao): dono + impressão da senha atual
+        session.setAttribute("origemLogin", "DONO");
+        session.removeAttribute("credId");
+        session.setAttribute("credFp", parceiroService.impressaoDaSenha(parceiroId));
+        session.setAttribute("atendenteNome", nvl(String.valueOf(session.getAttribute(S_PARCEIRO_NOME)), "Proprietário"));
+        session.removeAttribute("validadoEm");
         session.setAttribute("enderecoArmazem", nvl(a.getEndereco(), "Endereço não informado"));
         session.setAttribute("nomeFuncionarioLogado", "Gestor / Administrador");
 
@@ -176,7 +181,9 @@ public class ContaController {
         session.setAttribute("planoAssinatura", plano);
         session.setAttribute("statusAssinatura", status);
 
-        if ("BLOQUEADO".equals(status)) {
+        // mesma regra do login de operador: bloqueado, suspenso ou teste de 7 dias vencido => só a tela de assinatura
+        if (com.reciclatech.backend.util.Assinatura.bloqueado(status, a.getDataCadastro(),
+                java.time.LocalDate.now(java.time.ZoneId.of("America/Recife")))) {
             session.setAttribute("bloqueadoPagamento", true);
             return "redirect:/admin/assinatura";
         }

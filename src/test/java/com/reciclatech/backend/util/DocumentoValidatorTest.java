@@ -18,4 +18,17 @@ class DocumentoValidatorTest {
         assertFalse(DocumentoValidator.valido(""));
         assertFalse(DocumentoValidator.valido("123"));
     }
+
+    @Test void formataCpfECnpjEmUmUnicoPadrao() {
+        assertEquals("529.982.247-25", DocumentoValidator.formatar("52998224725"));
+        assertEquals("529.982.247-25", DocumentoValidator.formatar(" 529.982.247-25 "));
+        assertEquals("11.222.333/0001-81", DocumentoValidator.formatar("11222333000181"));
+        assertEquals("abc", DocumentoValidator.formatar(" abc "));
+        assertEquals("", DocumentoValidator.formatar(null));
+    }
+
+    @Test void normalizarIgnoraPontuacaoEMaiusculas() {
+        assertEquals("11222333000181", DocumentoValidator.normalizar("11.222.333/0001-81"));
+        assertEquals("AB12", DocumentoValidator.normalizar("ab.12"));
+    }
 }

@@ -1,6 +1,9 @@
 package com.reciclatech.backend.config;
 
+import com.reciclatech.backend.service.ValidadorSessao;
 import com.reciclatech.backend.util.OrigemConfiavel;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,6 +32,9 @@ public class FiltroSeguranca extends OncePerRequestFilter {
 
     @Value("${coletae.url-base:}")
     private String urlBase;
+
+    @Autowired
+    private ValidadorSessao validadorSessao;
 
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
@@ -66,7 +72,27 @@ public class FiltroSeguranca extends OncePerRequestFilter {
                 return;
             }
         }
+
+        // Reconfere a sessão no banco (operador desativado, senha trocada, armazém bloqueado...). Páginas estáticas ficam de fora.
+        // (as rotas de entrada ficam de fora: entrar de novo sempre tem de funcionar, mesmo com uma sessão velha no navegador)
+        if (!ehEstatico(uri) && !"/sair".equals(uri) && !"/login-admin".equals(uri) && !"/master/login-secreto".equals(uri)) {
+            HttpSession sessao = req.getSession(false);
+            if (sessao != null && validadorSessao.verificar(sessao) == ValidadorSessao.Resultado.ENCERRAR) {
+                try { sessao.invalidate(); } catch (IllegalStateException ja) { /* já encerrada */ }
+                if (uri.startsWith("/api/")) {
+                    res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                } else {
+                    res.sendRedirect(req.getContextPath() + "/login?erro=sessao");
+                }
+                return;
+            }
+        }
         chain.doFilter(req, res);
+    }
+
+    private static boolean ehEstatico(String uri) {
+        return uri.startsWith("/css/") || uri.startsWith("/js/") || uri.startsWith("/img/") || uri.startsWith("/video/")
+                || uri.startsWith("/favicon") || uri.startsWith("/actuator/");
     }
 
     private static void addHost(Set<String> hosts, String h) {

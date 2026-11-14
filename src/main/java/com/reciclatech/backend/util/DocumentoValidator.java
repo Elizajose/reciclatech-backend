@@ -50,4 +50,17 @@ public final class DocumentoValidator {
         }
         return false;
     }
+
+    /** Só letras e números, em maiúsculas. Serve para comparar documentos escritos de formas diferentes. */
+    public static String normalizar(String documento) {
+        return documento == null ? "" : documento.replaceAll("[^a-zA-Z0-9]", "").toUpperCase();
+    }
+
+    /** Formato único para gravar: CPF 000.000.000-00, CNPJ 00.000.000/0000-00; outro tamanho volta aparado. */
+    public static String formatar(String documento) {
+        String d = normalizar(documento);
+        if (d.length() == 11) return d.substring(0, 3) + "." + d.substring(3, 6) + "." + d.substring(6, 9) + "-" + d.substring(9);
+        if (d.length() == 14) return d.substring(0, 2) + "." + d.substring(2, 5) + "." + d.substring(5, 8) + "/" + d.substring(8, 12) + "-" + d.substring(12);
+        return documento == null ? "" : documento.trim();
+    }
 }

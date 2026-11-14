@@ -31,7 +31,7 @@ public class LoginThrottle {
     }
 
     public void falhou(String chave) {
-        if (mapa.size() > LIMITE_MAPA) mapa.clear();
+        if (mapa.size() > LIMITE_MAPA) limpar();
         mapa.compute(norm(chave), (k, atual) -> {
             long agora = System.currentTimeMillis();
             Estado e = atual;
@@ -44,6 +44,25 @@ public class LoginThrottle {
             return e;
         });
     }
+
+    /**
+     * Mantém a memória sob controle SEM zerar o freio: primeiro descarta o que já expirou;
+     * se ainda estiver cheio (ataque com milhares de chaves), descarta só as mais antigas que NÃO estão bloqueadas.
+     */
+    private void limpar() {
+        long agora = System.currentTimeMillis();
+        mapa.entrySet().removeIf(en -> en.getValue().bloqueadoAte <= agora && agora - en.getValue().inicio > JANELA_MS);
+        if (mapa.size() <= LIMITE_MAPA) return;
+        java.util.List<Map.Entry<String, Estado>> candidatas = new java.util.ArrayList<>();
+        for (Map.Entry<String, Estado> en : mapa.entrySet()) {
+            if (en.getValue().bloqueadoAte <= agora) candidatas.add(en);
+        }
+        candidatas.sort(java.util.Comparator.comparingLong(en -> en.getValue().inicio));
+        int remover = Math.min(candidatas.size(), mapa.size() - LIMITE_MAPA / 2);
+        for (int i = 0; i < remover; i++) mapa.remove(candidatas.get(i).getKey(), candidatas.get(i).getValue());
+    }
+
+    int tamanho() { return mapa.size(); }
 
     public void sucesso(String chave) { mapa.remove(norm(chave)); }
 }

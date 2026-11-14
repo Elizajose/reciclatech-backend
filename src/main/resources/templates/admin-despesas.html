@@ -18,6 +18,10 @@
         <span class="text-white fw-bold"><i class="bi bi-wallet2"></i> Despesas do Galpão</span>
     </div>
 </nav>
+<div class="container-lg mt-3" th:if="${erroTela != null or avisoTela != null or sucessoTela != null}">
+    <div th:replace="~{fragments/avisos :: avisos}"></div>
+</div>
+
 
 <div class="container container-despesas">
 

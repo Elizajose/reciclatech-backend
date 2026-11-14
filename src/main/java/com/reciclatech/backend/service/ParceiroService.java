@@ -102,7 +102,11 @@ public class ParceiroService {
         String documento = (cnpj == null || cnpj.isBlank()) ? null : cnpj.trim();
         if (documento != null) {
             if (!DocumentoValidator.valido(documento)) throw new IllegalArgumentException("CPF/CNPJ inválido.");
-            if (armazemRepository.existsByCnpj(documento)) throw new IllegalArgumentException("Este CPF/CNPJ já está cadastrado.");
+            // mesmo formato para todos e comparação sem pontuação: "11.222.333/0001-81" e "11222333000181" são o mesmo documento
+            documento = DocumentoValidator.formatar(documento);
+            if (armazemRepository.existeDocumentoNormalizado(DocumentoValidator.normalizar(documento))) {
+                throw new IllegalArgumentException("Este CPF/CNPJ já está cadastrado.");
+            }
         }
 
         Parceiro dono = parceiroRepository.findById(parceiroId)
@@ -121,6 +125,12 @@ public class ParceiroService {
         a.setPlano("PRO".equalsIgnoreCase(plano) ? "PRO" : "START");
         a.setDataCadastro(LocalDate.now(ZoneId.of("America/Recife")));
         return armazemRepository.save(a);
+    }
+
+    /** Impressão curta do hash atual da senha do dono (guardada na sessão para detectar troca de senha). */
+    @Transactional(readOnly = true)
+    public String impressaoDaSenha(Long parceiroId) {
+        return parceiroRepository.findById(parceiroId).map(p -> com.reciclatech.backend.util.Impressao.de(p.getSenhaHash())).orElse("");
     }
 
     /** Define uma senha nova (usada na redefinição por e-mail). */

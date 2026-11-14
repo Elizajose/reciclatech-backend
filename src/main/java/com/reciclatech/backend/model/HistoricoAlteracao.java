@@ -15,6 +15,7 @@ public class HistoricoAlteracao {
     public static final String MATERIAL = "MATERIAL";
     public static final String DESPESA = "DESPESA";
     public static final String PRECO_VIP = "PRECO_VIP";
+    public static final String ESTOQUE = "ESTOQUE";
 
     public static final String CRIADO = "CRIADO";
     public static final String PRECO_ALTERADO = "PRECO_ALTERADO";

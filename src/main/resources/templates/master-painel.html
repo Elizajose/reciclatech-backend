@@ -69,6 +69,10 @@
     </style>
 </head>
 <body>
+<div class="container-lg mt-3" th:if="${erroTela != null or avisoTela != null or sucessoTela != null}">
+    <div th:replace="~{fragments/avisos :: avisos}"></div>
+</div>
+
 
 <div class="master-header">
     <div class="container d-flex justify-content-between align-items-start">

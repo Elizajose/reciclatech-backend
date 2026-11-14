@@ -27,7 +27,12 @@ public class Oferta {
     @Enumerated(EnumType.STRING)
     private StatusOferta status = StatusOferta.DISPONIVEL;
 
-    private LocalDate dataCriacao = LocalDate.now();
+    // Fuso de Recife (o mesmo do resto do sistema), não o relógio do servidor
+    private LocalDate dataCriacao = LocalDate.now(java.time.ZoneId.of("America/Recife"));
+
+    /** Quem está atendendo este pedido (preenchido ao iniciar o atendimento). */
+    @Column(length = 120)
+    private String atendente;
 
     public enum StatusOferta {
         DISPONIVEL, EM_ATENDIMENTO, FINALIZADO, CANCELADO, VENDIDO, SAIDA_INDUSTRIA, AJUSTE_POSITIVO, AJUSTE_NEGATIVO
@@ -54,6 +59,8 @@ public class Oferta {
     public void setPrecoEstimado(BigDecimal precoEstimado) { this.precoEstimado = precoEstimado; }
     public StatusOferta getStatus() { return status; }
     public void setStatus(StatusOferta status) { this.status = status; }
+    public String getAtendente() { return atendente; }
+    public void setAtendente(String atendente) { this.atendente = atendente; }
     public LocalDate getDataCriacao() { return dataCriacao; }
     public void setDataCriacao(LocalDate dataCriacao) { this.dataCriacao = dataCriacao; }
 

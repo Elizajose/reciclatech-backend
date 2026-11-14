@@ -36,6 +36,10 @@ public class DatabaseService {
     @Autowired private ParceiroRepository parceiroRepository;
     @Autowired private HttpSession session;
 
+    /** Teto do preço negociado em relação à tabela/VIP (variável PRECO_MAX_MULTIPLO; 2 = até o dobro). */
+    @org.springframework.beans.factory.annotation.Value("${coletae.preco-max-multiplo:2}")
+    private double multiploPrecoMax = com.reciclatech.backend.util.RegrasVenda.MULTIPLO_PADRAO;
+
 
     // =========================================================================
     // 1. HELPERS E CONTEXTO DA SESSÃO
@@ -134,12 +138,13 @@ public class DatabaseService {
     /**
      * Login de OPERADOR (funcionário): código do armazém + usuário + senha (o usuário é único só dentro do armazém). O dono entra pela aba "Sou dono".
      * Senhas novas são BCrypt; senhas antigas (SHA-256) ainda entram uma vez e são convertidas para BCrypt.
+     * Devolve também: trialVencido ("true"/"false"), origem ("FUNC") e a "impressão" da senha (credId/credFp) para a sessão.
      */
     public Map<String, String> autenticarOperador(String codigoArmazem, String login, String senhaPura) {
         if (codigoArmazem == null || codigoArmazem.isBlank() || login == null || senhaPura == null) return null;
         try {
             String sql = "SELECT f.id AS func_id, f.nome AS func_nome, f.senha AS func_senha, f.perfil, f.armazem_id, " +
-                    "a.nome AS nome_armazem, a.cnpj, a.endereco, a.telefone, a.status, a.plano " +
+                    "a.nome AS nome_armazem, a.cnpj, a.endereco, a.telefone, a.status, a.plano, a.data_cadastro " +
                     "FROM funcionario f " +
                     "JOIN armazem a ON f.armazem_id = a.id " +
                     "WHERE a.codigo = ? AND f.login = ? AND f.ativo = true";
@@ -157,6 +162,8 @@ public class DatabaseService {
                 dados.put("status", rs.getString("status"));
                 dados.put("plano", rs.getString("plano"));
                 dados.put("nomeFuncionarioLogado", rs.getString("func_nome"));
+                java.sql.Date dc = rs.getDate("data_cadastro");
+                dados.put("dataCadastro", dc == null ? "" : dc.toLocalDate().toString());
                 return dados;
             }, codigoArmazem, login);
             if (achados.isEmpty()) return null;
@@ -167,13 +174,75 @@ public class DatabaseService {
             if (!senhaConfere(senhaPura, hashSalvo)) return null;
 
             if (hashSalvo != null && !hashSalvo.startsWith("$2")) {
-                jdbcTemplate.update("UPDATE funcionario SET senha = ? WHERE id = ?",
-                        passwordEncoder.encode(senhaPura), Long.valueOf(funcId));
+                hashSalvo = passwordEncoder.encode(senhaPura);
+                jdbcTemplate.update("UPDATE funcionario SET senha = ? WHERE id = ?", hashSalvo, Long.valueOf(funcId));
             }
+            dados.put("origem", "FUNC");
+            dados.put("credId", funcId);
+            dados.put("credFp", com.reciclatech.backend.util.Impressao.de(hashSalvo));
+            completarAssinatura(dados);
             return dados;
         } catch (Exception e) {
+            log.error("Erro no login de operador", e);
             return null;
         }
+    }
+
+    /**
+     * Armazéns ANTIGOS (criados antes da conta de dono) ainda têm usuário e senha na própria linha do armazém e
+     * nenhum dono vinculado. Eles continuam entrando, como gestor, só com esse usuário e senha (o código é opcional).
+     * Quando o armazém ganhar um dono, este caminho deixa de valer e o acesso passa a ser pela conta do dono.
+     */
+    public Map<String, String> autenticarArmazemAntigo(String codigoArmazem, String login, String senhaPura) {
+        if (login == null || login.isBlank() || senhaPura == null) return null;
+        try {
+            boolean comCodigo = codigoArmazem != null && !codigoArmazem.isBlank();
+            String sql = "SELECT a.id, a.nome, a.cnpj, a.endereco, a.telefone, a.status, a.plano, a.data_cadastro, a.senha " +
+                    "FROM armazem a WHERE a.login = ? AND a.proprietario_id IS NULL" + (comCodigo ? " AND a.codigo = ?" : "");
+            Object[] args = comCodigo ? new Object[]{login, codigoArmazem} : new Object[]{login};
+            List<Map<String, String>> achados = jdbcTemplate.query(sql, (rs, n) -> {
+                Map<String, String> d = new HashMap<>();
+                d.put("idPlanilha", rs.getString("id"));
+                d.put("perfil", "GESTOR");
+                d.put("nomeArmazem", rs.getString("nome"));
+                d.put("cnpj", rs.getString("cnpj"));
+                d.put("endereco", rs.getString("endereco"));
+                d.put("telefone", rs.getString("telefone"));
+                d.put("status", rs.getString("status"));
+                d.put("plano", rs.getString("plano"));
+                d.put("nomeFuncionarioLogado", "Gestor / Administrador");
+                java.sql.Date dc = rs.getDate("data_cadastro");
+                d.put("dataCadastro", dc == null ? "" : dc.toLocalDate().toString());
+                d.put("senhaHash", rs.getString("senha"));
+                return d;
+            }, args);
+            if (achados.isEmpty()) return null;
+
+            Map<String, String> dados = achados.get(0);
+            String hashSalvo = dados.remove("senhaHash");
+            if (!senhaConfere(senhaPura, hashSalvo)) return null;
+            if (hashSalvo != null && !hashSalvo.startsWith("$2")) {
+                hashSalvo = passwordEncoder.encode(senhaPura);
+                jdbcTemplate.update("UPDATE armazem SET senha = ? WHERE id = ?", hashSalvo, Long.valueOf(dados.get("idPlanilha")));
+            }
+            dados.put("origem", "LEGADO");
+            dados.put("credId", dados.get("idPlanilha"));
+            dados.put("credFp", com.reciclatech.backend.util.Impressao.de(hashSalvo));
+            completarAssinatura(dados);
+            return dados;
+        } catch (Exception e) {
+            log.error("Erro no login de armazém antigo", e);
+            return null;
+        }
+    }
+
+    /** Calcula, com a mesma regra usada em toda a aplicação, se o armazém pode operar agora. */
+    private void completarAssinatura(Map<String, String> dados) {
+        LocalDate hoje = LocalDate.now(ZoneId.of("America/Recife"));
+        String dc = dados.get("dataCadastro");
+        LocalDate cadastro = (dc == null || dc.isBlank()) ? null : LocalDate.parse(dc);
+        dados.put("trialVencido", String.valueOf(com.reciclatech.backend.util.Assinatura.trialVencido(dados.get("status"), cadastro, hoje)));
+        dados.remove("dataCadastro");
     }
 
     private boolean senhaConfere(String senhaPura, String hashSalvo) {
@@ -185,13 +254,18 @@ public class DatabaseService {
                 hashSalvo.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
+    /** Documento do armazém sem pontuação e em maiúsculas, para achar duplicados escritos de formas diferentes. */
+    static final String SQL_DOC_NORMALIZADO = "UPPER(regexp_replace(COALESCE(cnpj, ''), '[^A-Za-z0-9]', '', 'g'))";
+
     public boolean cadastrarParceiroSaaS(String nomeArmazem, String nomeProprietario, String documentoCnpjCpf, String telefone, String endereco, String login, String senha, String planoEscolhido) {
         try {
             // CNPJ/CPF é opcional: vazio vira NULL e só entra na checagem de duplicidade quando preenchido
-            String documento = (documentoCnpjCpf == null || documentoCnpjCpf.isBlank()) ? null : documentoCnpjCpf.trim();
+            String documento = (documentoCnpjCpf == null || documentoCnpjCpf.isBlank()) ? null
+                    : com.reciclatech.backend.util.DocumentoValidator.formatar(documentoCnpjCpf);
             Integer count = (documento == null)
                     ? jdbcTemplate.queryForObject("SELECT COUNT(*) FROM armazem WHERE login = ?", Integer.class, login)
-                    : jdbcTemplate.queryForObject("SELECT COUNT(*) FROM armazem WHERE login = ? OR cnpj = ?", Integer.class, login, documento);
+                    : jdbcTemplate.queryForObject("SELECT COUNT(*) FROM armazem WHERE login = ? OR " + SQL_DOC_NORMALIZADO + " = ?",
+                            Integer.class, login, com.reciclatech.backend.util.DocumentoValidator.normalizar(documento));
             if (count != null && count > 0) return false;
 
             java.sql.Date dataHoje = java.sql.Date.valueOf(LocalDate.now(ZoneId.of("America/Recife")));
@@ -213,14 +287,7 @@ public class DatabaseService {
         LocalDate hoje = LocalDate.now(ZoneId.of("America/Recife"));
 
         List<Armazem> armazens = armazemRepository.findAll().stream()
-                .filter(a -> {
-                    if ("ATIVO".equals(a.getStatus())) return true;
-                    if ("TRIAL".equals(a.getStatus()) && a.getDataCadastro() != null) {
-                        long diasUso = java.time.temporal.ChronoUnit.DAYS.between(a.getDataCadastro(), hoje);
-                        return diasUso <= 7;
-                    }
-                    return false;
-                })
+                .filter(a -> com.reciclatech.backend.util.Assinatura.aceitaPedidosPublicos(a.getStatus(), a.getDataCadastro(), hoje))
                 .collect(Collectors.toList());
 
         List<Map<String, Object>> cotacoes = new ArrayList<>();
@@ -228,7 +295,7 @@ public class DatabaseService {
             Map<String, Object> dados = new HashMap<>();
             dados.put("idPlanilha", a.getId().toString());
             dados.put("nome", a.getNome());
-            dados.put("htmlId", a.getNome().replaceAll("[^a-zA-Z0-9]", "").toLowerCase());
+            dados.put("htmlId", "arm" + a.getId()); // único por armazém (nomes parecidos davam o mesmo id na página)
             dados.put("telefone", a.getTelefone());
             dados.put("uf", a.getUf());
             dados.put("cidade", a.getCidade());
@@ -251,8 +318,28 @@ public class DatabaseService {
         return materialRepository.findAllByArmazemIdOrderByNomeAsc(Long.parseLong(sheetId));
     }
 
+    private static String chaveNome(String nome) {
+        return nome == null ? "" : nome.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+    }
+
+    private static final Set<String> UNIDADES = Set.of("KG", "UN");
+
     @Transactional(rollbackFor = Exception.class)
     public void salvarMaterial(Material material) throws IOException {
+        String nome = com.reciclatech.backend.util.Valores.texto(material.getNome(), 100);
+        if (nome == null) throw new IllegalArgumentException("Informe o nome do material (até 100 letras).");
+        if (!com.reciclatech.backend.util.Valores.positivoAte(material.getPrecoPorKg(), com.reciclatech.backend.util.Valores.PRECO_MAX)) {
+            throw new IllegalArgumentException("Informe um preço maior que zero.");
+        }
+        String unidade = material.getUnidade() == null ? "KG" : material.getUnidade().trim().toUpperCase(Locale.ROOT);
+        if (!UNIDADES.contains(unidade)) throw new IllegalArgumentException("Unidade inválida.");
+        for (Material existente : materialRepository.findAllByArmazemIdOrderByNomeAsc(getArmazemIdLogado())) {
+            if (chaveNome(existente.getNome()).equals(chaveNome(nome))) {
+                throw new IllegalArgumentException("Já existe um material chamado \"" + existente.getNome() + "\".");
+            }
+        }
+        material.setNome(nome);
+        material.setUnidade(unidade);
         material.setArmazem(getArmazemLogado());
         materialRepository.save(material);
         auditar(HistoricoAlteracao.MATERIAL, HistoricoAlteracao.CRIADO, material.getNome(), material.getUnidade(), null, material.getPrecoPorKg());
@@ -260,6 +347,9 @@ public class DatabaseService {
 
     @Transactional(rollbackFor = Exception.class)
     public void atualizarPrecoMaterial(Long id, BigDecimal novoPreco) throws IOException {
+        if (!com.reciclatech.backend.util.Valores.positivoAte(novoPreco, com.reciclatech.backend.util.Valores.PRECO_MAX)) {
+            throw new IllegalArgumentException("Informe um preço maior que zero.");
+        }
         Optional<Material> achado = materialRepository.findById(id);
         if (achado.isEmpty() || achado.get().getArmazem() == null
                 || !achado.get().getArmazem().getId().equals(getArmazemIdLogado())) return;
@@ -277,8 +367,26 @@ public class DatabaseService {
         if (achado.isEmpty() || achado.get().getArmazem() == null
                 || !achado.get().getArmazem().getId().equals(getArmazemIdLogado())) return;
         Material m = achado.get();
+        // O estoque é guardado pelo NOME do material: apagar com saldo faria o estoque "sumir" das telas.
+        double saldo = saldoDoMaterial(m.getNome());
+        if (Math.abs(saldo) > 0.0005) {
+            throw new IllegalArgumentException("\"" + m.getNome() + "\" ainda tem " + String.format("%.2f", saldo).replace('.', ',')
+                    + " no estoque. Zere o estoque (venda ou ajuste) antes de excluir.");
+        }
+        // preços VIP deste material ficariam órfãos: saem junto
+        for (PrecoVip p : precoVipRepository.findAllByArmazemId(getArmazemIdLogado())) {
+            if (chaveNome(p.getMaterialNome()).equals(chaveNome(m.getNome()))) precoVipRepository.delete(p);
+        }
         auditar(HistoricoAlteracao.MATERIAL, HistoricoAlteracao.EXCLUIDO, m.getNome(), m.getUnidade(), m.getPrecoPorKg(), null);
         materialRepository.delete(m);
+    }
+
+    /** Saldo no pátio de um material (entradas - saídas), pelo mesmo critério das telas de estoque. */
+    private double saldoDoMaterial(String nomeMaterial) {
+        Long arm = getArmazemIdLogado();
+        Double ent = ofertaRepository.somarEntradasPorMaterial(arm, nomeMaterial);
+        Double sai = ofertaRepository.somarSaidasPorMaterial(arm, nomeMaterial);
+        return (ent == null ? 0.0 : ent) - (sai == null ? 0.0 : sai);
     }
 
 
@@ -310,17 +418,17 @@ public class DatabaseService {
 
     /** Atendimento de balcão: sempre cria um cliente novo (telefone é chave temporária). */
     @Transactional(rollbackFor = Exception.class)
-    public void salvarSolicitacaoInicial(Usuario usuario, String endereco) throws IOException {
-        salvarSolicitacaoInicial(usuario, endereco, getArmazemIdLogado().toString(), false);
+    public Usuario salvarSolicitacaoInicial(Usuario usuario, String endereco) throws IOException {
+        return salvarSolicitacaoInicial(usuario, endereco, getArmazemIdLogado().toString(), false);
     }
 
     /** Pedido vindo do formulário público: reaproveita o cliente pelo telefone naquele armazém. */
     @Transactional(rollbackFor = Exception.class)
-    public void salvarSolicitacaoInicial(Usuario usuario, String endereco, String idArmazemDestino) throws IOException {
-        salvarSolicitacaoInicial(usuario, endereco, idArmazemDestino, true);
+    public Usuario salvarSolicitacaoInicial(Usuario usuario, String endereco, String idArmazemDestino) throws IOException {
+        return salvarSolicitacaoInicial(usuario, endereco, idArmazemDestino, true);
     }
 
-    private void salvarSolicitacaoInicial(Usuario usuario, String endereco, String idArmazemDestino, boolean reaproveitar) throws IOException {
+    private Usuario salvarSolicitacaoInicial(Usuario usuario, String endereco, String idArmazemDestino, boolean reaproveitar) throws IOException {
         Long armazemId = idArmazemDestino != null ? Long.parseLong(idArmazemDestino) : getArmazemIdLogado();
         Armazem destino = armazemRepository.findById(armazemId)
                 .orElseThrow(() -> new IOException("Armazém de destino não encontrado"));
@@ -329,11 +437,14 @@ public class DatabaseService {
             List<Usuario> existentes = usuarioRepository.findAllByTelefoneAndArmazemIdOrderByIdAsc(usuario.getTelefone(), armazemId);
             if (!existentes.isEmpty()) {
                 Usuario atual = existentes.get(existentes.size() - 1);
-                atual.setNome(usuario.getNome());
-                atual.setEndereco(endereco);
-                usuarioRepository.save(atual);
+                // O formulário público é aberto a qualquer pessoa: ele NÃO reescreve nome/endereço de um cliente que já
+                // existe (alguém poderia trocar os dados de outro pelo telefone). Só completa o que estiver vazio.
+                boolean mudou = false;
+                if (atual.getNome() == null || atual.getNome().isBlank()) { atual.setNome(usuario.getNome()); mudou = true; }
+                if (atual.getEndereco() == null || atual.getEndereco().isBlank()) { atual.setEndereco(endereco); mudou = true; }
+                if (mudou) usuarioRepository.save(atual);
                 // já existe pedido aberto deste cliente? então é duplo clique/reenvio: não cria outro.
-                if (!ofertaRepository.findAllByUsuarioIdAndStatusIn(atual.getId(), STATUS_ABERTOS).isEmpty()) return;
+                if (!ofertaRepository.findAllByUsuarioIdAndStatusIn(atual.getId(), STATUS_ABERTOS).isEmpty()) return atual;
                 usuario = atual;
             }
         }
@@ -355,6 +466,7 @@ public class DatabaseService {
         oferta.setStatus(Oferta.StatusOferta.DISPONIVEL);
         oferta.setData(LocalDate.now(ZoneId.of("America/Recife")).toString());
         ofertaRepository.save(oferta);
+        return usuario;
     }
 
     private static final List<Oferta.StatusOferta> STATUS_ABERTOS =
@@ -369,9 +481,11 @@ public class DatabaseService {
             Usuario existente = porId.get(u.getId());
             if (existente == null) {
                 u.setStatusPlanilha(o.getStatus().toString());
+                u.setAtendentePlanilha(o.getStatus() == Oferta.StatusOferta.EM_ATENDIMENTO ? o.getAtendente() : null);
                 porId.put(u.getId(), u);
             } else if (o.getStatus() == Oferta.StatusOferta.EM_ATENDIMENTO) {
                 existente.setStatusPlanilha("EM_ATENDIMENTO");
+                existente.setAtendentePlanilha(o.getAtendente());
             }
         }
         return new ArrayList<>(porId.values());
@@ -428,9 +542,54 @@ public class DatabaseService {
         }
     }
 
+    /** Resultado de "iniciar atendimento". */
+    public static final class InicioAtendimento {
+        public final boolean ok;
+        public final String ocupadoPor; // preenchido quando outro operador já está atendendo
+        InicioAtendimento(boolean ok, String ocupadoPor) { this.ok = ok; this.ocupadoPor = ocupadoPor; }
+    }
+
+    private String atendenteAtual() {
+        Object nome = session.getAttribute("atendenteNome");
+        if (nome != null && !nome.toString().isBlank()) return nome.toString();
+        Object func = session.getAttribute("nomeFuncionarioLogado");
+        return func == null ? "Operador" : func.toString();
+    }
+
+    /**
+     * Começa (ou retoma) o atendimento de um cliente, gravando QUEM está atendendo.
+     * Se outro operador já estiver com o cliente aberto, não toma o atendimento dele (devolve quem é), a menos que
+     * {@code assumir} seja verdadeiro (decisão consciente na tela). Trava as linhas: dois cliques simultâneos não passam os dois.
+     */
     @Transactional(rollbackFor = Exception.class)
-    public void marcarComoEmAtendimento(String idVendedor) throws IOException {
-        mudarStatusOferta(idVendedor, Collections.singletonList(Oferta.StatusOferta.DISPONIVEL), Oferta.StatusOferta.EM_ATENDIMENTO);
+    public InicioAtendimento iniciarAtendimento(String idVendedor, boolean assumir) throws IOException {
+        List<Long> ids = idsUsuariosPorChave(idVendedor);
+        if (ids.isEmpty()) throw new IOException("Cliente não encontrado neste armazém.");
+        List<Oferta> abertas = ofertaRepository.travarPorUsuariosEStatus(ids, STATUS_ABERTOS);
+        if (abertas.isEmpty()) return new InicioAtendimento(false, null); // já finalizado/cancelado
+        String eu = atendenteAtual();
+        if (!assumir) {
+            for (Oferta o : abertas) {
+                if (o.getStatus() == Oferta.StatusOferta.EM_ATENDIMENTO && o.getAtendente() != null
+                        && !o.getAtendente().isBlank() && !o.getAtendente().equals(eu)) {
+                    return new InicioAtendimento(false, o.getAtendente());
+                }
+            }
+        }
+        for (Oferta o : abertas) {
+            o.setStatus(Oferta.StatusOferta.EM_ATENDIMENTO);
+            o.setAtendente(eu);
+            ofertaRepository.save(o);
+        }
+        return new InicioAtendimento(true, null);
+    }
+
+    /** Há pedido aberto para este cliente? (a tela de atendimento só deve abrir para quem tem) */
+    public boolean temPedidoAberto(String idVendedor) {
+        for (Long id : idsUsuariosPorChave(idVendedor)) {
+            if (!ofertaRepository.findAllByUsuarioIdAndStatusIn(id, STATUS_ABERTOS).isEmpty()) return true;
+        }
+        return false;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -450,6 +609,7 @@ public class DatabaseService {
         List<Oferta> abertos = ofertaRepository.travarPorUsuariosEStatus(ids, STATUS_ABERTOS);
         if (abertos.isEmpty()) return false;
 
+        validarLinhasDeCompra(idVendedor, cpfFinal, linhasParaSalvar);
         registrarVendasEmLote(linhasParaSalvar);
         atualizarCpfUsuario(idVendedor, cpfFinal);
         for (Oferta o : abertos) {
@@ -457,6 +617,35 @@ public class DatabaseService {
             ofertaRepository.save(o);
         }
         return true;
+    }
+
+    /**
+     * O navegador manda peso e preço, mas o servidor confere tudo de novo: material precisa existir NESTE armazém,
+     * peso e preço > 0, preço dentro do teto sobre a tabela (ou VIP) e o total é recalculado aqui.
+     */
+    private void validarLinhasDeCompra(String idVendedor, String cpfFinal, List<List<Object>> linhas) throws IOException {
+        if (linhas == null || linhas.isEmpty()) throw new IllegalArgumentException("Nenhum material informado.");
+        Map<String, Material> porNome = new HashMap<>();
+        for (Material m : materialRepository.findAllByArmazemIdOrderByNomeAsc(getArmazemIdLogado())) porNome.putIfAbsent(chaveNome(m.getNome()), m);
+        String cpfRef = (cpfFinal != null && !cpfFinal.isBlank() && !"NÃO INFORMADO".equals(cpfFinal)) ? cpfFinal
+                : buscarUsuarioPorIdOuTelefone(idVendedor).map(Usuario::getCpf).orElse(null);
+        Map<String, BigDecimal> vip = buscarPrecosEspeciais(cpfRef);
+        Map<String, BigDecimal> vipPorChave = new HashMap<>();
+        vip.forEach((k, v) -> vipPorChave.putIfAbsent(chaveNome(k), v));
+
+        for (List<Object> row : linhas) {
+            String nome = row.get(1).toString();
+            Material mat = porNome.get(chaveNome(nome));
+            if (mat == null) throw new IllegalArgumentException("O material \"" + nome + "\" não existe neste armazém.");
+            BigDecimal peso = com.reciclatech.backend.util.Valores.decimal(row.get(2) instanceof Double d ? d : Double.valueOf(row.get(2).toString().replace(",", ".")));
+            BigDecimal preco = row.get(4) instanceof BigDecimal b ? b : new BigDecimal(row.get(4).toString().replace(",", "."));
+            BigDecimal referencia = vipPorChave.getOrDefault(chaveNome(nome), mat.getPrecoPorKg());
+            com.reciclatech.backend.util.RegrasVenda.validarLinha(mat.getNome(), peso, preco, referencia, multiploPrecoMax);
+            row.set(5, com.reciclatech.backend.util.RegrasVenda.total(preco, peso));
+            if (referencia != null && preco.compareTo(referencia) != 0) {
+                log.info("Preço negociado: armazem={} material={} tabela={} pago={} por={}", getArmazemIdLogado(), mat.getNome(), referencia, preco, atendenteAtual());
+            }
+        }
     }
 
     /** Cancela pedido aberto. Fica registrado como CANCELADO (não some nem vira "finalizado"). */
@@ -486,16 +675,118 @@ public class DatabaseService {
         return ofertaRepository.findAllByArmazemIdOrderByDataCriacaoDesc(getArmazemIdLogado());
     }
 
+    /** Serializa as operações que mexem no estoque deste armazém (saída e ajuste): impede vender o mesmo saldo duas vezes. */
+    private void travarEstoque() {
+        armazemRepository.travarPorId(getArmazemIdLogado());
+    }
+
+    /** Saldo atual de todos os materiais (pelo nome), para conferir saída/ajuste antes de gravar. */
+    public Map<String, Double> saldosDoEstoque() {
+        Map<String, Double> saldo = new HashMap<>();
+        for (Oferta o : ofertaRepository.findAllByArmazemIdOrderByDataCriacaoDesc(getArmazemIdLogado())) {
+            if (o.getMaterial() == null || o.getPeso() == null || o.getStatus() == null) continue;
+            switch (o.getStatus()) {
+                case VENDIDO, AJUSTE_POSITIVO -> saldo.merge(o.getMaterial(), o.getPeso(), Double::sum);
+                case SAIDA_INDUSTRIA, AJUSTE_NEGATIVO -> saldo.merge(o.getMaterial(), -o.getPeso(), Double::sum);
+                default -> { }
+            }
+        }
+        return saldo;
+    }
+
+    /**
+     * Ajuste manual de estoque (sobra/falta). Só aceita AJUSTE_POSITIVO e AJUSTE_NEGATIVO: antes qualquer status
+     * (inclusive VENDIDO e SAIDA_INDUSTRIA) era gravado e bagunçava caixa e relatórios. Ajuste negativo não passa do saldo.
+     */
+    @Transactional(rollbackFor = Exception.class)
     public void salvarAjusteEstoque(String material, Double peso, String tipoAjuste, String motivo) throws IOException {
+        Oferta.StatusOferta tipo;
+        if ("AJUSTE_POSITIVO".equals(tipoAjuste)) tipo = Oferta.StatusOferta.AJUSTE_POSITIVO;
+        else if ("AJUSTE_NEGATIVO".equals(tipoAjuste)) tipo = Oferta.StatusOferta.AJUSTE_NEGATIVO;
+        else throw new IllegalArgumentException("Tipo de ajuste inválido.");
+
+        BigDecimal pesoValido = com.reciclatech.backend.util.Valores.peso(peso);
+        if (pesoValido == null) throw new IllegalArgumentException("Informe uma quantidade maior que zero.");
+        String motivoValido = com.reciclatech.backend.util.Valores.texto(motivo, 200);
+        if (motivoValido == null) throw new IllegalArgumentException("Informe o motivo do ajuste (até 200 letras).");
+
+        travarEstoque();
+        Material mat = materialRepository.findAllByArmazemIdOrderByNomeAsc(getArmazemIdLogado()).stream()
+                .filter(m -> chaveNome(m.getNome()).equals(chaveNome(material))).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Material não encontrado neste armazém."));
+
+        if (tipo == Oferta.StatusOferta.AJUSTE_NEGATIVO) {
+            double saldo = saldosDoEstoque().getOrDefault(mat.getNome(), 0.0);
+            if (pesoValido.doubleValue() > saldo + 0.0005) {
+                throw new IllegalArgumentException("Só há " + String.format("%.2f", Math.max(saldo, 0)).replace('.', ',')
+                        + " de \"" + mat.getNome() + "\" no estoque; não dá para baixar " + pesoValido.toPlainString().replace('.', ',') + ".");
+            }
+        }
+
         Oferta o = new Oferta();
         o.setArmazem(getArmazemLogado());
-        o.setMaterial(material);
-        o.setPeso(peso);
-        o.setEndereco("AJUSTE MANUAL: " + motivo);
+        o.setMaterial(mat.getNome());
+        o.setPeso(pesoValido.doubleValue());
+        o.setEndereco("AJUSTE MANUAL: " + motivoValido);
         o.setPrecoEstimado(BigDecimal.ZERO);
         o.setData(LocalDate.now(ZoneId.of("America/Recife")).toString());
-        o.setStatus(Oferta.StatusOferta.valueOf(tipoAjuste));
+        o.setStatus(tipo);
         ofertaRepository.save(o);
+        auditar(HistoricoAlteracao.ESTOQUE, tipo == Oferta.StatusOferta.AJUSTE_POSITIVO ? HistoricoAlteracao.CRIADO : HistoricoAlteracao.EXCLUIDO,
+                (tipo == Oferta.StatusOferta.AJUSTE_POSITIVO ? "Entrada manual: " : "Baixa manual: ") + mat.getNome() + " — " + motivoValido,
+                mat.getUnidade(), null, pesoValido);
+    }
+
+    /**
+     * Saída para a indústria: confere saldo, cria o destinatário (tipo INDUSTRIA) e grava as linhas tudo numa
+     * transação, com o estoque travado. Devolve o id do destinatário (para abrir o romaneio).
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Long registrarSaidaIndustria(String nomeIndustria, String documento, Map<Long, BigDecimal> pesos, Map<Long, BigDecimal> precos) throws IOException {
+        String nome = com.reciclatech.backend.util.Valores.texto(nomeIndustria, 100);
+        if (nome == null) throw new IllegalArgumentException("Informe o nome da indústria/comprador (até 100 letras).");
+        String doc = (documento == null || documento.isBlank()) ? "NÃO INFORMADO" : com.reciclatech.backend.util.DocumentoValidator.formatar(documento);
+        if (!"NÃO INFORMADO".equals(doc) && !com.reciclatech.backend.util.DocumentoValidator.valido(doc)) {
+            throw new IllegalArgumentException("CPF/CNPJ do comprador inválido.");
+        }
+
+        travarEstoque();
+        Map<String, Double> saldo = saldosDoEstoque();
+        List<List<Object>> linhas = new ArrayList<>();
+        for (Material mat : listarMateriais()) {
+            BigDecimal peso = pesos.get(mat.getId());
+            if (peso == null) continue;
+            BigDecimal preco = precos.get(mat.getId());
+            if (!com.reciclatech.backend.util.Valores.positivoAte(peso, com.reciclatech.backend.util.Valores.PESO_MAX)) {
+                throw new IllegalArgumentException("Quantidade inválida para \"" + mat.getNome() + "\".");
+            }
+            if (!com.reciclatech.backend.util.Valores.positivoAte(preco, com.reciclatech.backend.util.Valores.PRECO_MAX)) {
+                throw new IllegalArgumentException("Informe o preço de venda de \"" + mat.getNome() + "\" (maior que zero).");
+            }
+            double disponivel = saldo.getOrDefault(mat.getNome(), 0.0);
+            if (peso.doubleValue() > disponivel + 0.0005) {
+                throw new IllegalArgumentException("Quantidade incompatível! Você tentou vender " + peso.toPlainString().replace('.', ',') + " de "
+                        + mat.getNome() + ", mas só possui " + String.format("%.2f", Math.max(disponivel, 0)).replace('.', ',') + " no pátio.");
+            }
+            linhas.add(Arrays.asList(UUID.randomUUID().toString().substring(0, 13).toUpperCase(), mat.getNome(), peso.doubleValue(),
+                    "VENDA INDÚSTRIA", preco, com.reciclatech.backend.util.RegrasVenda.total(preco, peso),
+                    LocalDate.now(ZoneId.of("America/Recife")).toString(), null, "SAIDA_INDUSTRIA", doc));
+        }
+        if (linhas.isEmpty()) throw new IllegalArgumentException("Informe a quantidade e o preço de pelo menos um material.");
+
+        Usuario destinatario = new Usuario();
+        destinatario.setNome(nome.toUpperCase(Locale.ROOT) + " (SAÍDA)");
+        destinatario.setEndereco(doc);
+        destinatario.setTipo(Usuario.TipoUsuario.INDUSTRIA);
+        destinatario.setArmazem(getArmazemLogado());
+        destinatario.prePersist();
+        destinatario = usuarioRepository.save(destinatario);
+
+        for (List<Object> row : linhas) {
+            row.set(7, destinatario.getId().toString());
+        }
+        registrarVendasEmLote(linhas);
+        return destinatario.getId();
     }
 
 
@@ -505,6 +796,12 @@ public class DatabaseService {
 
     @Transactional(rollbackFor = Exception.class)
     public void salvarDespesa(String descricao, BigDecimal valor) throws IOException {
+        String desc = com.reciclatech.backend.util.Valores.texto(descricao, 150);
+        if (desc == null) throw new IllegalArgumentException("Descreva a despesa (até 150 letras).");
+        if (!com.reciclatech.backend.util.Valores.positivoAte(valor, com.reciclatech.backend.util.Valores.DINHEIRO_MAX)) {
+            throw new IllegalArgumentException("Informe um valor maior que zero.");
+        }
+        descricao = desc;
         Despesa d = new Despesa();
         d.setArmazem(getArmazemLogado());
         d.setDescricao(descricao);
@@ -554,31 +851,70 @@ public class DatabaseService {
         try {
             Long id = Long.parseLong(idArmazem.trim());
             LocalDate hoje = LocalDate.now(ZoneId.of("America/Recife"));
-            return armazemRepository.findById(id).filter(a -> {
-                if ("ATIVO".equals(a.getStatus())) return true;
-                if ("TRIAL".equals(a.getStatus()) && a.getDataCadastro() != null) {
-                    return java.time.temporal.ChronoUnit.DAYS.between(a.getDataCadastro(), hoje) <= 7;
-                }
-                return false;
-            }).isPresent();
+            return armazemRepository.findById(id)
+                    .filter(a -> com.reciclatech.backend.util.Assinatura.aceitaPedidosPublicos(a.getStatus(), a.getDataCadastro(), hoje))
+                    .isPresent();
         } catch (NumberFormatException e) {
             return false;
         }
     }
 
-    public void fecharCaixaDoDia(String data, BigDecimal entradas, BigDecimal saidas, BigDecimal despesas, BigDecimal lucro, Double pesoComprado) throws IOException {
-        LocalDate localDate = LocalDate.parse(data);
-        CaixaDiario caixa = caixaDiarioRepository.findByArmazemIdAndDataFechamento(getArmazemIdLogado(), localDate).orElse(new CaixaDiario());
+    /** Totais de um dia, calculados no servidor a partir do que está gravado (mesmas regras da tela de análises). */
+    public static final class ResumoDia {
+        public final BigDecimal entradas, saidas, despesas, lucro;
+        public final double pesoComprado;
+        ResumoDia(BigDecimal e, BigDecimal s, BigDecimal d, BigDecimal l, double p) { entradas = e; saidas = s; despesas = d; lucro = l; pesoComprado = p; }
+    }
 
+    public ResumoDia resumoDoDia(LocalDate dia) {
+        String data = dia.toString();
+        Map<String, String> unidades = new HashMap<>();
+        for (Material m : materialRepository.findAllByArmazemIdOrderByNomeAsc(getArmazemIdLogado())) unidades.putIfAbsent(m.getNome(), m.getUnidade());
+        BigDecimal entradas = BigDecimal.ZERO, saidas = BigDecimal.ZERO;
+        double peso = 0.0;
+        for (Oferta o : ofertaRepository.findAllByArmazemIdOrderByDataCriacaoDesc(getArmazemIdLogado())) {
+            if (o.getStatus() == null || o.getData() == null || !data.equals(o.getData())) continue;
+            BigDecimal valor = o.getPrecoEstimado() == null ? BigDecimal.ZERO : o.getPrecoEstimado();
+            if (o.getStatus() == Oferta.StatusOferta.SAIDA_INDUSTRIA) {
+                entradas = entradas.add(valor); // dinheiro que entrou (venda para a indústria)
+            } else if (o.getStatus() == Oferta.StatusOferta.VENDIDO) {
+                saidas = saidas.add(valor);     // dinheiro que saiu (pago ao catador)
+                if (o.getPeso() != null && "KG".equalsIgnoreCase(unidades.getOrDefault(o.getMaterial(), "KG"))) peso += o.getPeso();
+            }
+        }
+        BigDecimal despesas = despesaRepository.findAllByArmazemIdAndDataDespesa(getArmazemIdLogado(), dia).stream()
+                .map(Despesa::getValor).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new ResumoDia(entradas.setScale(2, java.math.RoundingMode.HALF_UP), saidas.setScale(2, java.math.RoundingMode.HALF_UP),
+                despesas.setScale(2, java.math.RoundingMode.HALF_UP),
+                entradas.subtract(saidas).subtract(despesas).setScale(2, java.math.RoundingMode.HALF_UP), peso);
+    }
+
+    /**
+     * Fecha o caixa de um dia. Os totais NÃO vêm da tela: são recalculados aqui. A data precisa ser válida,
+     * não pode ser futura nem anterior a 366 dias. Fechar de novo o mesmo dia atualiza o fechamento.
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void fecharCaixaDoDia(String data) throws IOException {
+        LocalDate hoje = LocalDate.now(ZoneId.of("America/Recife"));
+        LocalDate localDate;
+        try {
+            localDate = LocalDate.parse(data == null ? "" : data.trim());
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new IllegalArgumentException("Data inválida.");
+        }
+        if (localDate.isAfter(hoje)) throw new IllegalArgumentException("Não dá para fechar o caixa de um dia que ainda não chegou.");
+        if (localDate.isBefore(hoje.minusDays(366))) throw new IllegalArgumentException("Data muito antiga para fechar o caixa.");
+
+        ResumoDia r = resumoDoDia(localDate);
+        CaixaDiario caixa = caixaDiarioRepository.findByArmazemIdAndDataFechamento(getArmazemIdLogado(), localDate).orElse(new CaixaDiario());
         caixa.setArmazem(getArmazemLogado());
         caixa.setDataFechamento(localDate);
-        caixa.setEntradas(entradas);
-        caixa.setSaidas(saidas);
-        caixa.setDespesas(despesas);
-        caixa.setLucroLiquido(lucro);
-        caixa.setPesoComprado(pesoComprado);
+        caixa.setEntradas(r.entradas);
+        caixa.setSaidas(r.saidas);
+        caixa.setDespesas(r.despesas);
+        caixa.setLucroLiquido(r.lucro);
+        caixa.setPesoComprado(r.pesoComprado);
         caixa.setStatus("FECHADO");
-
         caixaDiarioRepository.save(caixa);
     }
 
@@ -602,11 +938,11 @@ public class DatabaseService {
 
     public Map<String, BigDecimal> buscarPrecosEspeciais(String cpf) throws IOException {
         if (cpf == null || cpf.trim().isEmpty()) return new HashMap<>();
-        String cpfLimpo = cpf.replaceAll("\\D", "");
+        String cpfLimpo = com.reciclatech.backend.util.DocumentoValidator.normalizar(cpf);
 
         return precoVipRepository.findAllByArmazemId(getArmazemIdLogado()).stream()
-                .filter(p -> p.getCpfCatador() != null && p.getCpfCatador().equals(cpfLimpo))
-                .collect(Collectors.toMap(PrecoVip::getMaterialNome, PrecoVip::getPrecoEspecial));
+                .filter(p -> p.getCpfCatador() != null && com.reciclatech.backend.util.DocumentoValidator.normalizar(p.getCpfCatador()).equals(cpfLimpo))
+                .collect(Collectors.toMap(PrecoVip::getMaterialNome, PrecoVip::getPrecoEspecial, (a, b) -> a));
     }
 
     public List<Map<String, String>> listarFornecedoresVip() throws IOException {
@@ -621,7 +957,17 @@ public class DatabaseService {
 
     @Transactional(rollbackFor = Exception.class)
     public void salvarFornecedorVip(String cpf, String material, BigDecimal preco) throws IOException {
-        String cpfLimpo = cpf.replaceAll("\\D", "");
+        if (!com.reciclatech.backend.util.DocumentoValidator.valido(cpf)) throw new IllegalArgumentException("CPF inválido.");
+        if (!com.reciclatech.backend.util.Valores.positivoAte(preco, com.reciclatech.backend.util.Valores.PRECO_MAX)) {
+            throw new IllegalArgumentException("Informe um preço maior que zero.");
+        }
+        String cpfLimpo = com.reciclatech.backend.util.DocumentoValidator.normalizar(cpf);
+        // grava com o nome EXATO do material cadastrado (a busca do preço compara o nome)
+        final String materialInformado = material;
+        material = materialRepository.findAllByArmazemIdOrderByNomeAsc(getArmazemIdLogado()).stream()
+                .filter(m -> chaveNome(m.getNome()).equals(chaveNome(materialInformado)))
+                .map(Material::getNome).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Material não encontrado neste armazém."));
         Optional<PrecoVip> existente = precoVipRepository.findByArmazemIdAndCpfCatadorAndMaterialNome(getArmazemIdLogado(), cpfLimpo, material);
         String ref = material + " - " + mascararCpf(cpfLimpo);
         BigDecimal anterior = existente.map(PrecoVip::getPrecoEspecial).orElse(null);
@@ -637,7 +983,7 @@ public class DatabaseService {
 
     @Transactional(rollbackFor = Exception.class)
     public void deletarFornecedorVip(String cpf, String material) throws IOException {
-        String cpfLimpo = cpf.replaceAll("\\D", "");
+        String cpfLimpo = com.reciclatech.backend.util.DocumentoValidator.normalizar(cpf);
         precoVipRepository.findByArmazemIdAndCpfCatadorAndMaterialNome(getArmazemIdLogado(), cpfLimpo, material)
                 .ifPresent(p -> {
                     auditar(HistoricoAlteracao.PRECO_VIP, HistoricoAlteracao.EXCLUIDO, material + " - " + mascararCpf(cpfLimpo), null, p.getPrecoEspecial(), null);
@@ -652,7 +998,8 @@ public class DatabaseService {
 
     public List<Map<String, Object>> listarTodosArmazensSaaS() {
         try {
-            String sql = "SELECT * FROM armazem ORDER BY id DESC";
+            // só as colunas do painel: nunca carrega hash de senha
+            String sql = "SELECT id, nome, cnpj, telefone, login, status, plano, data_cadastro FROM armazem ORDER BY id DESC";
             return jdbcTemplate.queryForList(sql);
         } catch (Exception e) {
             log.error("Erro ao listar armazéns", e);
@@ -660,13 +1007,30 @@ public class DatabaseService {
         }
     }
 
-    public void atualizarStatusArmazem(Long id, String novoStatus) {
-        try {
-            String sql = "UPDATE armazem SET status = ? WHERE id = ?";
-            jdbcTemplate.update(sql, novoStatus, id);
-        } catch (Exception e) {
-            log.error("Erro ao atualizar status", e);
+    public static final Set<String> STATUS_ARMAZEM_VALIDOS = Set.of("ATIVO", "TRIAL", "SUSPENSO", "BLOQUEADO");
+
+    /** Muda a situação de um armazém. Só aceita os 4 status conhecidos. Devolve false se o armazém não existe. */
+    public boolean atualizarStatusArmazem(Long id, String novoStatus) {
+        String status = novoStatus == null ? "" : novoStatus.trim().toUpperCase(Locale.ROOT);
+        if (!STATUS_ARMAZEM_VALIDOS.contains(status)) throw new IllegalArgumentException("Status inválido.");
+        if ("TRIAL".equals(status)) {
+            // recolocar em TRIAL = dar um novo teste de 7 dias a partir de hoje
+            return jdbcTemplate.update("UPDATE armazem SET status = ?, data_cadastro = ? WHERE id = ?", status,
+                    java.sql.Date.valueOf(LocalDate.now(ZoneId.of("America/Recife"))), id) > 0;
         }
+        return jdbcTemplate.update("UPDATE armazem SET status = ? WHERE id = ?", status, id) > 0;
+    }
+
+    /** Volume do mês (todos os armazéns): GMV = compras + vendas à indústria; toneladas = material comprado (kg / 1000). */
+    public double[] resumoMensalMaster() {
+        String mes = LocalDate.now(ZoneId.of("America/Recife")).toString().substring(0, 7);
+        String sql = "SELECT COALESCE(SUM(CASE WHEN status IN ('VENDIDO','SAIDA_INDUSTRIA') THEN preco_estimado ELSE 0 END), 0), " +
+                "COALESCE(SUM(CASE WHEN status = 'VENDIDO' THEN peso ELSE 0 END), 0) " +
+                "FROM oferta WHERE data LIKE ?";
+        return jdbcTemplate.query(sql, rs -> {
+            rs.next();
+            return new double[]{rs.getBigDecimal(1).doubleValue(), rs.getBigDecimal(2).doubleValue() / 1000.0};
+        }, mes + "-%");
     }
 
 
@@ -714,15 +1078,26 @@ public class DatabaseService {
         return funcionarioRepository.findAllByArmazemId(getArmazemIdLogado());
     }
 
+    public static final int SENHA_OPERADOR_MIN = 6;
+
     public void salvarFuncionario(String nome, String login, String senhaPura) {
+        String nomeLimpo = com.reciclatech.backend.util.Valores.texto(nome, 100);
+        if (nomeLimpo == null) throw new IllegalArgumentException("Informe o nome do operador.");
         String loginLimpo = login == null ? "" : login.trim();
         if (loginLimpo.isEmpty()) throw new IllegalArgumentException("Informe o usuário do operador.");
+        if (loginLimpo.length() > 40 || loginLimpo.matches(".*\\s.*")) {
+            throw new IllegalArgumentException("O usuário deve ter até 40 caracteres e não pode ter espaços.");
+        }
+        if (senhaPura == null || senhaPura.length() < SENHA_OPERADOR_MIN) {
+            throw new IllegalArgumentException("A senha do operador deve ter pelo menos " + SENHA_OPERADOR_MIN + " caracteres.");
+        }
+        if (senhaPura.length() > 72) throw new IllegalArgumentException("A senha deve ter no máximo 72 caracteres.");
         if (funcionarioRepository.existsByArmazemIdAndLogin(getArmazemIdLogado(), loginLimpo)) {
             throw new IllegalArgumentException("login_duplicado");
         }
         Funcionario f = new Funcionario();
         f.setArmazem(getArmazemLogado());
-        f.setNome(nome);
+        f.setNome(nomeLimpo);
         f.setLogin(loginLimpo);
         f.setSenha(passwordEncoder.encode(senhaPura));
         f.setAtivo(true);
