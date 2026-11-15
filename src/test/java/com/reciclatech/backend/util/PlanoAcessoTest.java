@@ -17,8 +17,9 @@ class PlanoAcessoTest {
         assertFalse(PlanoAcesso.liberaPro("START", null));
     }
 
-    @Test void duranteOTesteTudoFicaLiberadoMesmoNoStart() {
-        assertTrue(PlanoAcesso.liberaPro("START", "TRIAL"));
+    @Test void oTesteGratisRespeitaOPlanoEscolhido() {
+        assertFalse(PlanoAcesso.liberaPro("START", "TRIAL"));
+        assertTrue(PlanoAcesso.liberaPro("PRO", "TRIAL"));
     }
 
     @Test void recursosProSaoReconhecidosPeloEndereco() {

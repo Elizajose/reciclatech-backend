@@ -69,12 +69,20 @@ class FiltroPlanoTest {
         }
     }
 
-    @Test void proEPeriodoDeTesteAbremTudo() throws Exception {
+    @Test void proAbreTudoInclusiveNoTeste() throws Exception {
         chamar("/admin/analises", sessao("PRO", "ATIVO"));
         assertTrue(passou);
-        chamar("/admin/saida", sessao("START", "TRIAL"));
+        chamar("/admin/saida", sessao("PRO", "TRIAL"));
         assertTrue(passou);
         assertNull(redirecionou);
+    }
+
+    @Test void startEmTesteTambemNaoAbreRecursosPro() throws Exception {
+        chamar("/admin/saida", sessao("START", "TRIAL"));
+        assertEquals("/admin/assinatura?aviso=pro", redirecionou);
+        assertFalse(passou);
+        chamar("/admin/coletas", sessao("START", "TRIAL"));
+        assertTrue(passou);
     }
 
     @Test void visitanteSemLoginNaoEhRedirecionadoPeloFiltroDePlano() throws Exception {

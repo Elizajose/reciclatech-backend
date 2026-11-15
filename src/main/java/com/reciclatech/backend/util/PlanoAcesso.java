@@ -2,9 +2,9 @@ package com.reciclatech.backend.util;
 
 /**
  * Quem pode usar o quê. Regra única, aplicada no servidor (a tela só esconde o botão):
- * - plano PRO: tudo liberado;
- * - armazém em TESTE (status TRIAL): tudo liberado durante os 7 dias, para o cliente conhecer o sistema completo;
- * - plano START (Básico) ativo: sem os recursos exclusivos do PRO.
+ * - plano PRO: tudo liberado (inclusive durante o teste de 7 dias);
+ * - plano START (Básico): sem os recursos exclusivos do PRO (também durante o teste).
+ * O teste grátis respeita o plano escolhido no cadastro.
  * Os dados do cliente nunca são apagados: só o acesso às telas fica trancado até o upgrade.
  */
 public final class PlanoAcesso {
@@ -12,7 +12,7 @@ public final class PlanoAcesso {
     private PlanoAcesso() {}
 
     public static boolean liberaPro(String plano, String status) {
-        return "PRO".equalsIgnoreCase(plano) || "TRIAL".equalsIgnoreCase(status);
+        return "PRO".equalsIgnoreCase(plano);
     }
 
     /** Endereços exclusivos do plano PRO: Financeiro, Estoque e Saída, Despesas/Caixa, Histórico de Vendas, Relatório e VIPs. */
