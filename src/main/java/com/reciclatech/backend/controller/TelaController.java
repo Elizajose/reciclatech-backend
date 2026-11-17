@@ -1420,6 +1420,25 @@ public class TelaController {
                 clientesFormatados.add(a);
             }
 
+            // Donos com armazém no Personalizado e outros ainda em START/PRO: o suporte precisa unificar ao ativar
+            Map<Object, List<String>> fora = new LinkedHashMap<>();
+            Set<Object> comPersonalizado = new HashSet<>();
+            Map<Object, String> nomeDono = new HashMap<>();
+            for (Map<String, Object> c : clientesBanco) {
+                Object dono = c.get("proprietario_id");
+                if (dono == null) continue;
+                nomeDono.put(dono, c.get("nome_dono") != null ? c.get("nome_dono").toString() : "Dono #" + dono);
+                String pl = c.get("plano") != null ? c.get("plano").toString().toUpperCase() : "START";
+                if (PlanoAcesso.PERSONALIZADO.equals(pl)) comPersonalizado.add(dono);
+                else fora.computeIfAbsent(dono, k -> new ArrayList<>()).add((c.get("nome") != null ? c.get("nome").toString() : "Sem nome") + " (" + pl + ")");
+            }
+            List<String> unificarPlano = new ArrayList<>();
+            for (Map.Entry<Object, List<String>> e : fora.entrySet()) {
+                if (comPersonalizado.contains(e.getKey()))
+                    unificarPlano.add(nomeDono.get(e.getKey()) + ": " + String.join(", ", e.getValue()));
+            }
+            model.addAttribute("unificarPlano", unificarPlano);
+
             // Personalizado: a mensalidade é por dono (199,90 + extra por armazém adicional)
             int donosPersonalizados = personalizadosAtivosPorDono.size();
             for (int qtdAtivos : personalizadosAtivosPorDono.values()) faturamentoMensal += PrecoPlano.personalizado(qtdAtivos, precoArmazemExtra);

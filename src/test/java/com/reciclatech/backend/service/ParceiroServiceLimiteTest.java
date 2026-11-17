@@ -45,14 +45,14 @@ class ParceiroServiceLimiteTest {
 
     @Test void primeiroArmazemPodeSerStartOuPro() {
         ParceiroService s = servico();
-        assertTrue(s.podeCadastrarOutro(1L));
+        assertFalse(s.somentePersonalizado(1L));
         assertEquals("PRO", cadastrar(s, "PRO").getPlano());
     }
 
     @Test void segundoArmazemEmStartOuProERecusado() {
         ParceiroService s = servico();
         cadastrar(s, "START");
-        assertFalse(s.podeCadastrarOutro(1L));
+        assertTrue(s.somentePersonalizado(1L));
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> cadastrar(s, "PRO"));
         assertTrue(e.getMessage().contains("Personalizado"));
         assertEquals(1, banco.size());
@@ -63,16 +63,34 @@ class ParceiroServiceLimiteTest {
         Armazem primeiro = cadastrar(s, "PRO");
         primeiro.setPlano("PERSONALIZADO"); // o suporte (master) muda o plano
         assertTrue(s.temPersonalizado(1L));
-        assertTrue(s.podeCadastrarOutro(1L));
+        assertFalse(s.somentePersonalizado(1L));
         assertEquals("PERSONALIZADO", cadastrar(s, "START").getPlano());
         assertEquals("PERSONALIZADO", cadastrar(s, "PRO").getPlano());
         assertEquals(3, banco.size());
     }
 
-    @Test void planoEscolhidoNoFormularioNaoPulaOLimite() {
+    @Test void escolherPersonalizadoNoFormularioLiberaOSegundoArmazem() {
         ParceiroService s = servico();
-        cadastrar(s, "START");
-        assertThrows(IllegalArgumentException.class, () -> cadastrar(s, "PERSONALIZADO"));
+        Armazem primeiro = cadastrar(s, "START");
+        assertTrue(s.somentePersonalizado(1L));
+        Armazem segundo = cadastrar(s, "PERSONALIZADO");
+        assertEquals("PERSONALIZADO", segundo.getPlano());
+        assertEquals("START", primeiro.getPlano());   // o antigo NÃO muda sozinho: o suporte unifica ao ativar
+        assertEquals(2, banco.size());
+        assertFalse(s.somentePersonalizado(1L));
+        assertEquals("PERSONALIZADO", cadastrar(s, "START").getPlano());   // já é Personalizado: o terceiro entra nele
+    }
+
+    @Test void primeiroArmazemPodeJaSerPersonalizado() {
+        ParceiroService s = servico();
+        assertFalse(s.somentePersonalizado(1L));
+        assertEquals("PERSONALIZADO", cadastrar(s, "personalizado").getPlano());
+    }
+
+    @Test void planoDesconhecidoVaiParaStart() {
+        ParceiroService s = servico();
+        assertEquals("START", cadastrar(s, "XYZ").getPlano());
+        assertThrows(IllegalArgumentException.class, () -> cadastrar(s, "XYZ"));
     }
 
     private Armazem comDocumento(ParceiroService s, String doc) {

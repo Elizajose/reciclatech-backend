@@ -107,7 +107,7 @@ class ComparacaoArmazensTest {
                 mov("Latinha", "SAIDA_INDUSTRIA", "50", "300", "2026-11-03"));
         ComparacaoArmazens.Resultado r = ComparacaoArmazens.comparar(List.of(entrada(1L, "A", a, null)), DE, ATE);
         assertEquals(0, BigDecimal.ZERO.compareTo(r.armazens.get(0).kgComprado));
-        assertTrue(r.materiais.isEmpty());
+        assertTrue(r.materiais.stream().noneMatch(m -> m.kgTotal.signum() > 0));   // nenhuma COMPRA
     }
 
     @Test void listaVaziaNaoQuebra() {
@@ -120,5 +120,92 @@ class ComparacaoArmazensTest {
         ComparacaoArmazens.Resultado r = ComparacaoArmazens.comparar(List.of(entrada(1L, "A", null, null)), DE, ATE);
         assertEquals(1, r.armazens.size());
         assertFalse(r.armazens.get(0).temMovimento);
+    }
+
+    private boolean temDestaque(ComparacaoArmazens.Resultado r, String tipo, String trecho) {
+        return r.destaques.stream().anyMatch(d -> d.tipo.equals(tipo) && d.texto.contains(trecho));
+    }
+
+    @Test void compraSemVendaNaoEhMenorLucroEViraAvisoDeEstoque() {
+        List<AnaliseFinanceira.Movimento> verde = List.of(mov("Ferro", "VENDIDO", "100", "400", "2026-11-02"));
+        ComparacaoArmazens.Resultado r = ComparacaoArmazens.comparar(
+                List.of(entrada(1L, "Norte", lucroDe200(), null), entrada(2L, "Verde", verde, null)), DE, ATE);
+        ComparacaoArmazens.Linha v = r.armazens.stream().filter(x -> x.id == 2L).findFirst().get();
+        assertEquals("SEM_VENDAS", v.situacao);
+        assertFalse(v.menorLucro);
+        assertFalse(r.armazens.stream().anyMatch(x -> x.maiorLucro));      // só um armazém vendeu: sem disputa
+        assertEquals(0, new BigDecimal("400").compareTo(v.estoqueCusto));
+        assertEquals(0, new BigDecimal("100").compareTo(v.estoqueKg));
+        assertEquals(0, new BigDecimal("-400").compareTo(v.fin.caixaPeriodo));
+        assertTrue(temDestaque(r, "aviso", "Verde comprou"));
+    }
+
+    @Test void vendaAbaixoDoCustoViraPrejuizoEAlerta() {
+        List<AnaliseFinanceira.Movimento> a = new ArrayList<>();
+        a.add(mov("Latinha", "VENDIDO", "100", "500", "2026-11-02"));
+        a.add(mov("Latinha", "SAIDA_INDUSTRIA", "100", "300", "2026-11-05"));
+        ComparacaoArmazens.Resultado r = ComparacaoArmazens.comparar(List.of(entrada(1L, "A", a, null), entrada(2L, "B", lucroDe200(), null)), DE, ATE);
+        ComparacaoArmazens.Linha la = r.armazens.stream().filter(x -> x.id == 1L).findFirst().get();
+        assertEquals("PREJUIZO", la.situacao);
+        assertTrue(temDestaque(r, "perigo", "A teve prejuízo de R$ 200,00"));
+        assertTrue(temDestaque(r, "perigo", "abaixo do custo médio"));
+    }
+
+    @Test void precoMedioDeCompraEVendaPorArmazem() {
+        ComparacaoArmazens.Resultado r = ComparacaoArmazens.comparar(List.of(entrada(1L, "A", lucroDe200(), null)), DE, ATE);
+        ComparacaoArmazens.Linha l = r.armazens.get(0);
+        assertEquals(0, new BigDecimal("5.00").compareTo(l.precoMedioCompra));
+        assertEquals(0, new BigDecimal("7.00").compareTo(l.precoMedioVenda));
+        assertEquals("Latinha", l.materialMaisLucrativo);
+        assertEquals(0, new BigDecimal("200").compareTo(r.materiais.get(0).lucroTotal));
+        assertEquals(0, new BigDecimal("5.00").compareTo(r.materiais.get(0).precoMedioCompra.get(1L)));
+    }
+
+    @Test void mesmoMaterialComNomeEmCaixaDiferenteSomaJunto() {
+        List<AnaliseFinanceira.Movimento> a = List.of(mov("Latinhas", "VENDIDO", "10", "50", "2026-11-02"));
+        List<AnaliseFinanceira.Movimento> b = List.of(mov("latinhas ", "VENDIDO", "20", "100", "2026-11-02"));
+        ComparacaoArmazens.Resultado r = ComparacaoArmazens.comparar(List.of(entrada(1L, "A", a, null), entrada(2L, "B", b, null)), DE, ATE);
+        assertEquals(1, r.materiais.size());
+        assertEquals(0, new BigDecimal("30").compareTo(r.materiais.get(0).kgTotal));
+    }
+
+    @Test void precoPagoMuitoDiferenteEntreArmazensViraDestaque() {
+        List<AnaliseFinanceira.Movimento> a = List.of(mov("Cobre", "VENDIDO", "10", "500", "2026-11-02"));   // 50/kg
+        List<AnaliseFinanceira.Movimento> b = List.of(mov("Cobre", "VENDIDO", "10", "400", "2026-11-03"));   // 40/kg
+        ComparacaoArmazens.Resultado r = ComparacaoArmazens.comparar(List.of(entrada(1L, "Norte", a, null), entrada(2L, "Verde", b, null)), DE, ATE);
+        assertTrue(temDestaque(r, "info", "Cobre: Norte paga R$ 50,00/kg e Verde paga R$ 40,00/kg (20% a menos)"));
+    }
+
+    @Test void precoPagoParecidoNaoGeraDestaque() {
+        List<AnaliseFinanceira.Movimento> a = List.of(mov("Cobre", "VENDIDO", "10", "500", "2026-11-02"));
+        List<AnaliseFinanceira.Movimento> b = List.of(mov("Cobre", "VENDIDO", "10", "480", "2026-11-03"));
+        ComparacaoArmazens.Resultado r = ComparacaoArmazens.comparar(List.of(entrada(1L, "Norte", a, null), entrada(2L, "Verde", b, null)), DE, ATE);
+        assertFalse(r.destaques.stream().anyMatch(d -> d.texto.contains("paga R$")));
+    }
+
+    @Test void quemSustentaOLucroEDespesasPesadas() {
+        List<AnaliseFinanceira.DespesaMov> desp = List.of(new AnaliseFinanceira.DespesaMov(LocalDate.parse("2026-11-03"), new BigDecimal("20")));
+        List<AnaliseFinanceira.Movimento> pequeno = new ArrayList<>();
+        pequeno.add(mov("Latinha", "VENDIDO", "10", "50", "2026-11-02"));
+        pequeno.add(mov("Latinha", "SAIDA_INDUSTRIA", "10", "60", "2026-11-05"));
+        ComparacaoArmazens.Resultado r = ComparacaoArmazens.comparar(
+                List.of(entrada(1L, "Grande", lucroDe200(), null), entrada(2L, "Pequeno", pequeno, desp)), DE, ATE);
+        assertTrue(temDestaque(r, "info", "Grande gerou 100%"));
+        assertTrue(temDestaque(r, "aviso", "despesas de Pequeno consomem"));
+    }
+
+    @Test void armazemSemMovimentoGeraAvisoInformativo() {
+        ComparacaoArmazens.Resultado r = ComparacaoArmazens.comparar(List.of(entrada(1L, "A", lucroDe200(), null), entrada(2L, "Parado", List.of(), null)), DE, ATE);
+        assertTrue(temDestaque(r, "info", "Parado não teve nenhuma movimentação"));
+    }
+
+    @Test void barrasSaoRelativasAoMaior() {
+        List<AnaliseFinanceira.Movimento> metade = new ArrayList<>();
+        metade.add(mov("Latinha", "VENDIDO", "100", "500", "2026-11-02"));
+        metade.add(mov("Latinha", "SAIDA_INDUSTRIA", "100", "600", "2026-11-05"));   // lucro 100
+        ComparacaoArmazens.Resultado r = ComparacaoArmazens.comparar(List.of(entrada(1L, "A", lucroDe200(), null), entrada(2L, "B", metade, null)), DE, ATE);
+        assertEquals(100, r.armazens.get(0).pctLucro);
+        assertEquals(50, r.armazens.get(1).pctLucro);
+        assertEquals(100, r.armazens.get(0).pctCompras);
     }
 }

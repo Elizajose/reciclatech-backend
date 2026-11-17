@@ -34,27 +34,73 @@
         <span class="small text-muted ms-auto" th:text="${periodoTexto}">01/11/2026 a 15/11/2026</span>
     </div></form>
 
+    <!-- Indicadores da conta -->
     <div class="row g-3 mb-3">
-        <div class="col-6 col-md-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body">
-            <div class="small text-muted fw-bold text-uppercase">Lucro da conta</div>
-            <div class="fs-4 fw-bold" th:classappend="${cmp.lucroTotal.signum() < 0} ? 'text-danger' : 'text-success'">R$ <span th:text="${#numbers.formatDecimal(cmp.lucroTotal,1,'POINT',2,'COMMA')}">0,00</span></div></div></div></div>
-        <div class="col-6 col-md-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body">
+        <div class="col-6 col-lg"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body">
+            <div class="small text-muted fw-bold text-uppercase">Lucro líquido</div>
+            <div class="fs-4 fw-bold" th:classappend="${cmp.lucroTotal.signum() < 0} ? 'text-danger' : 'text-success'">R$ <span th:text="${#numbers.formatDecimal(cmp.lucroTotal,1,'POINT',2,'COMMA')}">0,00</span></div>
+            <div class="small text-muted">vendas - custo do que vendeu - perdas - despesas</div></div></div></div>
+        <div class="col-6 col-lg"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body">
             <div class="small text-muted fw-bold text-uppercase">Vendas à indústria</div>
-            <div class="fs-4 fw-bold">R$ <span th:text="${#numbers.formatDecimal(cmp.receitaTotal,1,'POINT',2,'COMMA')}">0,00</span></div></div></div></div>
-        <div class="col-6 col-md-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body">
+            <div class="fs-4 fw-bold">R$ <span th:text="${#numbers.formatDecimal(cmp.receitaTotal,1,'POINT',2,'COMMA')}">0,00</span></div>
+            <div class="small text-muted">faturamento do período</div></div></div></div>
+        <div class="col-6 col-lg"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body">
             <div class="small text-muted fw-bold text-uppercase">Pago aos catadores</div>
-            <div class="fs-4 fw-bold">R$ <span th:text="${#numbers.formatDecimal(cmp.comprasTotal,1,'POINT',2,'COMMA')}">0,00</span></div></div></div></div>
-        <div class="col-6 col-md-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body">
-            <div class="small text-muted fw-bold text-uppercase">Material comprado</div>
-            <div class="fs-4 fw-bold"><span th:text="${#numbers.formatDecimal(cmp.kgTotal,1,'POINT',2,'COMMA')}">0</span> kg</div></div></div></div>
+            <div class="fs-4 fw-bold">R$ <span th:text="${#numbers.formatDecimal(cmp.comprasTotal,1,'POINT',2,'COMMA')}">0,00</span></div>
+            <div class="small text-muted"><span th:text="${#numbers.formatDecimal(cmp.kgTotal,1,'POINT',1,'COMMA')}">0</span> kg comprados</div></div></div></div>
+        <div class="col-6 col-lg"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body">
+            <div class="small text-muted fw-bold text-uppercase">Caixa do período</div>
+            <div class="fs-4 fw-bold" th:classappend="${cmp.caixaTotal.signum() < 0} ? 'text-danger' : 'text-success'">R$ <span th:text="${#numbers.formatDecimal(cmp.caixaTotal,1,'POINT',2,'COMMA')}">0,00</span></div>
+            <div class="small text-muted">vendas - compras - despesas</div></div></div></div>
+        <div class="col-12 col-lg"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body">
+            <div class="small text-muted fw-bold text-uppercase">Estoque (a custo)</div>
+            <div class="fs-4 fw-bold">R$ <span th:text="${#numbers.formatDecimal(cmp.estoqueCustoTotal,1,'POINT',2,'COMMA')}">0,00</span></div>
+            <div class="small text-muted">dinheiro parado em material</div></div></div></div>
     </div>
 
+    <!-- Destaques automáticos -->
+    <div th:if="${!#lists.isEmpty(cmp.destaques)}" class="card border-0 shadow-sm rounded-4 mb-3"><div class="card-body">
+        <div class="fw-bold mb-2"><i class="bi bi-lightbulb"></i> O que chama atenção</div>
+        <ul class="list-unstyled small mb-0">
+            <li th:each="d : ${cmp.destaques}" class="d-flex gap-2 py-1">
+                <i class="bi mt-1" th:classappend="${d.tipo == 'perigo'} ? 'bi-exclamation-octagon-fill text-danger' : (${d.tipo == 'aviso'} ? 'bi-exclamation-triangle-fill text-warning' : (${d.tipo == 'bom'} ? 'bi-arrow-up-circle-fill text-success' : 'bi-info-circle-fill text-primary'))"></i>
+                <span th:text="${d.texto}">Texto</span>
+            </li>
+        </ul>
+    </div></div>
+
+    <!-- Barras lado a lado -->
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body">
+            <div class="fw-bold mb-2 small text-uppercase text-muted">Lucro líquido</div>
+            <div th:each="a : ${cmp.armazens}" class="mb-2">
+                <div class="d-flex justify-content-between small"><span class="fw-bold" th:text="${a.nome}">Armazém</span>
+                    <span th:classappend="${a.fin.lucroLiquido.signum() < 0} ? 'text-danger' : ''">R$ <span th:text="${#numbers.formatDecimal(a.fin.lucroLiquido,1,'POINT',2,'COMMA')}">0,00</span></span></div>
+                <div class="progress" style="height:10px"><div class="progress-bar" th:classappend="${a.fin.lucroLiquido.signum() < 0} ? 'bg-danger' : 'bg-success'" th:style="'width:' + ${a.pctLucro} + '%'"></div></div>
+            </div></div></div></div>
+        <div class="col-12 col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body">
+            <div class="fw-bold mb-2 small text-uppercase text-muted">Vendas à indústria</div>
+            <div th:each="a : ${cmp.armazens}" class="mb-2">
+                <div class="d-flex justify-content-between small"><span class="fw-bold" th:text="${a.nome}">Armazém</span>
+                    <span>R$ <span th:text="${#numbers.formatDecimal(a.fin.receita,1,'POINT',2,'COMMA')}">0,00</span></span></div>
+                <div class="progress" style="height:10px"><div class="progress-bar bg-primary" th:style="'width:' + ${a.pctVendas} + '%'"></div></div>
+            </div></div></div></div>
+        <div class="col-12 col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body">
+            <div class="fw-bold mb-2 small text-uppercase text-muted">Pago aos catadores</div>
+            <div th:each="a : ${cmp.armazens}" class="mb-2">
+                <div class="d-flex justify-content-between small"><span class="fw-bold" th:text="${a.nome}">Armazém</span>
+                    <span>R$ <span th:text="${#numbers.formatDecimal(a.fin.compras,1,'POINT',2,'COMMA')}">0,00</span></span></div>
+                <div class="progress" style="height:10px"><div class="progress-bar bg-warning" th:style="'width:' + ${a.pctCompras} + '%'"></div></div>
+            </div></div></div></div>
+    </div>
+
+    <!-- Resultado -->
     <div class="card border-0 shadow-sm rounded-4 mb-3"><div class="card-body p-0">
-        <div class="p-3 pb-2 fw-bold"><i class="bi bi-trophy"></i> Ranking por lucro</div>
+        <div class="p-3 pb-2 fw-bold"><i class="bi bi-trophy"></i> Resultado por armazém</div>
         <div class="table-responsive"><table class="table align-middle mb-0 small">
             <thead class="table-light"><tr>
-                <th>Armazém</th><th class="num">Lucro líquido</th><th class="num">vs período anterior</th><th class="num">Vendas</th>
-                <th class="num">Compras</th><th class="num">Despesas</th><th class="num">Margem</th><th class="num">kg comprados</th><th>Mais / menos comprado</th>
+                <th>Armazém</th><th class="num">Vendas</th><th class="num">Custo do que vendeu</th><th class="num">Despesas</th><th class="num">Perdas</th>
+                <th class="num">Lucro líquido</th><th class="num">Margem</th><th class="num">vs período anterior</th><th>Mais lucrativo</th>
             </tr></thead>
             <tbody>
             <tr th:each="a : ${cmp.armazens}" th:classappend="${a.maiorLucro} ? 'melhor' : (${a.menorLucro} ? 'pior' : '')">
@@ -62,43 +108,100 @@
                     <div class="text-muted" th:if="${a.local != ''}" th:text="${a.local}">Cidade - UF</div>
                     <span class="badge bg-success" th:if="${a.maiorLucro}">Maior lucro</span>
                     <span class="badge bg-warning text-dark" th:if="${a.menorLucro}">Menor lucro</span>
-                    <span class="badge bg-light text-muted border" th:unless="${a.temMovimento}">Sem movimento</span></td>
-                <td class="num fw-bold" th:classappend="${a.fin.lucroLiquido.signum() < 0} ? 'text-danger' : 'text-success'">R$ <span th:text="${#numbers.formatDecimal(a.fin.lucroLiquido,1,'POINT',2,'COMMA')}">0,00</span></td>
-                <td class="num"><span th:if="${a.fin.variacaoLucroPercentual != null}" th:text="${(a.fin.variacaoLucroPercentual.signum() >= 0 ? '+' : '') + #numbers.formatDecimal(a.fin.variacaoLucroPercentual,1,'POINT',1,'COMMA') + '%'}">+0%</span>
-                    <span th:unless="${a.fin.variacaoLucroPercentual != null}" class="text-muted">-</span></td>
+                    <span class="badge bg-danger" th:if="${a.situacao == 'PREJUIZO'}">Prejuízo</span>
+                    <span class="badge bg-secondary" th:if="${a.situacao == 'SEM_VENDAS'}">Sem vendas</span>
+                    <span class="badge bg-light text-muted border" th:if="${a.situacao == 'SEM_MOVIMENTO'}">Sem movimento</span></td>
                 <td class="num">R$ <span th:text="${#numbers.formatDecimal(a.fin.receita,1,'POINT',2,'COMMA')}">0,00</span></td>
-                <td class="num">R$ <span th:text="${#numbers.formatDecimal(a.fin.compras,1,'POINT',2,'COMMA')}">0,00</span></td>
+                <td class="num">R$ <span th:text="${#numbers.formatDecimal(a.fin.custoVendido,1,'POINT',2,'COMMA')}">0,00</span></td>
                 <td class="num">R$ <span th:text="${#numbers.formatDecimal(a.fin.despesas,1,'POINT',2,'COMMA')}">0,00</span></td>
+                <td class="num">R$ <span th:text="${#numbers.formatDecimal(a.fin.perdas,1,'POINT',2,'COMMA')}">0,00</span></td>
+                <td class="num fw-bold" th:classappend="${a.fin.lucroLiquido.signum() < 0} ? 'text-danger' : 'text-success'">R$ <span th:text="${#numbers.formatDecimal(a.fin.lucroLiquido,1,'POINT',2,'COMMA')}">0,00</span></td>
                 <td class="num"><span th:if="${a.fin.margemPercentual != null}" th:text="${#numbers.formatDecimal(a.fin.margemPercentual,1,'POINT',1,'COMMA') + '%'}">0%</span>
                     <span th:unless="${a.fin.margemPercentual != null}" class="text-muted">-</span></td>
-                <td class="num"><span th:text="${#numbers.formatDecimal(a.kgComprado,1,'POINT',2,'COMMA')}">0</span></td>
-                <td><span th:if="${a.maisComprado != null}"><i class="bi bi-arrow-up-circle text-success"></i> <span th:text="${a.maisComprado}">Material</span></span>
-                    <span th:if="${a.menosComprado != null}"><br><i class="bi bi-arrow-down-circle text-warning"></i> <span th:text="${a.menosComprado}">Material</span></span>
-                    <span th:if="${a.maisComprado == null}" class="text-muted">-</span></td>
+                <td class="num"><span th:if="${a.fin.variacaoLucroPercentual != null}" th:text="${(a.fin.variacaoLucroPercentual.signum() >= 0 ? '+' : '') + #numbers.formatDecimal(a.fin.variacaoLucroPercentual,1,'POINT',1,'COMMA') + '%'}">+0%</span>
+                    <span th:unless="${a.fin.variacaoLucroPercentual != null}" class="text-muted">-</span></td>
+                <td><span th:if="${a.materialMaisLucrativo != null}" th:text="${a.materialMaisLucrativo}">Material</span>
+                    <span th:unless="${a.materialMaisLucrativo != null}" class="text-muted">-</span></td>
             </tr>
             </tbody>
         </table></div>
+        <div class="p-3 small text-muted">O lucro só conta o material que foi <strong>vendido</strong>. Quem comprou e ainda não vendeu mostra lucro zero e caixa negativo: o dinheiro está no estoque (tabela abaixo).</div>
     </div></div>
 
+    <!-- Compras, caixa e estoque -->
     <div class="card border-0 shadow-sm rounded-4 mb-3"><div class="card-body p-0">
-        <div class="p-3 pb-2 fw-bold"><i class="bi bi-box-seam"></i> Materiais comprados por armazém (kg)</div>
-        <div th:if="${#lists.isEmpty(cmp.materiais)}" class="p-3 pt-0 text-muted small">Nenhuma compra de material neste período.</div>
+        <div class="p-3 pb-2 fw-bold"><i class="bi bi-cash-stack"></i> Compras, caixa e estoque</div>
+        <div class="table-responsive"><table class="table align-middle mb-0 small">
+            <thead class="table-light"><tr>
+                <th>Armazém</th><th class="num">Comprado (R$)</th><th class="num">kg</th><th class="num">R$/kg médio</th><th class="num">Atendimentos</th><th class="num">Ticket médio</th>
+                <th class="num">Caixa do período</th><th class="num">Estoque (kg)</th><th class="num">Estoque a custo</th><th class="num">Estoque a preço de venda</th>
+            </tr></thead>
+            <tbody>
+            <tr th:each="a : ${cmp.armazens}">
+                <td class="fw-bold" th:text="${a.nome}">Armazém</td>
+                <td class="num">R$ <span th:text="${#numbers.formatDecimal(a.fin.compras,1,'POINT',2,'COMMA')}">0,00</span></td>
+                <td class="num" th:text="${#numbers.formatDecimal(a.kgComprado,1,'POINT',1,'COMMA')}">0</td>
+                <td class="num"><span th:if="${a.precoMedioCompra != null}">R$ <span th:text="${#numbers.formatDecimal(a.precoMedioCompra,1,'POINT',2,'COMMA')}">0,00</span></span>
+                    <span th:unless="${a.precoMedioCompra != null}" class="text-muted">-</span></td>
+                <td class="num" th:text="${a.fin.atendimentos}">0</td>
+                <td class="num"><span th:if="${a.fin.ticketMedio != null}">R$ <span th:text="${#numbers.formatDecimal(a.fin.ticketMedio,1,'POINT',2,'COMMA')}">0,00</span></span>
+                    <span th:unless="${a.fin.ticketMedio != null}" class="text-muted">-</span></td>
+                <td class="num fw-bold" th:classappend="${a.fin.caixaPeriodo.signum() < 0} ? 'text-danger' : 'text-success'">R$ <span th:text="${#numbers.formatDecimal(a.fin.caixaPeriodo,1,'POINT',2,'COMMA')}">0,00</span></td>
+                <td class="num" th:text="${#numbers.formatDecimal(a.estoqueKg,1,'POINT',1,'COMMA')}">0</td>
+                <td class="num">R$ <span th:text="${#numbers.formatDecimal(a.estoqueCusto,1,'POINT',2,'COMMA')}">0,00</span></td>
+                <td class="num">R$ <span th:text="${#numbers.formatDecimal(a.estoqueRevenda,1,'POINT',2,'COMMA')}">0,00</span></td>
+            </tr>
+            </tbody>
+        </table></div>
+        <div class="p-3 small text-muted">Estoque no último dia do período. "A preço de venda" usa o último preço de venda de cada material (ou o custo, se nunca vendeu).</div>
+    </div></div>
+
+    <!-- Materiais: compras -->
+    <div class="card border-0 shadow-sm rounded-4 mb-3"><div class="card-body p-0">
+        <div class="p-3 pb-2 fw-bold"><i class="bi bi-box-seam"></i> Compras por material (kg e preço médio pago por kg)</div>
+        <div th:if="${#lists.isEmpty(cmp.materiais)}" class="p-3 pt-0 text-muted small">Nenhuma movimentação de material neste período.</div>
         <div th:unless="${#lists.isEmpty(cmp.materiais)}" class="table-responsive"><table class="table align-middle mb-0 small">
             <thead class="table-light"><tr><th>Material</th>
                 <th class="num" th:each="a : ${cmp.armazens}" th:text="${a.nome}">Armazém</th>
-                <th class="num">Total</th></tr></thead>
+                <th class="num">Total (kg)</th></tr></thead>
             <tbody>
-            <tr th:each="m : ${cmp.materiais}">
+            <tr th:each="m : ${cmp.materiais}" th:if="${m.kgTotal.signum() > 0}">
                 <td class="fw-bold" th:text="${m.material}">Material</td>
                 <td class="num" th:each="a : ${cmp.armazens}"
-                    th:classappend="${m.armazemQueMaisComprou == a.id and m.armazemQueMenosComprou != null} ? 'melhor fw-bold' : (${m.armazemQueMenosComprou == a.id} ? 'pior' : '')">
-                    <span th:if="${m.kgPorArmazem.get(a.id) != null}" th:text="${#numbers.formatDecimal(m.kgPorArmazem.get(a.id),1,'POINT',2,'COMMA')}">0</span>
+                    th:classappend="${m.armazemQueMaisComprou == a.id and m.armazemQueMenosComprou != null} ? 'melhor' : (${m.armazemQueMenosComprou == a.id} ? 'pior' : '')">
+                    <div th:if="${m.kgPorArmazem.get(a.id) != null}">
+                        <div class="fw-bold" th:text="${#numbers.formatDecimal(m.kgPorArmazem.get(a.id),1,'POINT',2,'COMMA')}">0</div>
+                        <div class="text-muted" style="font-size:.75rem" th:if="${m.precoMedioCompra.get(a.id) != null}">R$ <span th:text="${#numbers.formatDecimal(m.precoMedioCompra.get(a.id),1,'POINT',2,'COMMA')}">0,00</span>/kg</div>
+                    </div>
                     <span th:unless="${m.kgPorArmazem.get(a.id) != null}" class="text-muted">-</span></td>
                 <td class="num fw-bold" th:text="${#numbers.formatDecimal(m.kgTotal,1,'POINT',2,'COMMA')}">0</td>
             </tr>
             </tbody>
         </table></div>
         <div class="p-3 small text-muted"><span class="badge melhor text-dark border">verde</span> armazém que mais comprou o material · <span class="badge pior text-dark border">laranja</span> o que menos comprou (entre os que compraram).</div>
+    </div></div>
+
+    <!-- Materiais: vendas e lucro -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4"><div class="card-body p-0">
+        <div class="p-3 pb-2 fw-bold"><i class="bi bi-graph-up-arrow"></i> Lucro por material vendido (kg e preço médio de venda)</div>
+        <div class="table-responsive"><table class="table align-middle mb-0 small">
+            <thead class="table-light"><tr><th>Material</th>
+                <th class="num" th:each="a : ${cmp.armazens}" th:text="${a.nome}">Armazém</th>
+                <th class="num">Lucro total</th></tr></thead>
+            <tbody>
+            <tr th:each="m : ${cmp.materiais}" th:if="${!m.venda.isEmpty()}">
+                <td class="fw-bold" th:text="${m.material}">Material</td>
+                <td class="num" th:each="a : ${cmp.armazens}">
+                    <div th:if="${m.venda.get(a.id) != null}">
+                        <div class="fw-bold" th:classappend="${m.venda.get(a.id).lucro.signum() < 0} ? 'text-danger' : 'text-success'">R$ <span th:text="${#numbers.formatDecimal(m.venda.get(a.id).lucro,1,'POINT',2,'COMMA')}">0,00</span></div>
+                        <div class="text-muted" style="font-size:.75rem"><span th:text="${#numbers.formatDecimal(m.venda.get(a.id).qtdVendida,1,'POINT',1,'COMMA')}">0</span> kg<span th:if="${m.venda.get(a.id).precoMedioVenda != null}"> · R$ <span th:text="${#numbers.formatDecimal(m.venda.get(a.id).precoMedioVenda,1,'POINT',2,'COMMA')}">0,00</span>/kg</span></div>
+                    </div>
+                    <span th:unless="${m.venda.get(a.id) != null}" class="text-muted">-</span></td>
+                <td class="num fw-bold" th:classappend="${m.lucroTotal.signum() < 0} ? 'text-danger' : 'text-success'">R$ <span th:text="${#numbers.formatDecimal(m.lucroTotal,1,'POINT',2,'COMMA')}">0,00</span></td>
+            </tr>
+            </tbody>
+        </table></div>
+        <div class="p-3 small text-muted">Lucro do material = venda à indústria - custo médio do que foi vendido. Vermelho = vendido abaixo do custo.</div>
     </div></div>
 </div>
 </body>

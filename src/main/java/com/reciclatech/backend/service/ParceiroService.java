@@ -90,11 +90,11 @@ public class ParceiroService {
                 .anyMatch(x -> PlanoAcesso.PERSONALIZADO.equalsIgnoreCase(x.getPlano()));
     }
 
-    /** Pode cadastrar mais um armazém? Sim se ainda não tem nenhum, ou se está no Personalizado. */
+    /** Já tem armazém, mas nenhum no Personalizado: para cadastrar outro, só escolhendo o Personalizado. */
     @Transactional(readOnly = true)
-    public boolean podeCadastrarOutro(Long parceiroId) {
+    public boolean somentePersonalizado(Long parceiroId) {
         List<Armazem> lista = armazemRepository.findByProprietarioIdOrderByNomeAsc(parceiroId);
-        return lista.isEmpty() || lista.stream().anyMatch(x -> PlanoAcesso.PERSONALIZADO.equalsIgnoreCase(x.getPlano()));
+        return !lista.isEmpty() && lista.stream().noneMatch(x -> PlanoAcesso.PERSONALIZADO.equalsIgnoreCase(x.getPlano()));
     }
 
     /** Devolve o armazém SOMENTE se pertencer ao dono informado. */
@@ -127,12 +127,15 @@ public class ParceiroService {
         Parceiro dono = parceiroRepository.travarPorId(parceiroId)
                 .orElseThrow(() -> new IllegalArgumentException("Conta não encontrada."));
 
-        // Regra comercial: START e PRO têm UM armazém por dono; vários só no plano Personalizado (liberado pelo suporte).
+        // Regra comercial: START e PRO têm UM armazém por dono. Para ter mais, o dono escolhe o plano PERSONALIZADO
+        // ao cadastrar (ou já está nele). Os armazéns antigos não mudam de plano sozinhos: o suporte unifica ao ativar.
         List<Armazem> existentes = armazemRepository.findByProprietarioIdOrderByNomeAsc(parceiroId);
-        boolean personalizado = existentes.stream().anyMatch(x -> PlanoAcesso.PERSONALIZADO.equalsIgnoreCase(x.getPlano()));
+        boolean jaPersonalizado = existentes.stream().anyMatch(x -> PlanoAcesso.PERSONALIZADO.equalsIgnoreCase(x.getPlano()));
+        boolean escolheuPersonalizado = PlanoAcesso.PERSONALIZADO.equalsIgnoreCase(plano == null ? null : plano.trim());
+        boolean personalizado = jaPersonalizado || escolheuPersonalizado;
         if (!existentes.isEmpty() && !personalizado) {
             throw new IllegalArgumentException("Os planos START e PRO permitem 1 armazém por conta. "
-                    + "Para cadastrar mais armazéns, fale com o suporte e peça o plano Personalizado.");
+                    + "Para cadastrar outro armazém, escolha o plano Personalizado.");
         }
 
         Armazem a = new Armazem();

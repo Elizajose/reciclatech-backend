@@ -1017,7 +1017,7 @@ public class DatabaseService {
         try {
             // só as colunas do painel: nunca carrega hash de senha
             String sql = "SELECT a.id, a.nome, a.cnpj, a.telefone, a.login, a.status, a.plano, a.data_cadastro, a.proprietario_id, " +
-                    "p.ultimo_login AS ultimo_acesso_dono FROM armazem a LEFT JOIN parceiro p ON p.id = a.proprietario_id ORDER BY a.id DESC";
+                    "p.nome AS nome_dono, p.ultimo_login AS ultimo_acesso_dono FROM armazem a LEFT JOIN parceiro p ON p.id = a.proprietario_id ORDER BY a.id DESC";
             return jdbcTemplate.queryForList(sql);
         } catch (Exception e) {
             log.error("Erro ao listar armazéns", e);

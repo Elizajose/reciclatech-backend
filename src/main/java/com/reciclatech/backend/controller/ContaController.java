@@ -6,6 +6,7 @@ import com.reciclatech.backend.service.ComparacaoArmazens;
 import com.reciclatech.backend.service.DatabaseService;
 import com.reciclatech.backend.service.LoginThrottle;
 import com.reciclatech.backend.util.PeriodoComparacao;
+import com.reciclatech.backend.util.PrecoPlano;
 import com.reciclatech.backend.service.ParceiroService;
 import com.reciclatech.backend.service.RecuperacaoSenhaService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,6 +34,9 @@ public class ContaController {
     private final LoginThrottle throttle;
     private final RecuperacaoSenhaService recuperacaoSenhaService;
     private final DatabaseService databaseService;
+
+    @org.springframework.beans.factory.annotation.Value("${coletae.preco-armazem-extra:129.90}")
+    private double precoArmazemExtra;
 
     public ContaController(ParceiroService parceiroService,
                            LoginThrottle throttle, RecuperacaoSenhaService recuperacaoSenhaService,
@@ -109,7 +113,7 @@ public class ContaController {
         if (id == null) return "redirect:/login";
         java.util.List<Armazem> lista = parceiroService.listarArmazens(id);
         model.addAttribute("armazens", lista);
-        model.addAttribute("podeNovo", parceiroService.podeCadastrarOutro(id));
+        model.addAttribute("somentePersonalizado", parceiroService.somentePersonalizado(id));
         model.addAttribute("personalizado", parceiroService.temPersonalizado(id));
         model.addAttribute("podeComparar", lista.size() >= 2);
         model.addAttribute("parceiroNome", session.getAttribute(S_PARCEIRO_NOME));
@@ -143,11 +147,11 @@ public class ContaController {
     }
 
     @GetMapping("/armazens/novo")
-    public String novoForm(HttpSession session, Model model) {
+    public String novoForm(@RequestParam(required = false) String plano, HttpSession session, Model model) {
         Long id = parceiroLogado(session);
         if (id == null) return "redirect:/login";
-        if (!parceiroService.podeCadastrarOutro(id)) return "redirect:/conta/armazens?erro=limite";
-        model.addAttribute("personalizado", parceiroService.temPersonalizado(id));
+        model.addAttribute("plano", plano == null ? null : plano.trim().toUpperCase(java.util.Locale.ROOT));
+        preencherPlanos(model, id);
         return "conta-armazem-novo";
     }
 
@@ -171,9 +175,18 @@ public class ContaController {
             model.addAttribute("uf", uf);
             model.addAttribute("cidade", cidade);
             model.addAttribute("plano", plano);
-            model.addAttribute("personalizado", parceiroService.temPersonalizado(id));
+            preencherPlanos(model, id);
             return "conta-armazem-novo";
         }
+    }
+
+    /** Dados da escolha de plano: situação do dono e preços (o valor extra do Personalizado vem da configuração). */
+    private void preencherPlanos(Model model, Long donoId) {
+        model.addAttribute("personalizado", parceiroService.temPersonalizado(donoId));
+        model.addAttribute("somentePersonalizado", parceiroService.somentePersonalizado(donoId));
+        model.addAttribute("precoStart", PrecoPlano.START);
+        model.addAttribute("precoPro", PrecoPlano.PRO);
+        model.addAttribute("precoExtra", precoArmazemExtra > 0 ? precoArmazemExtra : PrecoPlano.EXTRA_PADRAO);
     }
 
     /** Informa (ou corrige) estado e município de um armazém do próprio dono. */
