@@ -91,8 +91,8 @@
             <h5 class="fw-bold text-dark mb-1"><i class="bi bi-stars text-warning me-2"></i> Escolha o plano pela sua necessidade</h5>
             <p class="small text-muted mb-4">Escolha o melhor para o seu negócio. Você pode mudar de plano depois, e os seus dados são sempre mantidos.</p>
             <div class="row g-3">
-                <div class="col-md-6">
-                    <div class="border rounded-3 p-3 h-100" th:classappend="${planoNome != null and !#strings.contains(planoNome, 'Pro')} ? 'border-success border-2'">
+                <div class="col-md-4">
+                    <div class="border rounded-3 p-3 h-100" th:classappend="${planoCodigo == 'START'} ? 'border-success border-2'">
                         <h6 class="fw-bold mb-1">Básico <span class="text-muted fw-normal">· R$ 149,90/mês</span></h6>
                         <p class="small text-muted">Para pequenos depósitos focados em controle operacional.</p>
                         <ul class="small mb-0 ps-3">
@@ -104,8 +104,8 @@
                         </ul>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="border rounded-3 p-3 h-100" th:classappend="${planoNome != null and #strings.contains(planoNome, 'Pro')} ? 'border-success border-2'">
+                <div class="col-md-4">
+                    <div class="border rounded-3 p-3 h-100" th:classappend="${planoCodigo == 'PRO'} ? 'border-success border-2'">
                         <h6 class="fw-bold mb-1">Pro <span class="text-muted fw-normal">· R$ 199,90/mês</span></h6>
                         <p class="small text-muted">O sistema completo para organizar e lucrar mais.</p>
                         <ul class="small mb-0 ps-3">
@@ -117,8 +117,20 @@
                         </ul>
                     </div>
                 </div>
+                <div class="col-md-4">
+                    <div class="border rounded-3 p-3 h-100" th:classappend="${planoCodigo == 'PERSONALIZADO'} ? 'border-success border-2'">
+                        <h6 class="fw-bold mb-1">Personalizado <span class="text-muted fw-normal">· a partir de R$ 199,90/mês</span></h6>
+                        <p class="small text-muted">Para quem tem mais de um armazém ou cooperativa.</p>
+                        <ul class="small mb-0 ps-3">
+                            <li>Tudo do plano Pro em todos os armazéns</li>
+                            <li>Vários armazéns na mesma conta</li>
+                            <li>Comparação de lucro e materiais entre armazéns</li>
+                            <li>Valor calculado pela quantidade de armazéns</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
-            <p class="small text-muted mt-3 mb-0">Para trocar de plano, abra um chamado de suporte pelo painel.</p>
+            <p class="small text-muted mt-3 mb-0">Para trocar de plano ou contratar o plano Personalizado, abra um chamado de suporte pelo painel.</p>
         </div>
     </div>
 

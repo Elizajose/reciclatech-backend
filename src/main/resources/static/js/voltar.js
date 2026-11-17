@@ -10,7 +10,7 @@
  */
 (function () {
     var AUTH = ['/login', '/conta/cadastro', '/conta/esqueci-senha', '/conta/redefinir-senha'];
-    var LOGADAS = ['/admin', '/master', '/extrato', '/meus-extratos', '/conta/armazens'];
+    var LOGADAS = ['/admin', '/master', '/extrato', '/meus-extratos', '/conta/armazens', '/conta/comparar'];
     var chave = 'coletae:voltar:' + location.pathname;
 
     function ehLogada(caminho) {

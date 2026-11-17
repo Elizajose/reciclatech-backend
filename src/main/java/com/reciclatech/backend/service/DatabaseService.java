@@ -1016,7 +1016,7 @@ public class DatabaseService {
     public List<Map<String, Object>> listarTodosArmazensSaaS() {
         try {
             // só as colunas do painel: nunca carrega hash de senha
-            String sql = "SELECT a.id, a.nome, a.cnpj, a.telefone, a.login, a.status, a.plano, a.data_cadastro, " +
+            String sql = "SELECT a.id, a.nome, a.cnpj, a.telefone, a.login, a.status, a.plano, a.data_cadastro, a.proprietario_id, " +
                     "p.ultimo_login AS ultimo_acesso_dono FROM armazem a LEFT JOIN parceiro p ON p.id = a.proprietario_id ORDER BY a.id DESC";
             return jdbcTemplate.queryForList(sql);
         } catch (Exception e) {
@@ -1059,10 +1059,59 @@ public class DatabaseService {
         }
     }
 
-    /** Troca o plano (START/PRO) de um armazém. Os dados não mudam; só o acesso aos recursos Pro. false = armazém não existe. */
+    /** Compras/vendas/ajustes de UM armazém (para a comparação do dono; o chamador já confirmou que o armazém é do dono). */
+    public List<AnaliseFinanceira.Movimento> movimentosDoArmazem(Long armazemId) {
+        List<AnaliseFinanceira.Movimento> lista = new ArrayList<>();
+        for (Oferta o : ofertaRepository.findAllByArmazemIdOrderByDataCriacaoDesc(armazemId)) {
+            if (o.getMaterial() == null || o.getPeso() == null || o.getStatus() == null || o.getData() == null) continue;
+            try {
+                lista.add(new AnaliseFinanceira.Movimento(o.getId(), o.getMaterial(), o.getStatus().name(),
+                        java.math.BigDecimal.valueOf(o.getPeso()), o.getPrecoEstimado(), LocalDate.parse(o.getData()),
+                        o.getUsuario() != null ? o.getUsuario().getNome() : null));
+            } catch (Exception e) {
+                log.debug("Movimento com data inválida ignorado na comparação: id={}", o.getId());
+            }
+        }
+        return lista;
+    }
+
+    /** Despesas de UM armazém (comparação do dono). */
+    public List<AnaliseFinanceira.DespesaMov> despesasDoArmazem(Long armazemId) {
+        List<AnaliseFinanceira.DespesaMov> lista = new ArrayList<>();
+        for (Despesa d : despesaRepository.findAllByArmazemIdOrderByDataDespesaDesc(armazemId)) {
+            lista.add(new AnaliseFinanceira.DespesaMov(d.getDataDespesa(), d.getValor()));
+        }
+        return lista;
+    }
+
+    /** Quantos armazéns do mesmo dono estão no plano Personalizado (para mostrar a mensalidade). Sem dono = 1. */
+    public int contarPersonalizadosDoDono(Long armazemId) {
+        try {
+            Integer n = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM armazem WHERE plano = 'PERSONALIZADO' AND proprietario_id = " +
+                    "(SELECT proprietario_id FROM armazem WHERE id = ?)", Integer.class, armazemId);
+            return n == null ? 1 : Math.max(1, n);
+        } catch (Exception e) {
+            log.error("Erro ao contar armazéns do dono", e);
+            return 1;
+        }
+    }
+
+    /** Troca o plano (START/PRO/PERSONALIZADO) de um armazém. Os dados não mudam; só o acesso aos recursos Pro. false = armazém não existe. */
     public boolean atualizarPlanoArmazem(Long id, String novoPlano) {
         String plano = novoPlano == null ? "" : novoPlano.trim().toUpperCase(Locale.ROOT);
-        if (!"START".equals(plano) && !"PRO".equals(plano)) throw new IllegalArgumentException("Plano inválido.");
+        if (!"START".equals(plano) && !"PRO".equals(plano) && !"PERSONALIZADO".equals(plano)) throw new IllegalArgumentException("Plano inválido.");
+        if ("PERSONALIZADO".equals(plano)) {
+            // o Personalizado é do DONO: todos os armazéns dele passam juntos (cada um com o acesso Pro)
+            return jdbcTemplate.update("UPDATE armazem SET plano = ? WHERE id = ? OR (proprietario_id IS NOT NULL AND proprietario_id = " +
+                    "(SELECT proprietario_id FROM armazem WHERE id = ?))", plano, id, id) > 0;
+        }
+        Integer doDono = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM armazem WHERE proprietario_id = " +
+                "(SELECT proprietario_id FROM armazem WHERE id = ?)", Integer.class, id);
+        if (doDono != null && doDono > 1) {
+            throw new IllegalArgumentException("Este dono tem " + doDono + " armazéns: só o plano Personalizado comporta vários. "
+                    + "Suspenda ou remova os extras antes de voltar para " + plano + ".");
+        }
         return jdbcTemplate.update("UPDATE armazem SET plano = ? WHERE id = ?", plano, id) > 0;
     }
 

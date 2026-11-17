@@ -32,6 +32,7 @@
 
         <form action="/admin/confirmar-finalizacao" method="post" onsubmit="return prepararEnvio(this);">
             <input type="hidden" name="idVendedor" th:value="${vendedor.id}">
+            <input type="hidden" id="idArmazem" th:value="${session.idPlanilhaAtiva}">
 
             <div class="card-body p-4 p-md-5 bg-body">
 
@@ -113,6 +114,7 @@
 </div>
 
 <!-- SCRIPT EXTERNO -->
+<script th:src="@{/js/rascunho.js}"></script>
 <script th:src="@{/js/admin-revisao.js}"></script>
 </body>
 </html>

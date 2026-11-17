@@ -21,6 +21,14 @@ public interface ArmazemRepository extends JpaRepository<Armazem, Long> {
             nativeQuery = true)
     boolean existeDocumentoNormalizado(@org.springframework.data.repository.query.Param("documento") String documento);
 
+    /** Mesmo documento em armazém de OUTRO dono (ou sem dono). O mesmo dono pode repetir o próprio CPF/CNPJ nos seus armazéns. */
+    @org.springframework.data.jpa.repository.Query(value =
+            "SELECT COUNT(*) > 0 FROM armazem WHERE UPPER(regexp_replace(COALESCE(cnpj, ''), '[^A-Za-z0-9]', '', 'g')) = :documento " +
+            "AND (proprietario_id IS NULL OR proprietario_id <> :donoId)",
+            nativeQuery = true)
+    boolean existeDocumentoDeOutroDono(@org.springframework.data.repository.query.Param("documento") String documento,
+                                       @org.springframework.data.repository.query.Param("donoId") Long donoId);
+
     /** Trava a linha do armazém até o fim da transação: serializa saídas e ajustes de estoque. */
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @org.springframework.data.jpa.repository.Query("SELECT a FROM Armazem a WHERE a.id = :id")

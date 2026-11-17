@@ -39,4 +39,9 @@ class PlanoAcessoTest {
         }
         assertFalse(PlanoAcesso.recursoPro(null));
     }
+
+    @Test void personalizadoTemTodosOsRecursosPro() {
+        assertTrue(PlanoAcesso.liberaPro("PERSONALIZADO", "ATIVO"));
+        assertTrue(PlanoAcesso.liberaPro("personalizado", "TRIAL"));
+    }
 }

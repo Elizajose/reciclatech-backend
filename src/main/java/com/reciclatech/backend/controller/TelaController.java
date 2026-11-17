@@ -15,6 +15,8 @@ import com.reciclatech.backend.util.DocumentoValidator;
 import com.reciclatech.backend.util.Engajamento;
 import com.reciclatech.backend.util.ExportacaoCsv;
 import com.reciclatech.backend.util.Impressao;
+import com.reciclatech.backend.util.PlanoAcesso;
+import com.reciclatech.backend.util.PrecoPlano;
 import com.reciclatech.backend.util.Valores;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import jakarta.servlet.http.HttpSession;
@@ -436,7 +438,7 @@ public class TelaController {
             // o serviço confere de novo (material do armazém, teto de preço sobre a tabela/VIP) e recalcula os totais
             boolean gravou = googleSheetsService.finalizarAtendimento(idVendedor, cpfGravar, loteDeVendas);
             if (!gravou) return "redirect:/admin/coletas?aviso=ja_finalizado";
-            return "redirect:/extrato/" + idVendedor;
+            return "redirect:/extrato/" + idVendedor + "?fim=1";   // "fim=1": o navegador apaga o rascunho da pesagem
         } catch (IllegalArgumentException e) {
             ra.addFlashAttribute("erroTela", e.getMessage() + " Nada foi gravado.");
             return "redirect:/admin/coletas";
@@ -1213,6 +1215,10 @@ public class TelaController {
     // 8. PLANO SAAS E SUPORTE
     // =========================================================================
 
+    /** Valor mensal de cada armazém adicional no plano Personalizado (variável PRECO_ARMAZEM_EXTRA). */
+    @org.springframework.beans.factory.annotation.Value("${coletae.preco-armazem-extra:129.90}")
+    private double precoArmazemExtra;
+
     @GetMapping("/admin/assinatura")
     public String telaAssinaturaSaaS(Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
@@ -1221,9 +1227,20 @@ public class TelaController {
         String plano = (String) session.getAttribute("planoAssinatura");
         String status = (String) session.getAttribute("statusAssinatura");
 
-        double valor = "PRO".equals(plano) ? 199.90 : 149.90;
-        String planoNome = "PRO".equals(plano) ? "Coletaê SaaS Pro" : "Coletaê SaaS Start";
+        double valor;
+        String planoNome;
+        if (PlanoAcesso.PERSONALIZADO.equals(plano)) {
+            int qtd = 1;
+            try { qtd = googleSheetsService.contarPersonalizadosDoDono(Long.parseLong(String.valueOf(session.getAttribute("idPlanilhaAtiva")))); }
+            catch (NumberFormatException ignorado) { /* sessão sem armazém: mostra o valor de 1 */ }
+            valor = PrecoPlano.personalizado(qtd, precoArmazemExtra);
+            planoNome = "Coletaê SaaS Personalizado (" + qtd + (qtd == 1 ? " armazém)" : " armazéns)");
+        } else {
+            valor = PrecoPlano.individual(plano);
+            planoNome = "PRO".equals(plano) ? "Coletaê SaaS Pro" : "Coletaê SaaS Start";
+        }
 
+        model.addAttribute("planoCodigo", plano == null ? "START" : plano);
         model.addAttribute("planoNome", planoNome);
         model.addAttribute("valorMensalidade", valor);
         model.addAttribute("statusAssinatura", status != null ? status : "TRIAL");
@@ -1327,6 +1344,8 @@ public class TelaController {
             int ativosStart = 0; int ativosPro = 0;
             int trialsStart = 0; int trialsPro = 0;
             double faturamentoMensal = 0.0;
+            int ativosPersonalizado = 0; int trialsPersonalizado = 0;
+            Map<Object, Integer> personalizadosAtivosPorDono = new HashMap<>();   // dono -> armazéns ATIVOS no Personalizado (cobrança é por dono)
 
             List<Armazem> clientesFormatados = new ArrayList<>();
             LocalDate hojeMaster = LocalDate.now(ZoneId.of("America/Recife"));
@@ -1346,11 +1365,17 @@ public class TelaController {
 
                 if ("ATIVO".equals(status)) {
                     ativos++;
-                    if ("PRO".equals(plano)) { ativosPro++; faturamentoMensal += 199.90; }
-                    else { ativosStart++; faturamentoMensal += 149.90; }
+                    if (PlanoAcesso.PERSONALIZADO.equals(plano)) {
+                        ativosPersonalizado++;
+                        Object dono = c.get("proprietario_id") != null ? c.get("proprietario_id") : ("sem-dono-" + c.get("id"));
+                        personalizadosAtivosPorDono.merge(dono, 1, Integer::sum);
+                    }
+                    else if ("PRO".equals(plano)) { ativosPro++; faturamentoMensal += PrecoPlano.PRO; }
+                    else { ativosStart++; faturamentoMensal += PrecoPlano.START; }
                 } else if ("TRIAL".equals(status)) {
                     trials++;
-                    if ("PRO".equals(plano)) { trialsPro++; } else { trialsStart++; }
+                    if (PlanoAcesso.PERSONALIZADO.equals(plano)) { trialsPersonalizado++; }
+                    else if ("PRO".equals(plano)) { trialsPro++; } else { trialsStart++; }
                 } else if ("BLOQUEADO".equals(status) || "SUSPENSO".equals(status)) {
                     bloqueados++;
                 }
@@ -1395,6 +1420,10 @@ public class TelaController {
                 clientesFormatados.add(a);
             }
 
+            // Personalizado: a mensalidade é por dono (199,90 + extra por armazém adicional)
+            int donosPersonalizados = personalizadosAtivosPorDono.size();
+            for (int qtdAtivos : personalizadosAtivosPorDono.values()) faturamentoMensal += PrecoPlano.personalizado(qtdAtivos, precoArmazemExtra);
+
             double volumeGmv = 0.0;
             double volumeToneladas = 0.0;
             int churnMes = bloqueados + testesVencidos;   // hoje fora de operação: suspensos, bloqueados ou teste vencido
@@ -1422,6 +1451,9 @@ public class TelaController {
             model.addAttribute("bloqueados", bloqueados);
             model.addAttribute("ativosStart", ativosStart);
             model.addAttribute("ativosPro", ativosPro);
+            model.addAttribute("ativosPersonalizado", ativosPersonalizado);
+            model.addAttribute("donosPersonalizados", donosPersonalizados);
+            model.addAttribute("trialsPersonalizado", trialsPersonalizado);
             model.addAttribute("trialsStart", trialsStart);
             model.addAttribute("trialsPro", trialsPro);
             model.addAttribute("faturamentoMensal", faturamentoMensal);

@@ -5,6 +5,7 @@ import com.reciclatech.backend.model.Parceiro;
 import com.reciclatech.backend.repository.ArmazemRepository;
 import com.reciclatech.backend.repository.ParceiroRepository;
 import com.reciclatech.backend.util.DocumentoValidator;
+import com.reciclatech.backend.util.PlanoAcesso;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -82,6 +83,20 @@ public class ParceiroService {
         return lista;
     }
 
+    /** O dono tem o plano Personalizado (vários armazéns)? */
+    @Transactional(readOnly = true)
+    public boolean temPersonalizado(Long parceiroId) {
+        return armazemRepository.findByProprietarioIdOrderByNomeAsc(parceiroId).stream()
+                .anyMatch(x -> PlanoAcesso.PERSONALIZADO.equalsIgnoreCase(x.getPlano()));
+    }
+
+    /** Pode cadastrar mais um armazém? Sim se ainda não tem nenhum, ou se está no Personalizado. */
+    @Transactional(readOnly = true)
+    public boolean podeCadastrarOutro(Long parceiroId) {
+        List<Armazem> lista = armazemRepository.findByProprietarioIdOrderByNomeAsc(parceiroId);
+        return lista.isEmpty() || lista.stream().anyMatch(x -> PlanoAcesso.PERSONALIZADO.equalsIgnoreCase(x.getPlano()));
+    }
+
     /** Devolve o armazém SOMENTE se pertencer ao dono informado. */
     @Transactional(readOnly = true)
     public Optional<Armazem> buscarArmazemDoDono(Long armazemId, Long parceiroId) {
@@ -104,13 +119,21 @@ public class ParceiroService {
             if (!DocumentoValidator.valido(documento)) throw new IllegalArgumentException("CPF/CNPJ inválido.");
             // mesmo formato para todos e comparação sem pontuação: "11.222.333/0001-81" e "11222333000181" são o mesmo documento
             documento = DocumentoValidator.formatar(documento);
-            if (armazemRepository.existeDocumentoNormalizado(DocumentoValidator.normalizar(documento))) {
+            if (armazemRepository.existeDocumentoDeOutroDono(DocumentoValidator.normalizar(documento), parceiroId)) {
                 throw new IllegalArgumentException("Este CPF/CNPJ já está cadastrado.");
             }
         }
 
-        Parceiro dono = parceiroRepository.findById(parceiroId)
+        Parceiro dono = parceiroRepository.travarPorId(parceiroId)
                 .orElseThrow(() -> new IllegalArgumentException("Conta não encontrada."));
+
+        // Regra comercial: START e PRO têm UM armazém por dono; vários só no plano Personalizado (liberado pelo suporte).
+        List<Armazem> existentes = armazemRepository.findByProprietarioIdOrderByNomeAsc(parceiroId);
+        boolean personalizado = existentes.stream().anyMatch(x -> PlanoAcesso.PERSONALIZADO.equalsIgnoreCase(x.getPlano()));
+        if (!existentes.isEmpty() && !personalizado) {
+            throw new IllegalArgumentException("Os planos START e PRO permitem 1 armazém por conta. "
+                    + "Para cadastrar mais armazéns, fale com o suporte e peça o plano Personalizado.");
+        }
 
         Armazem a = new Armazem();
         a.setProprietario(dono);
@@ -122,7 +145,7 @@ public class ParceiroService {
         a.setCidade(cidadeValida);
         a.setPerfil("GESTOR");
         a.setStatus("TRIAL");
-        a.setPlano("PRO".equalsIgnoreCase(plano) ? "PRO" : "START");
+        a.setPlano(personalizado ? PlanoAcesso.PERSONALIZADO : ("PRO".equalsIgnoreCase(plano) ? "PRO" : "START"));
         a.setDataCadastro(LocalDate.now(ZoneId.of("America/Recife")));
         return armazemRepository.save(a);
     }

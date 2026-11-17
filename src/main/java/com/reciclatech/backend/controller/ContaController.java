@@ -2,7 +2,10 @@ package com.reciclatech.backend.controller;
 
 import com.reciclatech.backend.model.Armazem;
 import com.reciclatech.backend.model.Parceiro;
+import com.reciclatech.backend.service.ComparacaoArmazens;
+import com.reciclatech.backend.service.DatabaseService;
 import com.reciclatech.backend.service.LoginThrottle;
+import com.reciclatech.backend.util.PeriodoComparacao;
 import com.reciclatech.backend.service.ParceiroService;
 import com.reciclatech.backend.service.RecuperacaoSenhaService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,9 +32,12 @@ public class ContaController {
     private final ParceiroService parceiroService;
     private final LoginThrottle throttle;
     private final RecuperacaoSenhaService recuperacaoSenhaService;
+    private final DatabaseService databaseService;
 
     public ContaController(ParceiroService parceiroService,
-                           LoginThrottle throttle, RecuperacaoSenhaService recuperacaoSenhaService) {
+                           LoginThrottle throttle, RecuperacaoSenhaService recuperacaoSenhaService,
+                           DatabaseService databaseService) {
+        this.databaseService = databaseService;
         this.parceiroService = parceiroService;
         this.throttle = throttle;
         this.recuperacaoSenhaService = recuperacaoSenhaService;
@@ -101,14 +107,47 @@ public class ContaController {
     public String armazens(HttpSession session, Model model) {
         Long id = parceiroLogado(session);
         if (id == null) return "redirect:/login";
-        model.addAttribute("armazens", parceiroService.listarArmazens(id));
+        java.util.List<Armazem> lista = parceiroService.listarArmazens(id);
+        model.addAttribute("armazens", lista);
+        model.addAttribute("podeNovo", parceiroService.podeCadastrarOutro(id));
+        model.addAttribute("personalizado", parceiroService.temPersonalizado(id));
+        model.addAttribute("podeComparar", lista.size() >= 2);
         model.addAttribute("parceiroNome", session.getAttribute(S_PARCEIRO_NOME));
         return "conta-armazens";
     }
 
+    /** Compara os armazéns do dono: lucro, compras e materiais por armazém no período escolhido. */
+    @GetMapping("/comparar")
+    public String comparar(@RequestParam(required = false) String periodo, @RequestParam(required = false) String de,
+                           @RequestParam(required = false) String ate, HttpSession session, Model model) {
+        Long id = parceiroLogado(session);
+        if (id == null) return "redirect:/login";
+        java.util.List<Armazem> lista = parceiroService.listarArmazens(id);   // só os armazéns DESTE dono
+        if (lista.size() < 2) return "redirect:/conta/armazens";
+        java.time.LocalDate hoje = java.time.LocalDate.now(java.time.ZoneId.of("America/Recife"));
+        PeriodoComparacao p = PeriodoComparacao.resolver(periodo, de, ate, hoje);
+        java.util.List<ComparacaoArmazens.Entrada> entradas = new java.util.ArrayList<>();
+        for (Armazem a : lista) {
+            String local = (a.getCidade() != null && a.getUf() != null) ? a.getCidade() + " - " + a.getUf() : "";
+            entradas.add(new ComparacaoArmazens.Entrada(a.getId(), a.getNome(), local,
+                    databaseService.movimentosDoArmazem(a.getId()), databaseService.despesasDoArmazem(a.getId())));
+        }
+        model.addAttribute("cmp", ComparacaoArmazens.comparar(entradas, p.de, p.ate));
+        java.time.format.DateTimeFormatter br = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        model.addAttribute("periodoTexto", p.de.format(br) + " a " + p.ate.format(br));
+        model.addAttribute("periodoSel", p.selecionado);
+        model.addAttribute("periodoDe", p.de.toString());
+        model.addAttribute("periodoAte", p.ate.toString());
+        model.addAttribute("parceiroNome", session.getAttribute(S_PARCEIRO_NOME));
+        return "conta-comparar";
+    }
+
     @GetMapping("/armazens/novo")
-    public String novoForm(HttpSession session) {
-        if (parceiroLogado(session) == null) return "redirect:/login";
+    public String novoForm(HttpSession session, Model model) {
+        Long id = parceiroLogado(session);
+        if (id == null) return "redirect:/login";
+        if (!parceiroService.podeCadastrarOutro(id)) return "redirect:/conta/armazens?erro=limite";
+        model.addAttribute("personalizado", parceiroService.temPersonalizado(id));
         return "conta-armazem-novo";
     }
 
@@ -132,6 +171,7 @@ public class ContaController {
             model.addAttribute("uf", uf);
             model.addAttribute("cidade", cidade);
             model.addAttribute("plano", plano);
+            model.addAttribute("personalizado", parceiroService.temPersonalizado(id));
             return "conta-armazem-novo";
         }
     }

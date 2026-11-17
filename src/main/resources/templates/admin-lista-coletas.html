@@ -152,7 +152,7 @@
 
     <div class="row g-3 mb-4 justify-content-center">
 
-        <div class="col-12 col-sm-4" th:if="${session.perfilUser == 'GESTOR' and session.planoAssinatura == 'PRO'}">
+        <div class="col-12 col-sm-4" th:if="${session.perfilUser == 'GESTOR' and (session.planoAssinatura == 'PRO' or session.planoAssinatura == 'PERSONALIZADO')}">
             <a href="/admin/analises" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none">
                 <div class="card-body text-center p-3 d-flex flex-column justify-content-center">
                     <div class="icon-box bg-info bg-opacity-10 text-info mx-auto mb-2"><i class="bi bi-bar-chart-fill"></i></div>
@@ -162,7 +162,7 @@
             </a>
         </div>
 
-        <div class="col-12 col-sm-4" th:if="${session.perfilUser == 'GESTOR' and session.planoAssinatura != 'PRO'}">
+        <div class="col-12 col-sm-4" th:if="${session.perfilUser == 'GESTOR' and (session.planoAssinatura != 'PRO' and session.planoAssinatura != 'PERSONALIZADO')}">
             <a href="/admin/assinatura" class="card shadow-sm border-0 h-100 module-card module-disabled bg-body text-body text-decoration-none" onclick="alert('O Financeiro, o Controle de Estoque e Saída, os Clientes VIPs e o Histórico de Vendas são exclusivos do Plano PRO. Acesse Assinatura para fazer o upgrade!');">
                 <div class="card-body text-center p-3 d-flex flex-column justify-content-center position-relative">
                     <span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2" style="font-size: 0.65rem;">PLANO PRO</span>

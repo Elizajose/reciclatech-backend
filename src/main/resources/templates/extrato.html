@@ -160,6 +160,18 @@
 
 <!-- SCRIPT EXTERNO -->
 <script th:src="@{/js/admin-documento.js}"></script>
+<script th:src="@{/js/rascunho.js}"></script>
+<script>
+    // recibo gerado com sucesso: o rascunho da pesagem desse cliente não é mais necessário
+    (function () {
+        try {
+            if (new URLSearchParams(window.location.search).get('fim') === '1' && window.Rascunho) {
+                var partes = window.location.pathname.split('/');
+                Rascunho.apagarDoCliente(decodeURIComponent(partes[partes.length - 1]));
+            }
+        } catch (e) { /* sem efeito */ }
+    })();
+</script>
 
 </body>
 </html>

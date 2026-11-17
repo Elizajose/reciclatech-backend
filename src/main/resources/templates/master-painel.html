@@ -132,6 +132,7 @@
                         <div class="d-flex justify-content-between small fw-bold mb-1">
                             <span class="text-muted">Start (<span th:text="${ativosStart}"></span>)</span>
                             <span class="text-muted">Pro (<span th:text="${ativosPro}"></span>)</span>
+                            <span class="text-muted" th:title="|${donosPersonalizados} dono(s)|">Person. (<span th:text="${ativosPersonalizado}"></span>)</span>
                         </div>
                         <div class="progress" style="height: 6px;">
                             <div class="progress-bar bg-success" role="progressbar" th:style="'width: ' + (${ativos} > 0 ? (${ativosStart} * 100 / ${ativos}) : 50) + '%'"></div>
@@ -159,6 +160,7 @@
                         <div class="d-flex justify-content-between small fw-bold mb-1">
                             <span class="text-muted">Start (<span th:text="${trialsStart}"></span>)</span>
                             <span class="text-muted">Pro (<span th:text="${trialsPro}"></span>)</span>
+                            <span class="text-muted">Person. (<span th:text="${trialsPersonalizado}"></span>)</span>
                         </div>
                         <div class="progress" style="height: 6px;">
                             <div class="progress-bar bg-warning opacity-75" role="progressbar" style="width: 100%"></div>
@@ -309,6 +311,7 @@
                     <td>
                         <span th:if="${cliente.plano == 'START'}" class="badge bg-secondary badge-plano rounded-pill text-white shadow-sm px-3"><i class="bi bi-star-fill text-warning me-1"></i> START</span>
                         <span th:if="${cliente.plano == 'PRO'}" class="badge bg-dark badge-plano rounded-pill text-white shadow-sm px-3"><i class="bi bi-lightning-charge-fill text-warning me-1"></i> PRO</span>
+                        <span th:if="${cliente.plano == 'PERSONALIZADO'}" class="badge bg-primary badge-plano rounded-pill text-white shadow-sm px-3"><i class="bi bi-buildings-fill text-warning me-1"></i> PERSONALIZADO</span>
                     </td>
 
                     <td>
@@ -334,6 +337,7 @@
                             <select name="plano" class="form-select form-select-sm w-auto" aria-label="Plano">
                                 <option value="START" th:selected="${cliente.plano == 'START'}">Plano Start</option>
                                 <option value="PRO" th:selected="${cliente.plano == 'PRO'}">Plano Pro</option>
+                                <option value="PERSONALIZADO" th:selected="${cliente.plano == 'PERSONALIZADO'}">Personalizado (todos os armazéns do dono)</option>
                             </select>
                             <button type="submit" class="btn btn-sm btn-outline-dark fw-bold">Aplicar</button>
                         </form>

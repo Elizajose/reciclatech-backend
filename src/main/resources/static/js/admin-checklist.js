@@ -3,24 +3,36 @@ document.addEventListener('DOMContentLoaded', () => {
     document.documentElement.setAttribute('data-bs-theme', currentTheme);
 });
 
-// Lógica para recuperar rascunho
+// Rascunho automático (Fase 22): cada peso digitado/somado é guardado no navegador e volta se a tela for fechada ou recarregada.
 document.addEventListener("DOMContentLoaded", function() {
-    let idVendedorElement = document.getElementById('idVendedor');
-    if (!idVendedorElement) return; // Evita erro se o campo não carregar
+    var idVendedorElement = document.getElementById('idVendedor');
+    if (!idVendedorElement || !window.Rascunho) return;
+    var armazem = (document.getElementById('idArmazem') || {}).value || '0';
+    var k = Rascunho.chave(armazem, idVendedorElement.value, 'pesagem');
 
-    let idVendedor = idVendedorElement.value;
-    let rascunhoString = sessionStorage.getItem('rascunho_pesagem_' + idVendedor);
+    function salvar() {
+        var campos = {};
+        document.querySelectorAll('input[id^="total_"], input[id^="parcial_"]').forEach(function(i) {
+            if (i.value !== '') campos[i.id] = i.value;
+        });
+        if (Object.keys(campos).length === 0) Rascunho.apagar(k); else Rascunho.gravar(k, campos);
+    }
+    window.salvarRascunhoPesagem = salvar;
+    document.addEventListener('input', salvar);
 
-    if (rascunhoString) {
-        let rascunho = JSON.parse(rascunhoString);
-        let agora = new Date().getTime();
-
-        if (agora - rascunho.timestamp < 7200000) {
-            for (let idInput in rascunho.pesos) {
-                let campoTotal = document.getElementById(idInput);
-                if (campoTotal) { campoTotal.value = rascunho.pesos[idInput]; }
-            }
-        } else { sessionStorage.removeItem('rascunho_pesagem_' + idVendedor); }
+    var r = Rascunho.ler(k);
+    if (r) {
+        var restaurou = false;
+        Object.keys(r.campos).forEach(function(idInput) {
+            var campo = document.getElementById(idInput);
+            if (campo && campo.value === '') { campo.value = r.campos[idInput]; restaurou = true; }
+        });
+        if (restaurou) {
+            Rascunho.avisar(idVendedorElement.form || document.body, r.t, function() {
+                document.querySelectorAll('input[id^="total_"], input[id^="parcial_"]').forEach(function(i) { i.value = ''; });
+                Rascunho.apagar(k);
+            });
+        }
     }
 });
 
@@ -36,12 +48,14 @@ function adicionarAoTotal(id) {
         inputTotal.value = novoTotal.toFixed(2);
         inputParcial.value = '';
         inputParcial.focus();
+        if (window.salvarRascunhoPesagem) salvarRascunhoPesagem();
     }
 }
 
 function zerarTotal(id) {
     document.getElementById('total_' + id).value = '';
     document.getElementById('parcial_' + id).value = '';
+    if (window.salvarRascunhoPesagem) salvarRascunhoPesagem();
 }
 
 function validarAntesDeEnviar() {
@@ -56,17 +70,11 @@ function validarAntesDeEnviar() {
         }
     });
 
-    let rascunho = { timestamp: new Date().getTime(), pesos: {} };
-    let inputsTotais = document.querySelectorAll('input[id^="total_"]');
-    inputsTotais.forEach(function(input) {
-        if (input.value && parseFloat(input.value) > 0) { rascunho.pesos[input.id] = input.value; }
-    });
-
-    sessionStorage.setItem('rascunho_pesagem_' + idVendedor, JSON.stringify(rascunho));
+    if (window.salvarRascunhoPesagem) salvarRascunhoPesagem();   // o rascunho fica guardado até o recibo ser gerado
     return true;
 }
 
 function limparRascunho() {
-    let idVendedor = document.getElementById('idVendedor').value;
-    sessionStorage.removeItem('rascunho_pesagem_' + idVendedor);
+    var v = document.getElementById('idVendedor');
+    if (v && window.Rascunho) Rascunho.apagarDoCliente(v.value);
 }

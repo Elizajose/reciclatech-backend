@@ -29,6 +29,7 @@
 
         <form action="/admin/revisar-coleta" method="post" onsubmit="return validarAntesDeEnviar()" class="d-flex flex-column flex-grow-1 overflow-hidden">
             <input type="hidden" name="idVendedor" id="idVendedor" th:value="${vendedor.id}">
+            <input type="hidden" id="idArmazem" th:value="${session.idPlanilhaAtiva}">
 
             <div class="bg-body-tertiary p-3 border-bottom text-center flex-shrink-0">
                 <p class="fw-bold text-muted text-uppercase m-0 small letter-spacing-1">
@@ -101,6 +102,7 @@
 </div>
 
 <!--  SCRIPT EXTERNO -->
+<script th:src="@{/js/rascunho.js}"></script>
 <script th:src="@{/js/admin-checklist.js}"></script>
 </body>
 </html>
