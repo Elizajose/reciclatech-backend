@@ -4,6 +4,8 @@ import com.reciclatech.backend.model.Armazem;
 import com.reciclatech.backend.model.Parceiro;
 import com.reciclatech.backend.service.ComparacaoArmazens;
 import com.reciclatech.backend.service.DatabaseService;
+import com.reciclatech.backend.service.ImagemContaService;
+import com.reciclatech.backend.util.Assinatura;
 import com.reciclatech.backend.service.LoginThrottle;
 import com.reciclatech.backend.util.PeriodoComparacao;
 import com.reciclatech.backend.util.PrecoPlano;
@@ -34,14 +36,16 @@ public class ContaController {
     private final LoginThrottle throttle;
     private final RecuperacaoSenhaService recuperacaoSenhaService;
     private final DatabaseService databaseService;
+    private final ImagemContaService imagemContaService;
 
     @org.springframework.beans.factory.annotation.Value("${coletae.preco-armazem-extra:129.90}")
     private double precoArmazemExtra;
 
     public ContaController(ParceiroService parceiroService,
                            LoginThrottle throttle, RecuperacaoSenhaService recuperacaoSenhaService,
-                           DatabaseService databaseService) {
+                           DatabaseService databaseService, ImagemContaService imagemContaService) {
         this.databaseService = databaseService;
+        this.imagemContaService = imagemContaService;
         this.parceiroService = parceiroService;
         this.throttle = throttle;
         this.recuperacaoSenhaService = recuperacaoSenhaService;
@@ -117,6 +121,28 @@ public class ContaController {
         model.addAttribute("personalizado", parceiroService.temPersonalizado(id));
         model.addAttribute("podeComparar", lista.size() >= 2);
         model.addAttribute("parceiroNome", session.getAttribute(S_PARCEIRO_NOME));
+        String nomeDono = String.valueOf(nvl(String.valueOf(session.getAttribute(S_PARCEIRO_NOME)), "?")).trim();
+        model.addAttribute("inicial", nomeDono.isEmpty() ? "?" : nomeDono.substring(0, 1).toUpperCase(java.util.Locale.ROOT));
+        model.addAttribute("temFoto", !imagemContaService.comImagem(ImagemContaService.DONO, java.util.List.of(id)).isEmpty());
+        java.util.List<Long> ids = lista.stream().map(Armazem::getId).collect(java.util.stream.Collectors.toList());
+        model.addAttribute("comLogo", imagemContaService.comImagem(ImagemContaService.ARMAZEM, ids));
+
+        // situação de cada armazém em palavras e valor mensal estimado da conta
+        java.time.LocalDate hoje = java.time.LocalDate.now(java.time.ZoneId.of("America/Recife"));
+        java.util.Map<Long, String> infoStatus = new java.util.HashMap<>();
+        int personalizados = 0;
+        double mensalidade = 0;
+        for (Armazem a : lista) {
+            infoStatus.put(a.getId(), textoSituacao(a, hoje));
+            if ("PERSONALIZADO".equalsIgnoreCase(a.getPlano())) personalizados++;
+            else mensalidade += PrecoPlano.individual(a.getPlano());
+        }
+        if (personalizados > 0) mensalidade += PrecoPlano.personalizado(personalizados, precoArmazemExtra);
+        model.addAttribute("infoStatus", infoStatus);
+        model.addAttribute("mensalidade", mensalidade);
+        model.addAttribute("precoStart", PrecoPlano.START);
+        model.addAttribute("precoPro", PrecoPlano.PRO);
+        model.addAttribute("precoExtra", precoArmazemExtra > 0 ? precoArmazemExtra : PrecoPlano.EXTRA_PADRAO);
         return "conta-armazens";
     }
 
@@ -178,6 +204,93 @@ public class ContaController {
             preencherPlanos(model, id);
             return "conta-armazem-novo";
         }
+    }
+
+    /** Frase curta sobre a situação do armazém (teste grátis, bloqueio...). */
+    static String textoSituacao(Armazem a, java.time.LocalDate hoje) {
+        String status = nvl(a.getStatus(), "ATIVO");
+        if ("ATIVO".equals(status)) return "Assinatura ativa";
+        if ("TRIAL".equals(status)) {
+            if (a.getDataCadastro() == null) return "Teste grátis";
+            long restam = Assinatura.DIAS_TRIAL - java.time.temporal.ChronoUnit.DAYS.between(a.getDataCadastro(), hoje);
+            if (restam > 1) return "Teste grátis: faltam " + restam + " dias";
+            if (restam == 1) return "Teste grátis: falta 1 dia";
+            if (restam == 0) return "Último dia do teste grátis";
+            return "O teste grátis terminou. Ative a assinatura para voltar a operar.";
+        }
+        return "Acesso bloqueado. Regularize a assinatura para voltar a operar.";
+    }
+
+    // ---------------- foto do dono e logo do armazém ----------------
+
+    private static org.springframework.http.ResponseEntity<byte[]> imagem(java.util.Optional<byte[]> dados) {
+        if (dados.isEmpty()) return org.springframework.http.ResponseEntity.notFound().build();
+        return org.springframework.http.ResponseEntity.ok().contentType(org.springframework.http.MediaType.IMAGE_JPEG).body(dados.get());
+    }
+
+    private org.springframework.http.ResponseEntity<String> gravarImagem(String tipo, Long refId,
+                                                                       org.springframework.web.multipart.MultipartFile arquivo) {
+        try {
+            imagemContaService.salvar(tipo, refId, arquivo == null ? null : arquivo.getBytes());
+            return org.springframework.http.ResponseEntity.ok("ok");
+        } catch (IllegalArgumentException e) {
+            return org.springframework.http.ResponseEntity.badRequest().contentType(new org.springframework.http.MediaType("text", "plain", java.nio.charset.StandardCharsets.UTF_8)).body(e.getMessage());
+        } catch (Exception e) {
+            return org.springframework.http.ResponseEntity.internalServerError().contentType(new org.springframework.http.MediaType("text", "plain", java.nio.charset.StandardCharsets.UTF_8)).body("Não foi possível salvar a imagem. Tente de novo.");
+        }
+    }
+
+    @GetMapping("/foto")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<byte[]> verFoto(HttpSession session) {
+        Long id = parceiroLogado(session);
+        if (id == null) return org.springframework.http.ResponseEntity.status(401).build();
+        return imagem(imagemContaService.buscar(ImagemContaService.DONO, id));
+    }
+
+    @PostMapping("/foto")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<String> enviarFoto(@RequestParam(value = "arquivo", required = false) org.springframework.web.multipart.MultipartFile arquivo,
+                                                                    HttpSession session) {
+        Long id = parceiroLogado(session);
+        if (id == null) return org.springframework.http.ResponseEntity.status(401).body("Sessão expirada. Entre de novo.");
+        return gravarImagem(ImagemContaService.DONO, id, arquivo);
+    }
+
+    @PostMapping("/foto/remover")
+    public String removerFoto(HttpSession session) {
+        Long id = parceiroLogado(session);
+        if (id == null) return "redirect:/login";
+        imagemContaService.remover(ImagemContaService.DONO, id);
+        return "redirect:/conta/armazens";
+    }
+
+    @GetMapping("/armazens/{id}/logo")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<byte[]> verLogo(@PathVariable Long id, HttpSession session) {
+        Long parceiroId = parceiroLogado(session);
+        if (parceiroId == null) return org.springframework.http.ResponseEntity.status(401).build();
+        if (parceiroService.buscarArmazemDoDono(id, parceiroId).isEmpty()) return org.springframework.http.ResponseEntity.notFound().build();
+        return imagem(imagemContaService.buscar(ImagemContaService.ARMAZEM, id));
+    }
+
+    @PostMapping("/armazens/{id}/logo")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<String> enviarLogo(@PathVariable Long id,
+                                                                    @RequestParam(value = "arquivo", required = false) org.springframework.web.multipart.MultipartFile arquivo,
+                                                                    HttpSession session) {
+        Long parceiroId = parceiroLogado(session);
+        if (parceiroId == null) return org.springframework.http.ResponseEntity.status(401).body("Sessão expirada. Entre de novo.");
+        if (parceiroService.buscarArmazemDoDono(id, parceiroId).isEmpty()) return org.springframework.http.ResponseEntity.status(403).body("Esse armazém não é da sua conta.");
+        return gravarImagem(ImagemContaService.ARMAZEM, id, arquivo);
+    }
+
+    @PostMapping("/armazens/{id}/logo/remover")
+    public String removerLogo(@PathVariable Long id, HttpSession session) {
+        Long parceiroId = parceiroLogado(session);
+        if (parceiroId == null) return "redirect:/login";
+        if (parceiroService.buscarArmazemDoDono(id, parceiroId).isPresent()) imagemContaService.remover(ImagemContaService.ARMAZEM, id);
+        return "redirect:/conta/armazens";
     }
 
     /** Dados da escolha de plano: situação do dono e preços (o valor extra do Personalizado vem da configuração). */
