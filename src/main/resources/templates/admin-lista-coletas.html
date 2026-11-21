@@ -70,14 +70,14 @@
                         </a>
                     </li>
 
-                    <li>
+                    <li th:if="${session.parceiroId != null}">
                         <a class="dropdown-item d-flex align-items-center p-3 rounded" href="#" data-bs-toggle="modal" data-bs-target="#modalAlterarSenhas" style="transition: background 0.2s;">
                             <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-2 me-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
                                 <i class="bi bi-key-fill fs-4"></i>
                             </div>
                             <div class="flex-grow-1 text-wrap">
-                                <h6 class="mb-0 fw-bold text-dark">Alterar Senha</h6>
-                                <small class="text-muted" style="font-size: 0.8rem;">Mantenha sua conta segura</small>
+                                <h6 class="mb-0 fw-bold text-dark">Trocar senha</h6>
+                                <small class="text-muted" style="font-size: 0.8rem;">Senha de entrada com o seu e-mail</small>
                             </div>
                             <i class="bi bi-chevron-right text-muted"></i>
                         </a>
@@ -103,6 +103,18 @@
                             <input class="form-check-input" type="checkbox" role="switch" id="themeSwitchBtn">
                         </div>
                     </div>
+                </li>
+
+                <li th:if="${session.parceiroId != null and podeTrocarArmazem != true}">
+                    <a class="dropdown-item d-flex align-items-center p-3 rounded" th:href="@{/conta/armazens}" style="transition: background 0.2s;">
+                        <div class="bg-success bg-opacity-10 text-success rounded-3 p-2 me-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                            <i class="bi bi-person-badge fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1 text-wrap pe-2">
+                            <h6 class="mb-0 fw-bold text-dark">Minha conta</h6>
+                            <small class="text-muted" style="font-size: 0.8rem;">Sua foto, a logo e os dados do armazém</small>
+                        </div>
+                    </a>
                 </li>
 
                 <li th:if="${session.parceiroId != null and podeTrocarArmazem == true}">
@@ -138,7 +150,7 @@
     </div>
 </nav>
 
-<div class="container px-md-4 mt-4" style="max-width: 1000px;">
+<div class="container px-md-4 mt-4 mb-5" style="max-width: 1100px;">
 
     <div th:if="${sucessoPerfil != null}" class="alert alert-success alert-dismissible fade show small fw-bold shadow-sm" role="alert">
         <i class="bi bi-check-circle-fill me-2"></i> <span th:text="${sucessoPerfil}"></span>
@@ -158,71 +170,69 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 
-    <div class="row g-3 mb-4 justify-content-center">
-
-        <div class="col-12 col-sm-4" th:if="${session.perfilUser == 'GESTOR' and (session.planoAssinatura == 'PRO' or session.planoAssinatura == 'PERSONALIZADO')}">
-            <a href="/admin/analises" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none">
-                <div class="card-body text-center p-3 d-flex flex-column justify-content-center">
-                    <div class="icon-box bg-info bg-opacity-10 text-info mx-auto mb-2"><i class="bi bi-bar-chart-fill"></i></div>
-                    <h6 class="fw-bold m-0">Financeiro</h6>
-                    <small class="text-body-secondary d-none d-sm-block">Lucros e Estoque</small>
-                </div>
-            </a>
+    <!-- Fase 29: saudação + resumo da fila -->
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+        <div>
+            <div class="text-body-secondary small" id="painelData">&nbsp;</div>
+            <h1 class="h3 fw-bold mb-0">
+                <span id="painelSaudacao">Olá</span>, <span th:text="${primeiroNomeDono != null ? primeiroNomeDono : (session.nomeFuncionarioLogado != null ? session.nomeFuncionarioLogado : 'bem-vindo')}">Elizandro</span>
+            </h1>
         </div>
-
-        <div class="col-12 col-sm-4" th:if="${session.perfilUser == 'GESTOR' and (session.planoAssinatura != 'PRO' and session.planoAssinatura != 'PERSONALIZADO')}">
-            <a href="/admin/assinatura" class="card shadow-sm border-0 h-100 module-card module-disabled bg-body text-body text-decoration-none" onclick="alert('O Financeiro, o Controle de Estoque e Saída, os Clientes VIPs e o Histórico de Vendas são exclusivos do Plano PRO. Acesse Assinatura para fazer o upgrade!');">
-                <div class="card-body text-center p-3 d-flex flex-column justify-content-center position-relative">
-                    <span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2" style="font-size: 0.65rem;">PLANO PRO</span>
-                    <div class="icon-box bg-secondary bg-opacity-10 text-secondary mx-auto mb-2"><i class="bi bi-lock-fill"></i></div>
-                    <h6 class="fw-bold m-0 text-muted">Financeiro</h6>
-                    <small class="text-muted d-none d-sm-block">Recurso Bloqueado</small>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-12 col-sm-4">
-            <a href="/meus-extratos" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none">
-                <div class="card-body text-center p-3 d-flex flex-column justify-content-center">
-                    <div class="icon-box bg-secondary bg-opacity-10 text-secondary mx-auto mb-2"><i class="bi bi-receipt"></i></div>
-                    <h6 class="fw-bold m-0">Recibos</h6>
-                    <small class="text-body-secondary d-none d-sm-block">Histórico de Entradas</small>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-12 col-sm-4" th:if="${session.perfilUser == 'GESTOR'}">
-            <a href="/admin/precos" class="card shadow-sm border-0 h-100 module-card bg-body text-body text-decoration-none border-start border-success border-4">
-                <div class="card-body text-center p-3 d-flex flex-column justify-content-center">
-                    <div class="icon-box bg-success bg-opacity-10 text-success mx-auto mb-2"><i class="bi bi-tags-fill"></i></div>
-                    <h6 class="fw-bold m-0">Tabela de Preços</h6>
-                    <small class="text-body-secondary d-none d-sm-block">Atualizar Valores</small>
-                </div>
-            </a>
-        </div>
+        <a href="#agendamentos" class="fila-pill text-decoration-none" th:classappend="${#lists.isEmpty(usuarios)} ? 'fila-vazia'">
+            <i class="bi bi-geo-alt-fill"></i>
+            <span th:text="${#lists.isEmpty(usuarios)} ? 'Nenhum agendamento pendente' : (${#lists.size(usuarios) == 1} ? '1 agendamento na fila' : ${#lists.size(usuarios)} + ' agendamentos na fila')">0 agendamentos</span>
+        </a>
     </div>
 
-    <div class="card shadow-sm border-0 border-start border-4 border-primary bg-body mb-4">
-        <div class="card-body p-4">
-            <div class="d-flex align-items-center mb-3">
-                <div class="bg-primary bg-opacity-10 p-2 rounded me-3 text-primary">
-                    <i class="bi bi-shop fs-4"></i>
-                </div>
-                <div>
-                    <h5 class="fw-bold mb-0">Atendimento de Balcão</h5>
-                    <p class="small text-body-secondary m-0">Nova compra direta no galpão. Digite o nome e, se for VIP, informe o CPF.</p>
-                </div>
+    <!-- Atendimento de balcão: a ação principal da tela -->
+    <div class="balcao-hero shadow-sm mb-4">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="balcao-icone"><i class="bi bi-shop"></i></div>
+            <div>
+                <h2 class="h5 fw-bold mb-0 text-white">Atendimento de Balcão</h2>
+                <p class="small mb-0 text-white-50">Nova compra direta no galpão. Digite o nome e, se for VIP, informe o CPF.</p>
             </div>
+        </div>
+        <form action="/admin/pesagem-rapida" method="post" class="d-flex flex-column flex-md-row gap-2">
+            <input type="text" name="nome" class="form-control form-control-lg flex-grow-1 border-0" required placeholder="Nome do fornecedor" aria-label="Nome do fornecedor">
+            <input type="text" name="cpf" id="cpfInput" class="form-control form-control-lg border-0 cpf-balcao" placeholder="CPF (só VIP)" maxlength="14" aria-label="CPF (só VIP)">
+            <button type="submit" class="btn btn-warning btn-lg fw-bold px-4 text-nowrap text-dark">
+                Iniciar Pesagem <i class="bi bi-arrow-right-circle ms-1"></i>
+            </button>
+        </form>
+    </div>
 
-            <form action="/admin/pesagem-rapida" method="post" class="d-flex flex-column flex-md-row gap-2">
-                <input type="text" name="nome" class="form-control form-control-lg flex-grow-1 bg-body-tertiary text-body border-0 shadow-sm" required placeholder="Ex: João da Silva">
-
-                <input type="text" name="cpf" id="cpfInput" class="form-control form-control-lg bg-body-tertiary text-body border-0 shadow-sm" style="min-width: 240px;" placeholder="CPF (Apenas VIP)" maxlength="14">
-
-                <button type="submit" class="btn btn-primary btn-lg fw-bold px-4 text-nowrap shadow-sm">
-                    Iniciar Pesagem <i class="bi bi-arrow-right-circle ms-1"></i>
-                </button>
-            </form>
+    <!-- Atalhos -->
+    <div class="row g-3 mb-2">
+        <div class="col-6 col-lg-3" th:if="${session.perfilUser == 'GESTOR' and (session.planoAssinatura == 'PRO' or session.planoAssinatura == 'PERSONALIZADO')}">
+            <a href="/admin/analises" class="atalho bg-body text-body text-decoration-none shadow-sm">
+                <span class="atalho-icone bg-info bg-opacity-10 text-info"><i class="bi bi-bar-chart-fill"></i></span>
+                <span><span class="atalho-titulo">Financeiro</span><small class="text-body-secondary">Lucros e estoque</small></span>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3" th:if="${session.perfilUser == 'GESTOR' and (session.planoAssinatura != 'PRO' and session.planoAssinatura != 'PERSONALIZADO')}">
+            <a href="/admin/assinatura" class="atalho atalho-bloqueado bg-body text-body text-decoration-none shadow-sm" onclick="alert('O Financeiro, o Controle de Estoque e Saída, os Clientes VIPs e o Histórico de Vendas são exclusivos do Plano PRO. Acesse Assinatura para fazer o upgrade!');">
+                <span class="atalho-icone bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-lock-fill"></i></span>
+                <span><span class="atalho-titulo">Financeiro <span class="badge bg-warning text-dark align-middle" style="font-size: .6rem;">PRO</span></span><small class="text-body-secondary">Recurso bloqueado</small></span>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3">
+            <a href="/meus-extratos" class="atalho bg-body text-body text-decoration-none shadow-sm">
+                <span class="atalho-icone bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-receipt"></i></span>
+                <span><span class="atalho-titulo">Recibos</span><small class="text-body-secondary">Histórico de entradas</small></span>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3" th:if="${session.perfilUser == 'GESTOR'}">
+            <a href="/admin/precos" class="atalho bg-body text-body text-decoration-none shadow-sm">
+                <span class="atalho-icone bg-success bg-opacity-10 text-success"><i class="bi bi-tags-fill"></i></span>
+                <span><span class="atalho-titulo">Tabela de Preços</span><small class="text-body-secondary">Atualizar valores</small></span>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3" th:if="${session.perfilUser == 'GESTOR'}">
+            <a href="/admin/operadores" class="atalho bg-body text-body text-decoration-none shadow-sm">
+                <span class="atalho-icone bg-primary bg-opacity-10 text-primary"><i class="bi bi-people-fill"></i></span>
+                <span><span class="atalho-titulo">Equipe</span><small class="text-body-secondary">Operadores do balcão</small></span>
+            </a>
         </div>
     </div>
 
@@ -245,16 +255,23 @@
         <span th:case="*">Ocorreu um erro. Nada foi gravado; tente de novo.</span>
     </div>
 
-    <h5 class="text-body-secondary mb-3 mt-5 d-flex align-items-center gap-2">
-        <i class="bi bi-geo-alt-fill text-danger"></i> Agendamentos de Coleta
-    </h5>
+    <div id="agendamentos" class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 mt-5">
+        <h2 class="h5 fw-bold mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-geo-alt-fill text-danger"></i> Agendamentos de Coleta
+            <span class="badge rounded-pill bg-danger" th:unless="${#lists.isEmpty(usuarios)}" th:text="${#lists.size(usuarios)}">0</span>
+        </h2>
+        <small class="text-body-secondary">Pedidos feitos pelos catadores na página inicial</small>
+    </div>
 
     <div class="d-grid gap-3">
 
-        <div th:each="u : ${usuarios}" class="card shadow-sm border-0 bg-body">
+        <div th:each="u : ${usuarios}" class="card shadow-sm border-0 bg-body agenda-card"
+             th:classappend="${u.statusPlanilha == 'EM_ATENDIMENTO'} ? 'agenda-em-atendimento' : 'agenda-aguardando'">
             <div class="card-body p-3 p-sm-4 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
 
-                <div>
+                <div class="d-flex align-items-start gap-3 min-w-0">
+                <div class="agenda-avatar" aria-hidden="true" th:text="${u.nome != null and !#strings.isEmpty(u.nome) ? #strings.toUpperCase(#strings.substring(u.nome,0,1)) : '?'}">J</div>
+                <div class="min-w-0">
                     <span th:if="${u.statusPlanilha != 'EM_ATENDIMENTO'}" class="badge bg-success bg-opacity-10 text-success border border-success mb-2">AGUARDANDO</span>
                     <span th:if="${u.statusPlanilha == 'EM_ATENDIMENTO'}" class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning mb-2">
                         EM ATENDIMENTO<span th:if="${u.atendentePlanilha != null and !#strings.isEmpty(u.atendentePlanilha)}" th:text="' · ' + ${u.atendentePlanilha}"></span>
@@ -271,6 +288,7 @@
                             <span th:text="${u.endereco}">Endereço</span>
                         </p>
                     </div>
+                </div>
                 </div>
 
                 <div class="d-flex gap-2">
@@ -308,43 +326,56 @@
             </div>
         </div>
 
-        <div th:if="${#lists.isEmpty(usuarios)}" class="text-center py-5 bg-body rounded border border-dashed">
-            <div class="mb-3">
-                <i class="bi bi-inbox fs-1 text-body-secondary opacity-50"></i>
-            </div>
-            <h5 class="fw-bold text-body-secondary">Fila vazia</h5>
-            <small class="text-body-secondary">Não há agendamentos pendentes pelo site no momento.</small>
+        <div th:if="${#lists.isEmpty(usuarios)}" class="fila-vazia-card text-center py-5 bg-body">
+            <div class="fila-vazia-icone mx-auto mb-3"><i class="bi bi-inbox"></i></div>
+            <h3 class="h6 fw-bold mb-1">Fila vazia</h3>
+            <small class="text-body-secondary">Não há agendamentos pendentes pelo site no momento.<br>
+                Quando um catador agendar pela página inicial, o pedido aparece aqui.</small>
         </div>
 
     </div>
 </div>
 
-<div class="modal fade" id="modalAlterarSenhas" tabindex="-1" aria-labelledby="modalAlterarSenhasLabel" aria-hidden="true">
+<div class="modal fade" id="modalAlterarSenhas" tabindex="-1" aria-labelledby="modalAlterarSenhasLabel" aria-hidden="true"
+     th:attr="data-abrir=${erroPerfil != null ? 'sim' : 'nao'}">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-success text-white">
-                <h5 class="modal-title fw-bold" id="modalAlterarSenhasLabel"><i class="bi bi-shield-lock me-2"></i> Alterar Credenciais</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title fw-bold" id="modalAlterarSenhasLabel"><i class="bi bi-shield-lock me-2"></i> Trocar a senha da sua conta</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
-            <form action="/admin/perfil/atualizar-senhas" method="post">
+            <form action="/admin/perfil/atualizar-senhas" method="post" id="formTrocarSenha" novalidate>
                 <div class="modal-body p-4 text-body">
-                    <p class="small text-muted mb-4">Para sua segurança, confirme sua senha atual antes de fazer alterações.</p>
+                    <p class="small text-body-secondary mb-3">É a senha que você usa para entrar com o seu <strong>e-mail</strong>.
+                        As senhas dos operadores são trocadas em <strong>Gestão de Equipe</strong>.</p>
 
-                    <div class="mb-4 p-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded">
-                        <label class="form-label small fw-bold text-danger"><i class="bi bi-key-fill"></i> Senha atual da sua conta</label>
-                        <input type="password" name="senhaAtual" class="form-control border-danger" placeholder="Digite para autorizar a mudança" required>
+                    <div th:if="${erroPerfil != null}" class="alert alert-danger small fw-bold py-2" th:text="${erroPerfil}">Erro</div>
+                    <div class="alert alert-danger small fw-bold py-2 d-none" id="erroSenhaCliente" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold" for="senhaAtual">Senha atual</label>
+                        <input type="password" name="senhaAtual" id="senhaAtual" class="form-control" autocomplete="current-password" required>
                     </div>
-
-                    <hr class="text-muted">
-
-                    <div class="mb-3 mt-3">
-                        <label class="form-label small fw-bold">Nova senha da sua conta</label>
-                        <input type="password" name="novaSenha" class="form-control" placeholder="Deixe em branco se não quiser mudar">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold" for="novaSenha">Nova senha</label>
+                        <input type="password" name="novaSenha" id="novaSenha" class="form-control" autocomplete="new-password" minlength="8" maxlength="72" required>
+                        <div class="form-text">Pelo menos 8 caracteres.</div>
                     </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold" for="confirmarSenha">Repita a nova senha</label>
+                        <input type="password" name="confirmarSenha" id="confirmarSenha" class="form-control" autocomplete="new-password" minlength="8" maxlength="72" required>
+                    </div>
+                    <div class="form-check small mb-3">
+                        <input class="form-check-input" type="checkbox" id="mostrarSenhas">
+                        <label class="form-check-label" for="mostrarSenhas">Mostrar senhas</label>
+                    </div>
+                    <p class="small text-body-secondary mb-0"><i class="bi bi-info-circle"></i>
+                        Esqueceu a senha atual? Saia do sistema e use <strong>"Esqueci minha senha"</strong> na tela de entrada.
+                        Depois da troca, outros aparelhos conectados nesta conta são desconectados e você recebe um e-mail de aviso.</p>
                 </div>
-                <div class="modal-footer bg-light border-0">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success btn-sm fw-bold px-3">Salvar Alterações</button>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success btn-sm fw-bold px-3">Trocar senha</button>
                 </div>
             </form>
         </div>
@@ -499,7 +530,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<script th:src="@{/js/admin-lista-coletas.js?v=2}"></script>
+<script th:src="@{/js/admin-lista-coletas.js?v=3}"></script>
 
 </body>
 </html>

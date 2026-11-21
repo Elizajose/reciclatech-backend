@@ -59,3 +59,68 @@
 .btn-flutuante-ajuda:hover {
     transform: scale(1.05);
 }
+/* ===== Fase 29: painel mais leve e bonito (funciona no modo claro e no escuro) ===== */
+.min-w-0 { min-width: 0; }
+
+.fila-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 16px; border-radius: 50px; font-weight: 700; font-size: .9rem;
+    background: rgba(220, 53, 69, .1); color: #b02a37;
+}
+.fila-pill.fila-vazia { background: rgba(25, 135, 84, .1); color: #146c43; }
+[data-bs-theme="dark"] .fila-pill { color: #ea868f; }
+[data-bs-theme="dark"] .fila-pill.fila-vazia { color: #75b798; }
+
+.balcao-hero {
+    border-radius: 18px; padding: 24px;
+    background: linear-gradient(120deg, #0f5132 0%, #198754 60%, #2fa36b 100%);
+    position: relative; overflow: hidden;
+}
+.balcao-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px;
+    border-radius: 50%; background: rgba(255, 255, 255, .07); pointer-events: none;
+}
+.balcao-hero form { position: relative; z-index: 1; }
+.balcao-hero .form-control { background: #fff; color: #212529; }
+.balcao-hero .form-control::placeholder { color: #6c757d; }
+.balcao-icone {
+    width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
+    background: rgba(255, 255, 255, .15); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+}
+
+.atalho {
+    display: flex; align-items: center; gap: 14px; height: 100%;
+    padding: 16px 18px; border-radius: 14px; border: 1px solid var(--bs-border-color-translucent);
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.atalho:hover { transform: translateY(-3px); box-shadow: 0 10px 20px -10px rgba(0, 0, 0, .25) !important; border-color: #198754; }
+.atalho small { display: block; font-size: .8rem; }
+.atalho-titulo { display: block; font-weight: 800; }
+.atalho-icone {
+    width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 1.35rem;
+}
+.atalho-bloqueado { opacity: .7; border-style: dashed; }
+
+.agenda-card { border-left: 4px solid #198754 !important; border-radius: 14px; transition: box-shadow .2s ease; }
+.agenda-card:hover { box-shadow: 0 10px 20px -12px rgba(0, 0, 0, .3) !important; }
+.agenda-card.agenda-em-atendimento { border-left-color: #ffc107 !important; }
+.agenda-avatar {
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 1.1rem; color: #fff; background: #198754;
+}
+.agenda-em-atendimento .agenda-avatar { background: #e0a800; }
+
+.fila-vazia-card { border: 2px dashed var(--bs-border-color); border-radius: 16px; }
+.fila-vazia-icone {
+    width: 64px; height: 64px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 1.8rem;
+    background: rgba(25, 135, 84, .1); color: #198754;
+}
+@media (min-width: 768px) { .balcao-hero .cpf-balcao { flex: 0 0 230px; } }
+@media (max-width: 575.98px) {
+    .atalho { flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px; }
+    .btn-flutuante-ajuda { bottom: 16px; right: 16px; padding: 10px 18px; }
+}

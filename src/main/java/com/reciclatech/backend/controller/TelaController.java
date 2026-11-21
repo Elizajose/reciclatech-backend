@@ -1235,6 +1235,7 @@ public class TelaController {
     @PostMapping("/admin/perfil/atualizar-senhas")
     public String atualizarSenhasPerfil(@RequestParam String senhaAtual,
                                         @RequestParam(required = false) String novaSenha,
+                                        @RequestParam(required = false) String confirmarSenha,
                                         HttpSession session,
                                         org.springframework.web.servlet.mvc.support.RedirectAttributes ra) {
 
@@ -1244,8 +1245,10 @@ public class TelaController {
             ra.addFlashAttribute("erroPerfil", "Somente o dono da conta pode alterar a senha. Entre pela sua conta e tente de novo.");
             return "redirect:/admin/coletas";
         }
-        if (novaSenha == null || novaSenha.isBlank()) {
-            ra.addFlashAttribute("sucessoPerfil", "Nenhuma alteração: a nova senha estava em branco.");
+        // Fase 29: nova senha obrigatória e repetida igual (a tela antiga aceitava em branco e dizia "nenhuma alteração")
+        String erroNova = com.reciclatech.backend.util.RegraSenha.validarTroca(novaSenha, confirmarSenha);
+        if (erroNova != null) {
+            ra.addFlashAttribute("erroPerfil", erroNova);
             return "redirect:/admin/coletas";
         }
 
