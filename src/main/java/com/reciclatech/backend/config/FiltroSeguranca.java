@@ -51,9 +51,11 @@ public class FiltroSeguranca extends OncePerRequestFilter {
         }
 
         // Páginas de área logada nunca ficam no cache do navegador: após "Sair", o botão Voltar não mostra mais a tela antiga.
+        // (Fase 28: a foto do dono e a logo do armazém ficam de fora; a própria rota decide o cache, ver RespostaImagem)
         String uri = req.getRequestURI();
-        if (uri.startsWith("/admin") || uri.startsWith("/conta") || uri.startsWith("/master")
-                || uri.startsWith("/extrato") || uri.startsWith("/meus-extratos") || uri.equals("/login")) {
+        if ((uri.startsWith("/admin") || uri.startsWith("/conta") || uri.startsWith("/master")
+                || uri.startsWith("/extrato") || uri.startsWith("/meus-extratos") || uri.equals("/login"))
+                && !com.reciclatech.backend.util.RespostaImagem.rotaDeImagem(req.getMethod(), uri)) {
             res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
             res.setHeader("Pragma", "no-cache");
             res.setDateHeader("Expires", 0);

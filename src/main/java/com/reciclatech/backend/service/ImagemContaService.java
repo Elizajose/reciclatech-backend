@@ -45,6 +45,29 @@ public class ImagemContaService {
         repositorio.findByTipoAndRefId(tipo, refId).ifPresent(repositorio::delete);
     }
 
+    /**
+     * Fase 28: versão de cada imagem existente (id -> número que muda quando a imagem é trocada), sem carregar os bytes.
+     * Vai no endereço da imagem (?v=...): o navegador guarda a imagem e só baixa de novo quando ela muda.
+     */
+    @Transactional(readOnly = true)
+    public java.util.Map<Long, Long> versoes(String tipo, Collection<Long> ids) {
+        java.util.Map<Long, Long> mapa = new java.util.HashMap<>();
+        if (ids == null || ids.isEmpty()) return mapa;
+        for (Object[] linha : repositorio.versoes(tipo, ids)) {
+            if (linha == null || linha.length < 2 || !(linha[0] instanceof Long id)) continue;
+            long v = linha[1] instanceof LocalDateTime quando ? quando.toEpochSecond(java.time.ZoneOffset.UTC) : 1L;
+            mapa.put(id, v);
+        }
+        return mapa;
+    }
+
+    /** Fase 28: versão de uma imagem só; nulo = não tem imagem. */
+    @Transactional(readOnly = true)
+    public Long versao(String tipo, Long id) {
+        if (id == null) return null;
+        return versoes(tipo, java.util.List.of(id)).get(id);
+    }
+
     /** Quais dos ids têm imagem (sem carregar os bytes). */
     @Transactional(readOnly = true)
     public Set<Long> comImagem(String tipo, Collection<Long> ids) {

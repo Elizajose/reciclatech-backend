@@ -8,76 +8,115 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>body{font-family:Inter,sans-serif;background:#f4f7f5}.brand{color:#198754;font-weight:900}</style>
+    <style>
+        body{font-family:Inter,sans-serif;background:#f4f7f5}.brand{color:#198754;font-weight:900}
+        /* Fase 28: dados à esquerda, plano à direita */
+        .passo-n{width:28px;height:28px;border-radius:50%;background:#198754;color:#fff;font-weight:900;font-size:.85rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+        .plano{border:1.5px solid #dee2e6;border-radius:14px;padding:14px 16px;display:block;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s;margin-bottom:10px;background:#fff}
+        .plano:hover{border-color:#198754}
+        .plano:has(input:checked){border-color:#198754;background:#f1f9f4;box-shadow:0 0 0 3px rgba(25,135,84,.12)}
+        .plano.desativado{opacity:.5;cursor:not-allowed}
+        .plano .preco{font-weight:900;color:#198754;white-space:nowrap}
+        .resumo{background:#f4f7f5;border-radius:12px;padding:12px 14px}
+        @media (min-width:992px){.col-planos{border-left:1px solid #eef1ef}}
+    </style>
 </head>
 <body>
-<div class="container py-4" style="max-width:560px">
+<div class="container py-4" style="max-width:1140px">
     <a th:href="@{/conta/armazens}" data-voltar class="btn btn-link text-decoration-none text-muted px-0 mb-2"><i class="bi bi-arrow-left"></i> Voltar</a>
-    <div class="card shadow-sm border-0 rounded-4"><div class="card-body p-4">
+    <div class="card shadow-sm border-0 rounded-4"><div class="card-body p-4 p-lg-5">
         <h1 class="h4 fw-bold mb-1">Cadastrar armazém</h1>
-        <p class="text-muted small mb-4">Dados do estabelecimento. Ele ficará vinculado à sua conta.</p>
+        <p class="text-muted small mb-4">Preencha os dados do estabelecimento à esquerda e escolha o plano à direita. Ele ficará vinculado à sua conta.</p>
         <div th:if="${erro != null}" class="alert alert-danger small fw-bold py-2" th:text="${erro}"></div>
         <form th:action="@{/conta/armazens/novo}" method="post">
-            <div class="mb-3"><label class="form-label small fw-bold">Nome do armazém / cooperativa</label>
-                <input type="text" name="nome" class="form-control" th:value="${nome}" maxlength="150" required autofocus></div>
-            <div class="mb-3"><label class="form-label small fw-bold">CPF ou CNPJ <span class="text-muted fw-normal">(opcional)</span></label>
-                <input type="text" name="cnpj" class="form-control" th:value="${cnpj}" maxlength="20"></div>
-            <div class="mb-3"><label class="form-label small fw-bold">Telefone / WhatsApp</label>
-                <input type="text" name="telefone" class="form-control" th:value="${telefone}" maxlength="30" required></div>
-            <div class="row g-2 mb-3">
-                <div class="col-5"><label class="form-label small fw-bold">Estado</label>
-                    <select name="uf" id="ufSelect" class="form-select" required th:attr="data-valor=${uf}">
-                        <option value="" disabled selected>UF</option><option value="AC">Acre (AC)</option><option value="AL">Alagoas (AL)</option><option value="AP">Amapá (AP)</option><option value="AM">Amazonas (AM)</option><option value="BA">Bahia (BA)</option><option value="CE">Ceará (CE)</option><option value="DF">Distrito Federal (DF)</option><option value="ES">Espírito Santo (ES)</option><option value="GO">Goiás (GO)</option><option value="MA">Maranhão (MA)</option><option value="MT">Mato Grosso (MT)</option><option value="MS">Mato Grosso do Sul (MS)</option><option value="MG">Minas Gerais (MG)</option><option value="PR">Paraná (PR)</option><option value="PB">Paraíba (PB)</option><option value="PA">Pará (PA)</option><option value="PE">Pernambuco (PE)</option><option value="PI">Piauí (PI)</option><option value="RN">Rio Grande do Norte (RN)</option><option value="RS">Rio Grande do Sul (RS)</option><option value="RJ">Rio de Janeiro (RJ)</option><option value="RO">Rondônia (RO)</option><option value="RR">Roraima (RR)</option><option value="SC">Santa Catarina (SC)</option><option value="SE">Sergipe (SE)</option><option value="SP">São Paulo (SP)</option><option value="TO">Tocantins (TO)</option>
-                    </select></div>
-                <div class="col-7"><label class="form-label small fw-bold">Município</label>
-                    <input type="text" name="cidade" id="cidadeInput" list="listaCidades" class="form-control" th:value="${cidade}" maxlength="100" required autocomplete="off">
-                    <datalist id="listaCidades"></datalist></div>
-                <div class="form-text">Os catadores filtram os armazéns por estado e município na página inicial.</div>
+        <div class="row g-4 g-lg-5">
+            <!-- ESQUERDA: dados do armazém -->
+            <div class="col-lg-6">
+                <div class="d-flex align-items-center gap-2 mb-3"><span class="passo-n">1</span><span class="fw-bold">Dados do armazém</span></div>
+                <div class="mb-3"><label class="form-label small fw-bold" for="campoNome">Nome do armazém / cooperativa</label>
+                    <input type="text" id="campoNome" name="nome" class="form-control" th:value="${nome}" maxlength="150" required autofocus></div>
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-6"><label class="form-label small fw-bold" for="campoDoc">CPF ou CNPJ <span class="text-muted fw-normal">(opcional)</span></label>
+                        <input type="text" id="campoDoc" name="cnpj" class="form-control" th:value="${cnpj}" maxlength="20"></div>
+                    <div class="col-sm-6"><label class="form-label small fw-bold" for="campoTel">Telefone / WhatsApp</label>
+                        <input type="text" id="campoTel" name="telefone" class="form-control" th:value="${telefone}" maxlength="30" required></div>
+                </div>
+                <div class="row g-2 mb-1">
+                    <div class="col-5"><label class="form-label small fw-bold" for="ufSelect">Estado</label>
+                        <select name="uf" id="ufSelect" class="form-select" required th:attr="data-valor=${uf}">
+                            <option value="" disabled selected>UF</option><option value="AC">Acre (AC)</option><option value="AL">Alagoas (AL)</option><option value="AP">Amapá (AP)</option><option value="AM">Amazonas (AM)</option><option value="BA">Bahia (BA)</option><option value="CE">Ceará (CE)</option><option value="DF">Distrito Federal (DF)</option><option value="ES">Espírito Santo (ES)</option><option value="GO">Goiás (GO)</option><option value="MA">Maranhão (MA)</option><option value="MT">Mato Grosso (MT)</option><option value="MS">Mato Grosso do Sul (MS)</option><option value="MG">Minas Gerais (MG)</option><option value="PR">Paraná (PR)</option><option value="PB">Paraíba (PB)</option><option value="PA">Pará (PA)</option><option value="PE">Pernambuco (PE)</option><option value="PI">Piauí (PI)</option><option value="RN">Rio Grande do Norte (RN)</option><option value="RS">Rio Grande do Sul (RS)</option><option value="RJ">Rio de Janeiro (RJ)</option><option value="RO">Rondônia (RO)</option><option value="RR">Roraima (RR)</option><option value="SC">Santa Catarina (SC)</option><option value="SE">Sergipe (SE)</option><option value="SP">São Paulo (SP)</option><option value="TO">Tocantins (TO)</option>
+                        </select></div>
+                    <div class="col-7"><label class="form-label small fw-bold" for="cidadeInput">Município</label>
+                        <input type="text" name="cidade" id="cidadeInput" list="listaCidades" class="form-control" th:value="${cidade}" maxlength="100" required autocomplete="off">
+                        <datalist id="listaCidades"></datalist></div>
+                </div>
+                <div class="form-text mb-3">Os catadores filtram os armazéns por estado e município na página inicial.</div>
+                <div class="mb-0"><label class="form-label small fw-bold" for="campoEnd">Endereço</label>
+                    <input type="text" id="campoEnd" name="endereco" class="form-control" th:value="${endereco}" maxlength="255" required></div>
             </div>
-            <div class="mb-3"><label class="form-label small fw-bold">Endereço</label>
-                <input type="text" name="endereco" class="form-control" th:value="${endereco}" maxlength="255" required></div>
-            <div class="mb-4" th:if="${personalizado}">
-                <div class="alert alert-success small py-2 mb-0"><i class="bi bi-buildings-fill"></i> Este armazém entra no seu <strong>plano Personalizado</strong>, com todos os recursos Pro. Os 7 primeiros dias são grátis; depois o valor da conta passa a considerar mais um armazém (veja em Assinatura).</div>
-                <input type="hidden" name="plano" value="PERSONALIZADO"></div>
-            <div class="mb-4" th:unless="${personalizado}">
-                <label class="form-label small fw-bold d-block">Escolha o plano</label>
-                <div th:if="${somentePersonalizado}" class="alert alert-warning small py-2">
-                    Você já tem um armazém nos planos START/PRO, que permitem 1 armazém por conta. Para cadastrar outro, escolha o <strong>Personalizado</strong>.
-                    Seu armazém atual continua como está por enquanto; ao ativar a assinatura, o suporte passa todos os seus armazéns para o Personalizado.</div>
 
-                <label class="border rounded-3 p-3 d-block mb-2" for="pStart" th:classappend="${somentePersonalizado} ? 'opacity-50'">
-                    <input class="form-check-input me-2" type="radio" name="plano" id="pStart" value="START"
-                           th:checked="${!somentePersonalizado and plano != 'PRO' and plano != 'PERSONALIZADO'}" th:disabled="${somentePersonalizado}">
-                    <strong>START</strong> <span class="text-muted">· R$ <span th:text="${#numbers.formatDecimal(precoStart,1,'POINT',2,'COMMA')}">149,90</span>/mês</span>
-                    <div class="small text-muted mt-1">1 armazém. Pesagens, recibos digitais, funcionários e cotação online.</div>
-                </label>
+            <!-- DIREITA: plano -->
+            <div class="col-lg-6 col-planos">
+                <div class="d-flex align-items-center gap-2 mb-3"><span class="passo-n">2</span><span class="fw-bold">Plano</span></div>
 
-                <label class="border rounded-3 p-3 d-block mb-2" for="pPro" th:classappend="${somentePersonalizado} ? 'opacity-50'">
-                    <input class="form-check-input me-2" type="radio" name="plano" id="pPro" value="PRO"
-                           th:checked="${!somentePersonalizado and plano == 'PRO'}" th:disabled="${somentePersonalizado}">
-                    <strong>PRO</strong> <span class="text-muted">· R$ <span th:text="${#numbers.formatDecimal(precoPro,1,'POINT',2,'COMMA')}">199,90</span>/mês</span>
-                    <div class="small text-muted mt-1">1 armazém. Tudo do START, mais painel financeiro e lucro do dia, controle de estoque e saída, clientes VIPs e histórico completo de vendas.</div>
-                </label>
+                <div th:if="${personalizado}">
+                    <div class="alert alert-success small py-2 mb-3"><i class="bi bi-buildings-fill"></i> Este armazém entra no seu <strong>plano Personalizado</strong>, com todos os recursos Pro. Os 7 primeiros dias são grátis; depois o valor da conta passa a considerar mais um armazém (veja em Assinatura).</div>
+                    <input type="hidden" name="plano" value="PERSONALIZADO">
+                </div>
 
-                <label class="border rounded-3 p-3 d-block" for="pPers"
-                       th:attr="data-pro=${#numbers.formatDecimal(precoPro,1,'NONE',2,'POINT')},data-extra=${#numbers.formatDecimal(precoExtra,1,'NONE',2,'POINT')}" id="cartaoPers">
-                    <input class="form-check-input me-2" type="radio" name="plano" id="pPers" value="PERSONALIZADO"
-                           th:checked="${somentePersonalizado or plano == 'PERSONALIZADO'}">
-                    <strong>PERSONALIZADO</strong> <span class="badge bg-success">vários armazéns</span>
-                    <span class="text-muted">· a partir de R$ <span th:text="${#numbers.formatDecimal(precoPro,1,'POINT',2,'COMMA')}">199,90</span>/mês</span>
-                    <div class="small text-muted mt-1">Para quem tem mais de um armazém ou cooperativa. Todos os armazéns com os recursos Pro,
-                        mais a <strong>comparação de lucro, compras e materiais</strong> entre eles. O 1º armazém custa R$ <span th:text="${#numbers.formatDecimal(precoPro,1,'POINT',2,'COMMA')}">199,90</span>
-                        e cada armazém a mais R$ <span th:text="${#numbers.formatDecimal(precoExtra,1,'POINT',2,'COMMA')}">129,90</span>.</div>
-                    <div class="bg-light rounded-3 p-2 mt-2 small">
-                        <span class="me-1">Quantos armazéns você terá?</span>
-                        <input type="number" id="qtdArmazens" min="1" max="100" value="2" class="form-control form-control-sm d-inline-block" style="width:80px">
-                        <div class="mt-1">Total: <strong id="totalPers">R$ 329,80</strong>/mês
-                            <span class="text-muted">· média de <span id="mediaPers">R$ 164,90</span> por armazém</span></div>
+                <div th:unless="${personalizado}">
+                    <div th:if="${somentePersonalizado}" class="alert alert-warning small py-2">
+                        Você já tem um armazém nos planos START/PRO, que permitem 1 armazém por conta. Para cadastrar outro, escolha o <strong>Personalizado</strong>.
+                        Seu armazém atual continua como está por enquanto; ao ativar a assinatura, o suporte passa todos os seus armazéns para o Personalizado.</div>
+
+                    <label class="plano" for="pStart" th:classappend="${somentePersonalizado} ? 'desativado'">
+                        <span class="d-flex justify-content-between align-items-center gap-2">
+                            <span><input class="form-check-input me-2" type="radio" name="plano" id="pStart" value="START" data-nome="Start"
+                                         th:attr="data-valor=${#numbers.formatDecimal(precoStart,1,'NONE',2,'POINT')}"
+                                         th:checked="${!somentePersonalizado and plano != 'PRO' and plano != 'PERSONALIZADO'}" th:disabled="${somentePersonalizado}"><strong>START</strong></span>
+                            <span class="preco">R$ <span th:text="${#numbers.formatDecimal(precoStart,1,'POINT',2,'COMMA')}">149,90</span><small class="text-muted fw-normal">/mês</small></span>
+                        </span>
+                        <span class="small text-muted mt-1 d-block">1 armazém. Pesagens, recibos digitais, funcionários e cotação online.</span>
+                    </label>
+
+                    <label class="plano" for="pPro" th:classappend="${somentePersonalizado} ? 'desativado'">
+                        <span class="d-flex justify-content-between align-items-center gap-2">
+                            <span><input class="form-check-input me-2" type="radio" name="plano" id="pPro" value="PRO" data-nome="Pro"
+                                         th:attr="data-valor=${#numbers.formatDecimal(precoPro,1,'NONE',2,'POINT')}"
+                                         th:checked="${!somentePersonalizado and plano == 'PRO'}" th:disabled="${somentePersonalizado}"><strong>PRO</strong></span>
+                            <span class="preco">R$ <span th:text="${#numbers.formatDecimal(precoPro,1,'POINT',2,'COMMA')}">199,90</span><small class="text-muted fw-normal">/mês</small></span>
+                        </span>
+                        <span class="small text-muted mt-1 d-block">1 armazém. Tudo do START, mais painel financeiro e lucro do dia, controle de estoque e saída, clientes VIPs e histórico completo de vendas.</span>
+                    </label>
+
+                    <label class="plano" for="pPers" id="cartaoPers"
+                           th:attr="data-pro=${#numbers.formatDecimal(precoPro,1,'NONE',2,'POINT')},data-extra=${#numbers.formatDecimal(precoExtra,1,'NONE',2,'POINT')}">
+                        <span class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                            <span><input class="form-check-input me-2" type="radio" name="plano" id="pPers" value="PERSONALIZADO" data-nome="Personalizado"
+                                         th:checked="${somentePersonalizado or plano == 'PERSONALIZADO'}"><strong>PERSONALIZADO</strong> <span class="badge bg-success">vários armazéns</span></span>
+                            <span class="preco"><small class="text-muted fw-normal">a partir de</small> R$ <span th:text="${#numbers.formatDecimal(precoPro,1,'POINT',2,'COMMA')}">199,90</span></span>
+                        </span>
+                        <span class="small text-muted mt-1 d-block">Para quem tem mais de um armazém ou cooperativa. Todos os armazéns com os recursos Pro,
+                            mais a <strong>comparação de lucro, compras e materiais</strong> entre eles. O 1º armazém custa R$ <span th:text="${#numbers.formatDecimal(precoPro,1,'POINT',2,'COMMA')}">199,90</span>
+                            e cada armazém a mais R$ <span th:text="${#numbers.formatDecimal(precoExtra,1,'POINT',2,'COMMA')}">129,90</span>.</span>
+                        <span class="bg-light rounded-3 p-2 mt-2 small d-flex flex-wrap align-items-center gap-2">
+                            <span>Quantos armazéns você terá?</span>
+                            <input type="number" id="qtdArmazens" min="1" max="100" value="2" class="form-control form-control-sm" style="width:80px" aria-label="Quantos armazéns você terá">
+                            <span class="ms-auto">Total: <strong id="totalPers">R$ 329,80</strong>/mês
+                                <span class="text-muted">· média de <span id="mediaPers">R$ 164,90</span> por armazém</span></span>
+                        </span>
+                    </label>
+
+                    <div class="resumo d-flex flex-wrap justify-content-between align-items-center gap-2 small mt-3" id="resumoPlano" aria-live="polite">
+                        <span><i class="bi bi-check-circle-fill text-success"></i> <strong id="resumoNome">Plano</strong> · 7 primeiros dias grátis</span>
+                        <span class="text-muted">depois <span id="resumoValor">-</span>/mês</span>
                     </div>
-                </label>
-                <div class="form-text mt-2">Você pode mudar de plano depois. Os 7 primeiros dias são grátis, já com os recursos do plano escolhido.</div>
+                </div>
+
+                <button type="submit" class="btn btn-success w-100 fw-bold py-2 mt-3">Cadastrar armazém</button>
+                <div class="form-text text-center mt-2" th:unless="${personalizado}">Você pode mudar de plano depois. No teste grátis você já usa os recursos do plano escolhido.</div>
             </div>
-            <button type="submit" class="btn btn-success w-100 fw-bold">Cadastrar armazém</button>
+        </div>
         </form>
     </div></div>
 </div>
@@ -95,10 +134,26 @@
             document.getElementById('totalPers').textContent = brl(total);
             document.getElementById('mediaPers').textContent = brl(Math.round(total / n));
         };
-        qtd.addEventListener('input', calcular);
-        qtd.addEventListener('focus', function () { document.getElementById('pPers').checked = true; });
+        qtd.addEventListener('input', function () { calcular(); resumo(); });
+        qtd.addEventListener('focus', function () { document.getElementById('pPers').checked = true; resumo(); });
         calcular();
     }
+    // Fase 28: resumo do plano escolhido, acima do botão
+    function resumo() {
+        var marcado = document.querySelector('input[name="plano"]:checked');
+        var nome = document.getElementById('resumoNome'), valor = document.getElementById('resumoValor');
+        if (!nome || !valor) return;
+        if (!marcado) { nome.textContent = 'Escolha um plano'; valor.textContent = '-'; return; }
+        nome.textContent = marcado.getAttribute('data-nome') || marcado.value;
+        if (marcado.value === 'PERSONALIZADO') {
+            valor.textContent = document.getElementById('totalPers') ? document.getElementById('totalPers').textContent : '-';
+        } else {
+            var v = parseFloat(marcado.getAttribute('data-valor'));
+            valor.textContent = isFinite(v) ? 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-';
+        }
+    }
+    document.querySelectorAll('input[name="plano"]').forEach(function (r) { r.addEventListener('change', resumo); });
+    resumo();
 })();
 (function () {
     var uf = document.getElementById('ufSelect');

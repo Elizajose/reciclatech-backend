@@ -127,9 +127,14 @@ public class ContaController {
         model.addAttribute("parceiroNome", session.getAttribute(S_PARCEIRO_NOME));
         String nomeDono = String.valueOf(nvl(String.valueOf(session.getAttribute(S_PARCEIRO_NOME)), "?")).trim();
         model.addAttribute("inicial", nomeDono.isEmpty() ? "?" : nomeDono.substring(0, 1).toUpperCase(java.util.Locale.ROOT));
-        model.addAttribute("temFoto", !imagemContaService.comImagem(ImagemContaService.DONO, java.util.List.of(id)).isEmpty());
+        // Fase 28: a versão vai no endereço da imagem (?v=...) para o navegador guardar e só baixar de novo quando trocar
+        Long versaoFoto = imagemContaService.versao(ImagemContaService.DONO, id);
+        model.addAttribute("temFoto", versaoFoto != null);
+        model.addAttribute("versaoFoto", versaoFoto);
         java.util.List<Long> ids = lista.stream().map(Armazem::getId).collect(java.util.stream.Collectors.toList());
-        model.addAttribute("comLogo", imagemContaService.comImagem(ImagemContaService.ARMAZEM, ids));
+        java.util.Map<Long, Long> versaoLogo = imagemContaService.versoes(ImagemContaService.ARMAZEM, ids);
+        model.addAttribute("comLogo", versaoLogo.keySet());
+        model.addAttribute("versaoLogo", versaoLogo);
 
         // situação de cada armazém em palavras e valor mensal estimado da conta
         java.time.LocalDate hoje = java.time.LocalDate.now(java.time.ZoneId.of("America/Recife"));
@@ -227,11 +232,6 @@ public class ContaController {
 
     // ---------------- foto do dono e logo do armazém ----------------
 
-    private static org.springframework.http.ResponseEntity<byte[]> imagem(java.util.Optional<byte[]> dados) {
-        if (dados.isEmpty()) return org.springframework.http.ResponseEntity.notFound().build();
-        return org.springframework.http.ResponseEntity.ok().contentType(org.springframework.http.MediaType.IMAGE_JPEG).body(dados.get());
-    }
-
     private org.springframework.http.ResponseEntity<String> gravarImagem(String tipo, Long refId,
                                                                        org.springframework.web.multipart.MultipartFile arquivo) {
         try {
@@ -246,10 +246,10 @@ public class ContaController {
 
     @GetMapping("/foto")
     @ResponseBody
-    public org.springframework.http.ResponseEntity<byte[]> verFoto(HttpSession session) {
+    public org.springframework.http.ResponseEntity<byte[]> verFoto(@RequestParam(required = false) String v, HttpSession session) {
         Long id = parceiroLogado(session);
         if (id == null) return org.springframework.http.ResponseEntity.status(401).build();
-        return imagem(imagemContaService.buscar(ImagemContaService.DONO, id));
+        return com.reciclatech.backend.util.RespostaImagem.jpeg(imagemContaService.buscar(ImagemContaService.DONO, id), v);
     }
 
     @PostMapping("/foto")
@@ -271,11 +271,11 @@ public class ContaController {
 
     @GetMapping("/armazens/{id}/logo")
     @ResponseBody
-    public org.springframework.http.ResponseEntity<byte[]> verLogo(@PathVariable Long id, HttpSession session) {
+    public org.springframework.http.ResponseEntity<byte[]> verLogo(@PathVariable Long id, @RequestParam(required = false) String v, HttpSession session) {
         Long parceiroId = parceiroLogado(session);
         if (parceiroId == null) return org.springframework.http.ResponseEntity.status(401).build();
         if (parceiroService.buscarArmazemDoDono(id, parceiroId).isEmpty()) return org.springframework.http.ResponseEntity.notFound().build();
-        return imagem(imagemContaService.buscar(ImagemContaService.ARMAZEM, id));
+        return com.reciclatech.backend.util.RespostaImagem.jpeg(imagemContaService.buscar(ImagemContaService.ARMAZEM, id), v);
     }
 
     @PostMapping("/armazens/{id}/logo")

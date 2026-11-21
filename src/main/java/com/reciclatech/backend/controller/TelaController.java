@@ -48,6 +48,7 @@ public class TelaController {
     @Autowired private LoginThrottle throttle;
     @Autowired private LimitadorPublico limitadorPublico;
     @Autowired private com.reciclatech.backend.service.CotacaoPublicaService cotacaoPublicaService;
+    @Autowired(required = false) private com.reciclatech.backend.service.ImagemContaService imagemContaService; // Fase 28
     @Autowired(required = false) private com.reciclatech.backend.service.EmailService emailService;
 
     @Autowired(required = false)
@@ -265,7 +266,61 @@ public class TelaController {
         } catch (IOException e) {
             model.addAttribute("usuarios", new ArrayList<>());
         }
+        prepararTopoDoPainel(model, session);
         return "admin-lista-coletas";
+    }
+
+    /**
+     * Fase 28: topo do painel com a logo do armazém e, para o dono, a foto dele.
+     * "Trocar de armazém" só aparece para o dono que tem 2 armazéns ou mais.
+     * Qualquer falha aqui só esconde as imagens: a tela abre normalmente.
+     */
+    private void prepararTopoDoPainel(Model model, HttpSession session) {
+        Long armazemId = null;
+        Long parceiroId = session.getAttribute("parceiroId") instanceof Long p ? p : null;
+        try {
+            Object idSessao = session.getAttribute("idPlanilhaAtiva");
+            if (idSessao != null) armazemId = Long.parseLong(idSessao.toString());
+        } catch (NumberFormatException ignorado) { /* sem armazém válido: fica sem logo */ }
+        try {
+            if (imagemContaService != null) {
+                model.addAttribute("versaoLogoPainel", imagemContaService.versao(com.reciclatech.backend.service.ImagemContaService.ARMAZEM, armazemId));
+                if (parceiroId != null) {
+                    model.addAttribute("versaoFotoPainel", imagemContaService.versao(com.reciclatech.backend.service.ImagemContaService.DONO, parceiroId));
+                }
+            }
+        } catch (RuntimeException e) {
+            log.warn("Topo do painel sem imagens: {}", e.getMessage());
+        }
+        boolean podeTrocar = false;
+        if (parceiroId != null) {
+            try {
+                podeTrocar = parceiroService.listarArmazens(parceiroId).size() > 1;
+            } catch (RuntimeException e) {
+                log.warn("Não foi possível contar os armazéns do dono: {}", e.getMessage());
+            }
+            Object nome = session.getAttribute("parceiroNome");
+            String primeiro = nome == null ? "" : nome.toString().trim().split("\\s+")[0];
+            model.addAttribute("primeiroNomeDono", primeiro.isEmpty() ? "Meu Perfil" : primeiro);
+        }
+        model.addAttribute("podeTrocarArmazem", podeTrocar);
+    }
+
+    /** Fase 28: logo do armazém em que a pessoa está logada (dono ou operador). */
+    @GetMapping("/admin/logo")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<byte[]> logoDoPainel(@RequestParam(required = false) String v, HttpSession session) {
+        if (session.getAttribute("adminLogado") == null || session.getAttribute("idPlanilhaAtiva") == null || imagemContaService == null) {
+            return org.springframework.http.ResponseEntity.status(401).build();
+        }
+        long armazemId;
+        try {
+            armazemId = Long.parseLong(session.getAttribute("idPlanilhaAtiva").toString());
+        } catch (NumberFormatException e) {
+            return org.springframework.http.ResponseEntity.status(401).build();
+        }
+        return com.reciclatech.backend.util.RespostaImagem.jpeg(
+                imagemContaService.buscar(com.reciclatech.backend.service.ImagemContaService.ARMAZEM, armazemId), v);
     }
 
     @PostMapping("/admin/pesagem-rapida")

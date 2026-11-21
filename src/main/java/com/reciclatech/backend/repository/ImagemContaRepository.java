@@ -17,4 +17,8 @@ public interface ImagemContaRepository extends JpaRepository<ImagemConta, Long> 
     /** Só os ids que TÊM imagem (não carrega os bytes). */
     @Query("SELECT i.refId FROM ImagemConta i WHERE i.tipo = :tipo AND i.refId IN :ids")
     List<Long> idsComImagem(@Param("tipo") String tipo, @Param("ids") Collection<Long> ids);
+
+    /** Fase 28: [refId, atualizadoEm] de quem TEM imagem (sem os bytes). A data vira a "versão" do endereço da imagem. */
+    @Query("SELECT i.refId, i.atualizadoEm FROM ImagemConta i WHERE i.tipo = :tipo AND i.refId IN :ids")
+    List<Object[]> versoes(@Param("tipo") String tipo, @Param("ids") Collection<Long> ids);
 }

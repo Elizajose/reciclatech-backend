@@ -13,57 +13,70 @@
         .brand{color:#198754;font-weight:900}
         .avatar{position:relative;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#198754;color:#fff;font-weight:900}
         .avatar img{width:100%;height:100%;object-fit:cover}
-        .avatar-lg{width:96px;height:96px;border-radius:50%;font-size:2.4rem}
+        .avatar-lg{width:104px;height:104px;border-radius:50%;font-size:2.4rem;border:4px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.12)}
         .avatar-lg img{border-radius:50%}
-        .avatar-md{width:60px;height:60px;border-radius:16px;font-size:1.5rem}
-        .avatar-md img{border-radius:16px}
+        .avatar-md{width:56px;height:56px;border-radius:14px;font-size:1.4rem}
+        .avatar-md img{border-radius:14px}
         .avatar .cam{position:absolute;right:-6px;bottom:-6px;width:30px;height:30px;border-radius:50%;border:2px solid #f4f7f5;background:#fff;color:#198754;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:pointer}
         .avatar .cam:hover{background:#198754;color:#fff}
         .passo{width:34px;height:34px;border-radius:50%;background:#e8f5ee;color:#198754;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
         .codigo{background:#f4f7f5;border-radius:10px;padding:6px 10px}
+        /* Fase 28: faixa do perfil e grade de armazéns */
+        .perfil{overflow:hidden}
+        .perfil .capa{height:84px;background:linear-gradient(110deg,#0f5132 0%,#198754 55%,#3fb57a 100%)}
+        .perfil .corpo{padding-top:14px}
+        .perfil .avatar-lg{margin-top:-66px}
+        .arm-card{transition:box-shadow .2s,transform .2s}
+        .arm-card:hover{box-shadow:0 10px 24px -10px rgba(0,0,0,.25)!important;transform:translateY(-2px)}
+        .novo-card{border:2px dashed #b7d8c6;border-radius:1rem;color:#198754;min-height:190px}
+        .novo-card:hover{background:#eef7f2}
+        .min-w-0{min-width:0}
     </style>
 </head>
 <body>
-<div class="container py-4" style="max-width:960px">
+<div class="container py-4" style="max-width:1200px">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <a th:href="@{/}" class="fs-3 brand text-decoration-none"><i class="bi bi-recycle"></i> Coletaê</a>
         <form th:action="@{/conta/sair}" method="post" class="m-0">
             <button type="submit" class="btn btn-outline-danger btn-sm fw-bold"><i class="bi bi-box-arrow-right"></i> Sair</button>
         </form>
     </div>
 
-    <!-- Perfil da conta -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4"><div class="card-body p-4">
-        <div class="d-flex flex-wrap align-items-center gap-4">
-            <div class="text-center">
-                <div class="avatar avatar-lg">
-                    <img th:if="${temFoto}" th:src="@{/conta/foto}" alt="Sua foto">
-                    <span th:unless="${temFoto}" th:text="${inicial}">E</span>
-                    <button type="button" class="cam" data-enviar-imagem="/conta/foto" title="Trocar foto" aria-label="Trocar foto"><i class="bi bi-camera-fill"></i></button>
+    <!-- Perfil da conta (Fase 28: faixa larga, foto e nome à esquerda, ações à direita) -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 perfil">
+        <div class="capa"></div>
+        <div class="card-body px-4 pb-4 pt-0">
+            <div class="d-flex flex-wrap align-items-start gap-4 corpo">
+                <div class="text-center">
+                    <div class="avatar avatar-lg">
+                        <img th:if="${temFoto}" th:src="@{/conta/foto(v=${versaoFoto})}" alt="Sua foto">
+                        <span th:unless="${temFoto}" th:text="${inicial}">E</span>
+                        <button type="button" class="cam" data-enviar-imagem="/conta/foto" title="Trocar foto" aria-label="Trocar foto"><i class="bi bi-camera-fill"></i></button>
+                    </div>
+                    <form th:if="${temFoto}" th:action="@{/conta/foto/remover}" method="post" class="m-0 mt-2">
+                        <button type="submit" class="btn btn-link btn-sm text-muted p-0 text-decoration-none">Remover foto</button>
+                    </form>
                 </div>
-                <form th:if="${temFoto}" th:action="@{/conta/foto/remover}" method="post" class="m-0 mt-2">
-                    <button type="submit" class="btn btn-link btn-sm text-muted p-0 text-decoration-none">Remover foto</button>
-                </form>
-            </div>
-            <div class="flex-grow-1">
-                <div class="text-muted small">Conta do proprietário</div>
-                <h1 class="h3 fw-bold mb-2" th:text="${parceiroNome}">Nome</h1>
-                <div class="d-flex flex-wrap gap-2">
-                    <span class="badge bg-light text-dark border fw-bold"><i class="bi bi-buildings"></i>
-                        <span th:text="${#lists.size(armazens) == 1 ? '1 armazém' : #lists.size(armazens) + ' armazéns'}">0 armazéns</span></span>
-                    <span class="badge bg-primary" th:if="${personalizado}"><i class="bi bi-stars"></i> Plano Personalizado</span>
-                    <span class="badge bg-light text-dark border fw-bold" th:if="${!#lists.isEmpty(armazens)}">
-                        <i class="bi bi-cash-coin"></i> Valor mensal dos planos: R$ <span th:text="${#numbers.formatDecimal(mensalidade,1,'POINT',2,'COMMA')}">0,00</span></span>
+                <div class="flex-grow-1 pt-1 min-w-0">
+                    <div class="text-muted small">Conta do proprietário</div>
+                    <h1 class="h3 fw-bold mb-2" th:text="${parceiroNome}">Nome</h1>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge bg-light text-dark border fw-bold"><i class="bi bi-buildings"></i>
+                            <span th:text="${#lists.size(armazens) == 1 ? '1 armazém' : #lists.size(armazens) + ' armazéns'}">0 armazéns</span></span>
+                        <span class="badge bg-primary" th:if="${personalizado}"><i class="bi bi-stars"></i> Plano Personalizado</span>
+                        <span class="badge bg-light text-dark border fw-bold" th:if="${!#lists.isEmpty(armazens)}">
+                            <i class="bi bi-cash-coin"></i> Valor mensal dos planos: R$ <span th:text="${#numbers.formatDecimal(mensalidade,1,'POINT',2,'COMMA')}">0,00</span></span>
+                    </div>
                 </div>
-            </div>
-            <div class="d-flex flex-column gap-2 ms-md-auto">
-                <a th:unless="${somentePersonalizado}" th:href="@{/conta/armazens/novo}" class="btn btn-success fw-bold"><i class="bi bi-plus-lg"></i> Cadastrar novo armazém</a>
-                <a th:if="${somentePersonalizado}" th:href="@{/conta/armazens/novo(plano='PERSONALIZADO')}" class="btn btn-success fw-bold"><i class="bi bi-plus-lg"></i> Cadastrar outro armazém</a>
-                <a th:if="${podeComparar}" th:href="@{/conta/comparar}" class="btn btn-outline-success fw-bold"><i class="bi bi-bar-chart-line"></i> Comparar armazéns</a>
+                <div class="d-flex flex-wrap gap-2 align-self-center">
+                    <a th:if="${podeComparar}" th:href="@{/conta/comparar}" class="btn btn-outline-success fw-bold"><i class="bi bi-bar-chart-line"></i> Comparar armazéns</a>
+                    <a th:unless="${somentePersonalizado}" th:href="@{/conta/armazens/novo}" class="btn btn-success fw-bold"><i class="bi bi-plus-lg"></i> Cadastrar novo armazém</a>
+                    <a th:if="${somentePersonalizado}" th:href="@{/conta/armazens/novo(plano='PERSONALIZADO')}" class="btn btn-success fw-bold"><i class="bi bi-plus-lg"></i> Cadastrar outro armazém</a>
+                </div>
             </div>
         </div>
-    </div></div>
+    </div>
 
     <div th:if="${param.criado != null}" class="alert alert-success small fw-bold py-2">Armazém cadastrado!</div>
     <div th:if="${param.erro != null and param.erro[0] == 'acesso'}" class="alert alert-danger small fw-bold py-2">Você não tem acesso a esse armazém.</div>
@@ -102,19 +115,23 @@
         </div>
     </div>
 
-    <!-- Armazéns -->
+    <!-- Armazéns (Fase 28: 3 colunas no computador, 2 no tablet, 1 no celular) -->
+    <div th:unless="${#lists.isEmpty(armazens)}" class="d-flex flex-wrap align-items-baseline justify-content-between gap-2 mb-2">
+        <h2 class="h5 fw-bold mb-0">Seus armazéns <span class="text-muted fw-normal" th:text="|(${#lists.size(armazens)})|">(1)</span></h2>
+        <span class="small text-muted"><i class="bi bi-camera"></i> Toque na câmera para trocar a logo</span>
+    </div>
     <div th:unless="${#lists.isEmpty(armazens)}" class="row g-3 mb-4">
-        <div th:each="a : ${armazens}" class="col-12 col-md-6">
-            <div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body d-flex flex-column">
+        <div th:each="a : ${armazens}" class="col-12 col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100 arm-card"><div class="card-body d-flex flex-column">
                 <div class="d-flex gap-3 align-items-start mb-2">
                     <div class="avatar avatar-md">
-                        <img th:if="${comLogo.contains(a.id)}" th:src="@{/conta/armazens/{id}/logo(id=${a.id})}" alt="Logo do armazém">
+                        <img th:if="${comLogo.contains(a.id)}" th:src="@{/conta/armazens/{id}/logo(id=${a.id},v=${versaoLogo.get(a.id)})}" alt="Logo do armazém">
                         <span th:unless="${comLogo.contains(a.id)}" th:text="${#strings.toUpperCase(#strings.substring(a.nome,0,1))}">A</span>
                         <button type="button" class="cam" th:attr="data-enviar-imagem=${'/conta/armazens/' + a.id + '/logo'}" title="Trocar logo" aria-label="Trocar logo"><i class="bi bi-camera-fill"></i></button>
                     </div>
                     <div class="min-w-0">
-                        <div class="fw-bold fs-5" th:text="${a.nome}">Armazém</div>
-                        <div class="small text-muted" th:text="${a.endereco}">Endereço</div>
+                        <div class="fw-bold fs-5 text-truncate" th:text="${a.nome}" th:title="${a.nome}">Armazém</div>
+                        <div class="small text-muted text-truncate" th:text="${a.endereco}" th:title="${a.endereco}">Endereço</div>
                         <div class="small text-muted" th:if="${a.uf != null and a.cidade != null}"><i class="bi bi-geo-alt"></i> <span th:text="|${a.cidade} - ${a.uf}|">Cidade - UF</span></div>
                     </div>
                 </div>
@@ -125,7 +142,7 @@
                 </div>
                 <div class="small text-muted" th:text="${infoStatus.get(a.id)}">Situação</div>
                 <div class="codigo small mt-3" th:if="${a.codigo != null}">
-                    <i class="bi bi-key"></i> Código para os operadores entrarem:
+                    <i class="bi bi-key"></i> Código dos operadores:
                     <strong class="font-monospace user-select-all" th:text="${a.codigo}">K7M2QX</strong>
                 </div>
                 <form th:if="${a.uf == null or a.cidade == null}" th:action="@{/conta/armazens/{id}/regiao(id=${a.id})}" method="post" class="row g-2 mt-2">
@@ -145,6 +162,15 @@
                     </form>
                 </div>
             </div></div>
+        </div>
+        <!-- Fase 28: atalho para cadastrar mais um armazém -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <a th:href="${somentePersonalizado} ? @{/conta/armazens/novo(plano='PERSONALIZADO')} : @{/conta/armazens/novo}"
+               class="novo-card d-flex flex-column align-items-center justify-content-center h-100 text-decoration-none p-4 text-center">
+                <i class="bi bi-plus-lg fs-2 mb-2"></i>
+                <span class="fw-bold">Cadastrar outro armazém</span>
+                <span class="small text-muted mt-1" th:text="${personalizado} ? 'Entra no seu plano Personalizado' : 'Para ter vários armazéns, use o plano Personalizado'">Entra no seu plano Personalizado</span>
+            </a>
         </div>
     </div>
 

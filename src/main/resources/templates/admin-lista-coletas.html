@@ -19,14 +19,18 @@
 <nav class="navbar navbar-expand navbar-dark bg-success shadow-sm mb-0">
     <div class="container-fluid px-md-5">
         <a class="navbar-brand mb-0 h1 fw-bold d-flex align-items-center gap-2" href="#">
-            <i class="bi bi-recycle fs-3"></i>
+            <img th:if="${versaoLogoPainel != null}" th:src="@{/admin/logo(v=${versaoLogoPainel})}" alt="Logo do armazém"
+                 style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; border: 2px solid rgba(255,255,255,.8); background: #fff;">
+            <i th:if="${versaoLogoPainel == null}" class="bi bi-recycle fs-3"></i>
             <span class="d-none d-sm-inline" th:text="${session.nomeArmazem != null ? session.nomeArmazem : 'Painel do Gestor'}">Painel do Gestor</span>
             <span class="d-inline d-sm-none">Gestor</span>
         </a>
         <div class="dropdown">
             <button class="btn btn-success dropdown-toggle d-flex align-items-center gap-2 border-0 bg-transparent shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-person-circle fs-4"></i>
-                <span class="fw-bold d-none d-sm-inline">Meu Perfil</span>
+                <img th:if="${versaoFotoPainel != null}" th:src="@{/conta/foto(v=${versaoFotoPainel})}" alt="Sua foto"
+                     style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #fff;">
+                <i th:if="${versaoFotoPainel == null}" class="bi bi-person-circle fs-4"></i>
+                <span class="fw-bold d-none d-sm-inline" th:text="${primeiroNomeDono != null ? primeiroNomeDono : 'Meu Perfil'}">Meu Perfil</span>
             </button>
 
             <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-2" style="width: 350px; border-radius: 16px;">
@@ -34,7 +38,9 @@
                 <th:block th:if="${session.perfilUser == 'GESTOR'}">
                     <li>
                         <a class="dropdown-item d-flex align-items-center p-3 rounded" href="/admin/assinatura" style="transition: background 0.2s;">
-                            <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3 position-relative" style="width: 55px; height: 55px;">
+                            <img th:if="${versaoFotoPainel != null}" th:src="@{/conta/foto(v=${versaoFotoPainel})}" alt=""
+                                 class="me-3" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover;">
+                            <div th:if="${versaoFotoPainel == null}" class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3 position-relative" style="width: 55px; height: 55px;">
                                 <i class="bi bi-person-fill fs-2"></i>
                                 <span class="position-absolute bottom-0 end-0 p-2 bg-success border border-2 border-white rounded-circle"></span>
                             </div>
@@ -99,9 +105,11 @@
                     </div>
                 </li>
 
-                <li th:if="${session.parceiroId != null}">
+                <li th:if="${session.parceiroId != null and podeTrocarArmazem == true}">
                     <a class="dropdown-item d-flex align-items-center p-3 rounded" th:href="@{/conta/armazens}" style="transition: background 0.2s;">
-                        <div class="bg-success bg-opacity-10 text-success rounded-3 p-2 me-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                        <img th:if="${versaoLogoPainel != null}" th:src="@{/admin/logo(v=${versaoLogoPainel})}" alt=""
+                             class="me-3" style="width: 45px; height: 45px; border-radius: 10px; object-fit: cover;">
+                        <div th:if="${versaoLogoPainel == null}" class="bg-success bg-opacity-10 text-success rounded-3 p-2 me-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
                             <i class="bi bi-shop-window fs-4"></i>
                         </div>
                         <div class="flex-grow-1 text-wrap pe-2">
