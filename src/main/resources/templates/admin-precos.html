@@ -1,183 +1,169 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
 <head>
-    <title>Tabela de Preços - Coletaê</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
+    <title>Tabela de Preços | Coletaê</title>
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-
-    <!-- CSS EXTERNO -->
-    <link rel="stylesheet" th:href="@{/css/admin-precos.css}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" th:href="@{/css/admin-telas.css(v=1)}">
+    <link rel="stylesheet" th:href="@{/css/admin-precos.css(v=2)}">
 </head>
-<body class="bg-body-tertiary p-3 p-md-5">
+<body class="bg-body-tertiary">
 
-<div class="container-lg">
-<div class="container-lg mt-3" th:if="${erroTela != null or avisoTela != null or sucessoTela != null}">
+<!-- Fase 32: topo igual ao da Gestão de Equipe (logo + nome do armazém) -->
+<nav class="navbar navbar-dark bg-success shadow-sm d-print-none">
+    <div class="container-fluid px-md-5">
+        <span class="navbar-brand fw-bold d-flex align-items-center gap-2 mb-0 min-w-0">
+            <img th:if="${versaoLogoPainel != null}" th:src="@{/admin/logo(v=${versaoLogoPainel})}" alt="Logo do armazém" class="nav-logo">
+            <i th:if="${versaoLogoPainel == null}" class="bi bi-recycle fs-3"></i>
+            <span class="text-truncate" th:text="${session.nomeArmazem != null ? session.nomeArmazem : 'Seu armazém'}">Armazém</span>
+            <span class="d-none d-md-inline fw-normal opacity-75">· Tabela de Preços</span>
+        </span>
+        <a href="/admin/coletas" class="btn btn-light btn-sm btn-voltar"><i class="bi bi-arrow-left"></i> Voltar ao painel</a>
+    </div>
+</nav>
+
+<div class="container-lg mt-3 d-print-none" th:if="${erroTela != null or avisoTela != null or sucessoTela != null or confirmarPreco != null}">
     <div th:replace="~{fragments/avisos :: avisos}"></div>
 </div>
 
+<div class="container py-4 d-print-none" style="max-width: 1150px;">
 
-    <!-- CABEÇALHO (Some na Impressão) -->
-    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none flex-wrap gap-2">
-        <h3 class="fw-bold text-body-emphasis m-0">
-            <i class="bi bi-tags-fill text-success me-2"></i> Tabela de Preços e Materiais
-        </h3>
-        <div class="d-flex gap-2">
-            <!-- 🌟 NOVO BOTÃO DE PREÇOS VIP 🌟 -->
-            <a href="/admin/historico-alteracoes" class="btn btn-outline-dark shadow-sm fw-bold">
-                <i class="bi bi-clock-history me-1"></i> Histórico
-            </a>
-            <a th:if="${session.planoAssinatura == 'PRO' or session.planoAssinatura == 'PERSONALIZADO'}" href="/admin/fornecedores-vip" class="btn btn-warning shadow-sm fw-bold">
-                <i class="bi bi-star-fill text-dark me-1"></i> Preços VIP
-            </a>
-            <a th:unless="${session.planoAssinatura == 'PRO' or session.planoAssinatura == 'PERSONALIZADO'}" href="/admin/assinatura?aviso=pro" class="btn btn-outline-secondary shadow-sm fw-bold" title="Recurso exclusivo do plano Pro">
-                <i class="bi bi-lock-fill me-1"></i> Preços VIP <span class="badge bg-warning text-dark ms-1">PRO</span>
-            </a>
-            <a href="/admin/coletas" class="btn btn-secondary shadow-sm">
-                <i class="bi bi-arrow-left"></i> Voltar ao Painel
-            </a>
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Tabela de preços</h1>
+            <p class="text-body-secondary mb-0">Quanto o armazém paga por quilo ou por unidade. É esta tabela que o balcão usa na pesagem.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="contador"><strong th:text="${#lists.size(materiais)}">0</strong> <span th:text="${#lists.size(materiais) == 1 ? 'material' : 'materiais'}">materiais</span></span>
+            <span class="contador contador-verde"><strong th:text="${#lists.size(materiais.?[unidade == null or unidade != 'UN'])}">0</strong> por kg</span>
+            <span class="contador contador-azul"><strong th:text="${#lists.size(materiais.?[unidade == 'UN'])}">0</strong> por unidade</span>
         </div>
     </div>
 
-    <!-- TÍTULO OFICIAL (Só aparece na Impressão do PDF) -->
-    <div class="d-none d-print-block mb-4 text-center">
-        <h2 class="fw-bold">TABELA OFICIAL DE PREÇOS - COLETAÊ</h2>
-        <p class="text-muted">Documento gerado em: <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy')}"></span></p>
-        <hr style="border-top: 2px solid #000;">
+    <div class="faixa-acoes mb-4">
+        <button type="button" class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#modalImportar">
+            <i class="bi bi-file-earmark-arrow-up"></i> Importar planilha
+        </button>
+        <a href="/admin/precos/planilha" class="btn btn-outline-success bg-body">
+            <i class="bi bi-file-earmark-excel"></i> Baixar planilha (.xlsx)
+        </a>
+        <button type="button" class="btn btn-outline-secondary bg-body" onclick="window.print()">
+            <i class="bi bi-printer"></i> Imprimir / PDF
+        </button>
+        <a href="/admin/historico-alteracoes?tipo=MATERIAL" class="btn btn-outline-secondary bg-body">
+            <i class="bi bi-clock-history"></i> Histórico
+        </a>
+        <a th:if="${session.planoAssinatura == 'PRO' or session.planoAssinatura == 'PERSONALIZADO'}" href="/admin/fornecedores-vip" class="btn btn-warning shadow-sm">
+            <i class="bi bi-star-fill"></i> Preços VIP
+        </a>
+        <a th:unless="${session.planoAssinatura == 'PRO' or session.planoAssinatura == 'PERSONALIZADO'}" href="/admin/assinatura?aviso=pro" class="btn btn-outline-secondary bg-body" title="Recurso do plano Pro">
+            <i class="bi bi-lock-fill"></i> Preços VIP <span class="badge bg-warning text-dark">PRO</span>
+        </a>
     </div>
 
-    <!-- FORMULÁRIO DE ADICIONAR NOVO (Some na Impressão) -->
-    <div class="card mb-4 border-success shadow-sm bg-body d-print-none">
-        <div class="card-header bg-success text-white fw-bold">
-            <i class="bi bi-plus-circle me-1"></i> Cadastrar Novo Material
-        </div>
-        <div class="card-body">
-            <form action="/admin/material/novo" method="post" class="row g-3 align-items-end">
-                <div class="col-md-5">
-                    <label class="small fw-bold text-body-secondary mb-1">Nome do Material</label>
-                    <input type="text" name="nome" class="form-control" placeholder="Ex: Bateria Velha, Cobre Mel..." required>
+    <div class="row g-4">
+        <!-- Novo material -->
+        <div class="col-lg-4">
+            <div class="cartao p-4 h-100">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="icone-titulo"><i class="bi bi-plus-lg"></i></span>
+                    <h2 class="h5 fw-bold mb-0">Novo material</h2>
                 </div>
-                <div class="col-md-2">
-                    <label class="small fw-bold text-body-secondary mb-1">Unidade</label>
-                    <select name="unidade" class="form-select">
-                        <option value="KG">KG (Quilo)</option>
-                        <option value="UN">UN (Unidade)</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="small fw-bold text-body-secondary mb-1">Preço Inicial de Compra</label>
-                    <div class="input-group">
+                <p class="text-body-secondary small mb-3">Para muitos de uma vez, use <strong>Importar planilha</strong>.</p>
+                <form action="/admin/material/novo" method="post">
+                    <label class="form-label small fw-bold" for="novoNome">Nome do material</label>
+                    <input type="text" name="nome" id="novoNome" class="form-control mb-3" maxlength="100" placeholder="Ex.: Cobre mel, Latinha" required>
+
+                    <span class="form-label small fw-bold d-block">Como é pago</span>
+                    <div class="btn-group w-100 mb-3" role="group" aria-label="Unidade">
+                        <input type="radio" class="btn-check" name="unidade" id="unKg" value="KG" checked>
+                        <label class="btn btn-outline-success fw-bold" for="unKg">Por quilo (KG)</label>
+                        <input type="radio" class="btn-check" name="unidade" id="unUn" value="UN">
+                        <label class="btn btn-outline-primary fw-bold" for="unUn">Por unidade (UN)</label>
+                    </div>
+
+                    <label class="form-label small fw-bold" for="novoPreco"><span id="rotuloPreco">Preço por quilo</span></label>
+                    <div class="input-group mb-3">
                         <span class="input-group-text">R$</span>
-                        <input type="number" step="0.01" name="preco" class="form-control" placeholder="0.00" required>
+                        <input type="number" step="0.01" min="0.01" name="preco" id="novoPreco" class="form-control" placeholder="0,00" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 fw-bold"><i class="bi bi-check2-circle"></i> Cadastrar material</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Lista -->
+        <div class="col-lg-8">
+            <div class="cartao p-3 p-md-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <h2 class="h5 fw-bold mb-0">Materiais cadastrados</h2>
+                    <div class="busca" style="min-width: 240px;">
+                        <i class="bi bi-search"></i>
+                        <input type="search" id="campoBusca" class="form-control" placeholder="Buscar material..." aria-label="Buscar material">
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-success w-100 fw-bold shadow-sm">
-                        <i class="bi bi-save"></i> Salvar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
 
-    <!-- LISTA DE MATERIAIS -->
-    <div class="card shadow-sm border-0 mb-5 bg-body">
-
-        <!-- Controles de Tabela (Some na Impressão) -->
-        <div class="card-header bg-body border-bottom-0 pt-4 pb-0 d-flex justify-content-between align-items-center flex-wrap gap-3 d-print-none">
-            <h5 class="fw-bold m-0 text-body-emphasis">Materiais Cadastrados</h5>
-
-            <div class="d-flex align-items-center flex-wrap gap-2">
-                <div class="dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2 shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-download"></i> Exportar
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                        <li>
-                            <a class="dropdown-item text-danger fw-bold d-flex align-items-center" href="#" onclick="window.print(); return false;">
-                                <i class="bi bi-file-earmark-pdf-fill me-2 fs-5"></i> Salvar em PDF
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item text-success fw-bold d-flex align-items-center" href="/admin/precos/planilha">
-                                <i class="bi bi-file-earmark-excel-fill me-2 fs-5"></i> Baixar planilha do Excel (.xlsx)
-                            </a>
-                        </li>
-                    </ul>
+                <div class="vazio text-center p-5" th:if="${#lists.isEmpty(materiais)}">
+                    <div class="vazio-icone mx-auto mb-3"><i class="bi bi-tags"></i></div>
+                    <div class="fw-bold">Nenhum material cadastrado</div>
+                    <div class="text-body-secondary small">Cadastre ao lado ou importe a sua lista pelo Excel.</div>
                 </div>
 
-                <!-- Fase 31: importar preços por planilha -->
-                <button type="button" class="btn btn-success fw-bold d-flex align-items-center gap-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalImportar">
-                    <i class="bi bi-file-earmark-arrow-up"></i> Importar planilha
-                </button>
-
-                <div class="input-group shadow-sm" style="max-width: 300px;">
-                    <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="campoBusca" class="form-control border-start-0 ps-0" placeholder="Buscar material rapidamente...">
-                </div>
-            </div>
-        </div>
-
-        <!-- Tabela -->
-        <div class="card-body p-0 mt-3">
-            <div class="table-scroll">
-                <table class="table table-hover align-middle mb-0 bg-body">
-                    <thead class="table-light">
-                    <tr>
-                        <th class="ps-4">Item</th>
-                        <th width="30%">Preço Atual</th>
-                        <th width="15%" class="text-end pe-4 d-print-none">Remover</th>
-                    </tr>
-                    </thead>
-                    <tbody id="tabelaMateriais">
-                    <tr th:each="mat : ${materiais}">
-                        <td class="ps-4">
-                            <span class="fw-bold text-body-emphasis fs-6 nome-item text-uppercase" th:text="${mat.nome}">Cobre</span>
-                            <span class="badge bg-secondary-subtle text-secondary border ms-2" th:text="${mat.unidade}">KG</span>
-                        </td>
-                        <td>
-                            <!-- Form para a Tela -->
-                            <form action="/admin/atualizar" method="post" class="d-flex gap-2 d-print-none" style="max-width: 250px;">
+                <div class="lista-rolagem" id="tabelaMateriais" th:unless="${#lists.isEmpty(materiais)}">
+                    <div class="item-linha linha-material" th:each="mat : ${materiais}">
+                        <div class="item-avatar" th:classappend="${mat.unidade == 'UN'} ? 'un' : ''" th:text="${mat.unidade == 'UN' ? 'UN' : 'KG'}">KG</div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="item-nome nome-item text-truncate" th:text="${mat.nome}">Cobre</div>
+                            <div class="small text-body-secondary" th:text="${mat.unidade == 'UN' ? 'pago por unidade' : 'pago por quilo'}">pago por quilo</div>
+                        </div>
+                        <div class="item-acoes d-flex align-items-center gap-2">
+                            <form action="/admin/atualizar" method="post" class="m-0" style="width: 170px;">
                                 <input type="hidden" name="id" th:value="${mat.id}">
-                                <div class="input-group input-group-sm shadow-sm">
-                                    <span class="input-group-text bg-body-tertiary">R$</span>
-                                    <input type="number" step="0.01" name="novoPreco" class="form-control fw-bold" th:value="${mat.precoPorKg}">
-                                    <button class="btn btn-outline-success" title="Atualizar Preço"><i class="bi bi-check-lg"></i></button>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="number" step="0.01" min="0.01" name="novoPreco" class="form-control fw-bold" th:value="${mat.precoPorKg}" aria-label="Preço" required>
+                                    <button class="btn btn-success" title="Salvar o preço"><i class="bi bi-check-lg"></i></button>
                                 </div>
                             </form>
-                            <!-- Texto Limpo para o PDF -->
-                            <span class="d-none d-print-inline fw-bold text-success fs-5">R$ <span th:text="${mat.precoPorKg}">0.00</span></span>
-                        </td>
-                        <td class="text-end pe-4 d-print-none">
-                            <form action="/admin/material/deletar" method="post" class="d-inline m-0"
-                                  onsubmit="return confirm('Tem certeza que deseja excluir este item? Isso removerá o material das opções de venda.')">
+                            <form action="/admin/material/deletar" method="post" class="m-0"
+                                  onsubmit="return confirm('Excluir este material? Ele sai das opções de compra do balcão.')">
                                 <input type="hidden" name="id" th:value="${mat.id}">
-                                <button type="submit" class="btn btn-outline-danger btn-sm shadow-sm" title="Excluir Material">
-                                    <i class="bi bi-trash3-fill"></i>
-                                </button>
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir material"><i class="bi bi-trash3"></i></button>
                             </form>
-                        </td>
-                    </tr>
-                    <tr id="msgVazia" style="display: none;" class="d-print-none">
-                        <td colspan="3" class="text-center py-4 text-muted fst-italic">
-                            Nenhum material encontrado com este nome.
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
+                        </div>
+                    </div>
+                    <div id="msgVazia" class="text-center py-4 text-body-secondary" style="display: none;">Nenhum material com esse nome.</div>
+                </div>
             </div>
         </div>
     </div>
-
 </div>
 
-<!-- Fase 31: janela de importação -->
+<!-- Só na impressão: tabela limpa -->
+<div class="d-none d-print-block p-4">
+    <div class="text-center mb-3">
+        <h2 class="fw-bold mb-0" th:text="${'Tabela de preços - ' + (session.nomeArmazem != null ? session.nomeArmazem : 'Armazém')}">Tabela de preços</h2>
+        <div class="text-muted small">Emitida em <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy')}">01/01/2026</span> · Coletaê</div>
+    </div>
+    <table class="table table-sm table-bordered">
+        <thead><tr><th>Material</th><th class="text-center">Unidade</th><th class="text-end">Preço</th></tr></thead>
+        <tbody>
+        <tr th:each="mat : ${materiais}">
+            <td class="text-uppercase fw-bold" th:text="${mat.nome}">Cobre</td>
+            <td class="text-center" th:text="${mat.unidade == 'UN' ? 'UN' : 'KG'}">KG</td>
+            <td class="text-end" th:text="${mat.precoPorKg != null ? 'R$ ' + #numbers.formatDecimal(mat.precoPorKg, 1, 'POINT', 2, 'COMMA') : '-'}">R$ 4,50</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Fase 31/32: janela de importação -->
 <div class="modal fade" id="modalImportar" tabindex="-1" aria-labelledby="modalImportarTitulo" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
+        <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title fw-bold" id="modalImportarTitulo"><i class="bi bi-file-earmark-excel me-2"></i> Atualizar preços pelo Excel</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
@@ -187,16 +173,15 @@
                     <ol class="small ps-3 mb-3">
                         <li class="mb-1"><a href="/admin/precos/planilha" class="fw-bold text-success">Baixe a planilha</a> com os seus preços de hoje.</li>
                         <li class="mb-1">No Excel, altere a coluna <strong>Preço</strong> ou acrescente materiais (nome, <strong>KG</strong> ou <strong>UN</strong> e preço). Salve.</li>
-                        <li>Envie o arquivo aqui. Você confere tudo antes de gravar.</li>
+                        <li>Envie o arquivo aqui. Você confere e pode <strong>corrigir</strong> tudo antes de gravar.</li>
                     </ol>
-                    <div class="formato mb-3">
-                        <table class="table table-sm table-bordered mb-0 small text-center">
-                            <thead class="table-success"><tr><th>A · Material</th><th>B · Unidade</th><th>C · Preço</th></tr></thead>
-                            <tbody><tr><td>Latinhas</td><td>KG</td><td>4,50</td></tr><tr><td>Litro Pitú</td><td>UN</td><td>0,65</td></tr></tbody>
-                        </table>
-                    </div>
+                    <table class="table table-sm table-bordered mb-2 small text-center">
+                        <thead class="table-success"><tr><th>A · Material</th><th>B · Unidade</th><th>C · Preço</th></tr></thead>
+                        <tbody><tr><td>Latinhas</td><td>KG</td><td>4,50</td></tr><tr><td>Litro Pitú</td><td>UN</td><td>0,65</td></tr></tbody>
+                    </table>
+                    <div class="small text-body-secondary mb-3"><i class="bi bi-info-circle"></i> Material <strong>novo</strong> precisa da unidade (KG ou UN). Em branco, o sistema pede para você escolher.</div>
                     <input type="file" name="arquivo" class="form-control" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" required>
-                    <div class="form-text">Excel (.xlsx) ou .csv, até 1 MB. PDF não é aceito. A planilha nunca apaga materiais.</div>
+                    <div class="form-text">Excel (.xlsx) ou .csv, até 1 MB. A planilha nunca apaga materiais.</div>
                 </div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -208,8 +193,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- SCRIPT EXTERNO -->
-<script th:src="@{/js/admin-precos.js}"></script>
+<script th:src="@{/js/admin-precos.js(v=2)}"></script>
 </body>
 </html>

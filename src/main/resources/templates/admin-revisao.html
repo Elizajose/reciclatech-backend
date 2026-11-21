@@ -42,9 +42,9 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small fw-bold mb-1" for="cpfFinal">CPF do fornecedor <span class="fw-normal text-body-secondary">(opcional, sai no recibo)</span></label>
+                        <label class="form-label small fw-bold mb-1" for="cpfFinal">CPF ou CNPJ do fornecedor <span class="fw-normal text-body-secondary">(opcional, sai no recibo)</span></label>
                         <input type="text" name="cpfFinal" id="cpfFinal" class="form-control" th:value="${vendedor.cpf}"
-                               placeholder="000.000.000-00" maxlength="14" oninput="formatarCPF(this)" inputmode="numeric">
+                               placeholder="CPF ou CNPJ" maxlength="18" oninput="formatarCPF(this)" autocomplete="off">
                     </div>
                 </div>
             </div></div>
@@ -107,6 +107,7 @@
 </div>
 
 <script th:src="@{/js/rascunho.js}"></script>
-<script th:src="@{/js/admin-revisao.js(v=2)}"></script>
+<script th:src="@{/js/documento.js(v=1)}"></script>
+<script th:src="@{/js/admin-revisao.js(v=3)}"></script>
 </body>
 </html>

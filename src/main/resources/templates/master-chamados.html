@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chamados | Master Coletaê</title>
+    <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" th:href="@{/css/admin-telas.css(v=1)}">
+    <link rel="stylesheet" th:href="@{/css/chamados.css(v=1)}">
+</head>
+<body class="bg-body-tertiary master">
+<!-- Fase 32: caixa de chamados do suporte. Responder aqui grava a conversa, acende o sininho do armazém e avisa por e-mail. -->
+<nav class="navbar navbar-dark shadow-sm" style="background-color: #0f172a; background-image: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+    <div class="container-fluid px-md-5">
+        <span class="navbar-brand fw-bold mb-0"><i class="bi bi-headset me-2"></i>Chamados de suporte</span>
+        <a href="/master/painel" class="btn btn-light btn-sm btn-voltar"><i class="bi bi-arrow-left"></i> Voltar ao Master</a>
+    </div>
+</nav>
+
+<div class="container-lg mt-3" th:if="${erroTela != null or avisoTela != null or sucessoTela != null}">
+    <div th:replace="~{fragments/avisos :: avisos}"></div>
+</div>
+
+<div class="container py-4" style="max-width: 1250px;">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Filtro">
+            <a class="btn fw-bold" th:classappend="${filtro == 'pendentes'} ? 'btn-dark' : 'btn-outline-dark'" href="/master/chamados?filtro=pendentes">Aguardando resposta</a>
+            <a class="btn fw-bold" th:classappend="${filtro == 'respondidos'} ? 'btn-dark' : 'btn-outline-dark'" href="/master/chamados?filtro=respondidos">Respondidos</a>
+            <a class="btn fw-bold" th:classappend="${filtro == 'fechados'} ? 'btn-dark' : 'btn-outline-dark'" href="/master/chamados?filtro=fechados">Resolvidos</a>
+            <a class="btn fw-bold" th:classappend="${filtro == 'todos'} ? 'btn-dark' : 'btn-outline-dark'" href="/master/chamados?filtro=todos">Todos</a>
+        </div>
+        <span class="contador contador-vermelho"><strong th:text="${naoLidosSuporte}">0</strong> com mensagem nova</span>
+    </div>
+
+    <div class="alert alert-light border small">
+        <i class="bi bi-info-circle"></i> Responda <strong>por aqui</strong>. Resposta dada só pelo Gmail não entra no Coletaê e o armazém não vê no sininho.
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="cartao p-2 lista-chamados">
+                <div class="text-center text-body-secondary p-4" th:if="${#lists.isEmpty(chamados)}">Nenhum chamado aqui.</div>
+                <a th:each="c : ${chamados}" th:href="@{/master/chamados(id=${c.id},filtro=${filtro})}" class="chamado-item"
+                   th:classappend="${(chamado != null and chamado.id == c.id ? 'ativo ' : '') + (!c.lidoPeloSuporte ? 'nao-lido' : '')}">
+                    <div class="d-flex justify-content-between align-items-center gap-2">
+                        <span class="small text-body-secondary font-monospace" th:text="${c.codigo}">#00001</span>
+                        <span class="badge rounded-pill" th:if="${c.prioridade == 'urgente'}" style="background:#dc3545;">Urgente</span>
+                    </div>
+                    <div class="fw-bold text-body text-truncate mt-1"><span class="ponto-novo" th:if="${!c.lidoPeloSuporte}"></span><span th:text="${c.assunto}">Assunto</span></div>
+                    <div class="small text-body-secondary text-truncate" th:text="${(c.nomeArmazem != null ? c.nomeArmazem : 'Armazém ' + c.armazemId) + ' · ' + #temporals.format(c.atualizadoEm, 'dd/MM HH:mm')}">Armazém</div>
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="cartao p-3 p-md-4" th:if="${chamado != null}">
+                <div class="d-flex flex-wrap justify-content-between gap-2 mb-3 pb-3 border-bottom">
+                    <div class="min-w-0">
+                        <div class="small text-body-secondary">
+                            <span class="font-monospace" th:text="${chamado.codigo}">#00001</span> ·
+                            <strong th:text="${chamado.nomeArmazem != null ? chamado.nomeArmazem : 'Armazém ' + chamado.armazemId}">Armazém</strong>
+                            (id <span th:text="${chamado.armazemId}">1</span>)
+                            <span th:if="${chamado.abertoPor != null}" th:text="${'· ' + chamado.abertoPor}">· Ana</span>
+                        </div>
+                        <h2 class="h5 fw-bold mb-1 text-break" th:text="${chamado.assunto}">Assunto</h2>
+                        <div class="small">
+                            Prioridade <strong th:text="${chamado.prioridade}">normal</strong> ·
+                            <span th:if="${chamado.emailRetorno != null}">aviso por e-mail para <strong th:text="${chamado.emailRetorno}">a@b.com</strong></span>
+                            <span th:if="${chamado.emailRetorno == null}" class="text-body-secondary">sem e-mail (só o sininho)</span>
+                        </div>
+                    </div>
+                    <span class="badge align-self-start fs-6 rounded-pill"
+                          th:classappend="${chamado.situacao == 'RESPONDIDO'} ? 'text-bg-primary' : (${chamado.situacao == 'FECHADO'} ? 'text-bg-secondary' : 'text-bg-warning')"
+                          th:text="${chamado.situacao == 'RESPONDIDO' ? 'Respondido' : (chamado.situacao == 'FECHADO' ? 'Resolvido' : 'Aguardando resposta')}">Aberto</span>
+                </div>
+                <div class="conversa mb-3">
+                    <div th:each="m : ${mensagens}" class="balao-linha" th:classappend="${m.doSuporte} ? 'suporte' : 'armazem'">
+                        <div class="balao">
+                            <div class="balao-autor">
+                                <span th:text="${m.doSuporte ? 'Suporte' : (m.autor != null ? m.autor : 'Armazém')}">Suporte</span>
+                                · <span th:text="${#temporals.format(m.criadoEm, 'dd/MM HH:mm')}">10/11</span>
+                            </div>
+                            <div class="balao-texto" th:text="${m.texto}">texto</div>
+                        </div>
+                    </div>
+                </div>
+                <form th:action="@{/master/chamados/{id}/responder(id=${chamado.id})}" method="post">
+                    <label class="form-label small fw-bold" for="respostaMaster">Resposta ao armazém</label>
+                    <textarea name="texto" id="respostaMaster" class="form-control mb-2" rows="4" maxlength="5000" placeholder="Escreva a resposta..."></textarea>
+                    <div class="d-flex flex-wrap justify-content-end gap-2">
+                        <button type="submit" name="fechar" value="sim" class="btn btn-outline-secondary fw-bold" title="Envia a resposta (se escrita) e marca como resolvido">
+                            <i class="bi bi-check2-all"></i> Responder e resolver
+                        </button>
+                        <button type="submit" class="btn btn-primary fw-bold"><i class="bi bi-send-fill"></i> Enviar resposta</button>
+                    </div>
+                </form>
+            </div>
+            <div class="cartao p-5 text-center text-body-secondary" th:if="${chamado == null}">Escolha um chamado na lista.</div>
+        </div>
+    </div>
+</div>
+<script th:src="@{/js/chamados.js(v=1)}"></script>
+</body>
+</html>

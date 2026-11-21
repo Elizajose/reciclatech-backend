@@ -82,11 +82,19 @@
             </h4>
             <span class="text-white-50 small mt-1 d-block">Painel de Inteligência e Monitoramento</span>
         </div>
-        <form action="/sair" method="post" class="m-0">
-            <button type="submit" class="btn btn-dark border-secondary btn-sm rounded-pill px-4 py-2 fw-semibold shadow-sm">
-                <i class="bi bi-box-arrow-right me-1"></i> Sair do Painel
-            </button>
-        </form>
+        <div class="d-flex gap-2">
+            <!-- Fase 32: caixa de chamados (responder aqui acende o sininho do armazém) -->
+            <a href="/master/chamados" class="btn btn-light btn-sm rounded-pill px-3 py-2 fw-semibold shadow-sm position-relative">
+                <i class="bi bi-chat-left-dots me-1"></i> Chamados
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                      th:if="${chamadosPendentes != null and chamadosPendentes > 0}" th:text="${chamadosPendentes}">1</span>
+            </a>
+            <form action="/sair" method="post" class="m-0">
+                <button type="submit" class="btn btn-dark border-secondary btn-sm rounded-pill px-4 py-2 fw-semibold shadow-sm">
+                    <i class="bi bi-box-arrow-right me-1"></i> Sair do Painel
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 

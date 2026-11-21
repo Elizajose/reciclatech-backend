@@ -1,4 +1,7 @@
-/*
- * Arquivo reservado para estilizações específicas da tela de Fornecedores VIP.
- * Atualmente, a tela utiliza 100% de classes nativas do Bootstrap.
- */
+/* Fase 32: Preços VIP (visual base em admin-telas.css) */
+.grupo-vip { border: 1px solid var(--bs-border-color-translucent); border-radius: 16px; padding: 12px 14px; background: var(--bs-body-bg); }
+.grupo-vip + .grupo-vip { margin-top: 10px; }
+.vip-material { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 10px; background: var(--bs-tertiary-bg); margin-left: 52px; }
+.vip-material + .vip-material { margin-top: 6px; }
+#cartaoNovoVip.destaque { box-shadow: 0 0 0 3px rgba(255, 193, 7, .5); transition: box-shadow .3s; }
+@media (max-width: 575.98px) { .vip-material { margin-left: 0; } }

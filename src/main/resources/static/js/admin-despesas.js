@@ -1,12 +1,13 @@
-// Ativa o Modo Escuro caso o usuário tenha selecionado em outra tela
+// Fase 32: Despesas. Tema, sugestões de descrição e trava contra duplo clique.
 document.addEventListener('DOMContentLoaded', () => {
-    const currentTheme = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-bs-theme', currentTheme);
+    try { document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('theme') || 'light'); } catch (e) { /* sem storage */ }
+    const desc = document.getElementById('descDespesa');
+    document.querySelectorAll('.sugestao').forEach(b => b.addEventListener('click', () => {
+        if (!desc) return;
+        desc.value = b.textContent.trim();
+        const v = document.getElementById('valorDespesa');
+        if (v) v.focus();
+    }));
+    const form = document.getElementById('formDespesa');
+    if (form) form.addEventListener('submit', () => { const b = form.querySelector('button[type=submit]'); if (b) b.disabled = true; });
 });
-
-// Centraliza a mensagem de alerta (código mais limpo)
-function confirmarExclusao(event) {
-    if (!confirm('Tem certeza que deseja excluir este registro de despesa do seu financeiro?')) {
-        event.preventDefault(); // Impede o link de ser aberto se a pessoa clicar em "Cancelar"
-    }
-}

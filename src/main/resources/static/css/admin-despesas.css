@@ -1,7 +1,2 @@
-.container-despesas {
-    max-width: 800px;
-}
-
-.coluna-acao {
-    width: 50px;
-}
+/* Fase 32: Despesas (visual base em admin-telas.css) */
+.rotulo-mes { border-bottom: 1px solid var(--bs-border-color-translucent); padding-bottom: 4px; }

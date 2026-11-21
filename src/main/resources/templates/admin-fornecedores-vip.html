@@ -1,101 +1,133 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
 <head>
-    <title>Fornecedores VIP - Coletaê</title>
     <meta charset="UTF-8">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preços VIP | Coletaê</title>
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-
-    <!-- CSS EXTERNO -->
-    <link rel="stylesheet" th:href="@{/css/admin-fornecedores-vip.css}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" th:href="@{/css/admin-telas.css(v=1)}">
+    <link rel="stylesheet" th:href="@{/css/admin-fornecedores-vip.css(v=2)}">
 </head>
-<body class="bg-body-tertiary p-3 p-md-5">
+<body class="bg-body-tertiary">
 
-<div class="container-lg">
-<div class="container-lg mt-3" th:if="${erroTela != null or avisoTela != null or sucessoTela != null}">
+<nav class="navbar navbar-dark bg-success shadow-sm">
+    <div class="container-fluid px-md-5">
+        <span class="navbar-brand fw-bold d-flex align-items-center gap-2 mb-0 min-w-0">
+            <img th:if="${versaoLogoPainel != null}" th:src="@{/admin/logo(v=${versaoLogoPainel})}" alt="Logo do armazém" class="nav-logo">
+            <i th:if="${versaoLogoPainel == null}" class="bi bi-recycle fs-3"></i>
+            <span class="text-truncate" th:text="${session.nomeArmazem != null ? session.nomeArmazem : 'Seu armazém'}">Armazém</span>
+            <span class="d-none d-md-inline fw-normal opacity-75">· Preços VIP</span>
+        </span>
+        <div class="d-flex gap-2">
+            <a href="/admin/precos" class="btn btn-outline-light btn-sm btn-voltar d-none d-sm-inline-flex"><i class="bi bi-tags"></i> Tabela de preços</a>
+            <a href="/admin/coletas" class="btn btn-light btn-sm btn-voltar"><i class="bi bi-arrow-left"></i> Voltar ao painel</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container-lg mt-3" th:if="${erroTela != null or avisoTela != null or sucessoTela != null or confirmarPreco != null}">
     <div th:replace="~{fragments/avisos :: avisos}"></div>
 </div>
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="fw-bold text-body-emphasis m-0"><i class="bi bi-star-fill text-warning me-2"></i> Fornecedores VIP</h3>
-        <a href="/admin/coletas" class="btn btn-secondary shadow-sm"><i class="bi bi-arrow-left"></i> Voltar ao Painel</a>
+<div class="container py-4" style="max-width: 1150px;">
+
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Preços VIP</h1>
+            <p class="text-body-secondary mb-0">Preço combinado com um fornecedor fiel. Na pesagem, quando o CPF ou CNPJ dele é informado, o balcão usa este valor no lugar da tabela.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="contador contador-amarelo"><strong th:text="${gruposVip != null ? #lists.size(gruposVip) : 0}">0</strong> <span th:text="${gruposVip != null and #lists.size(gruposVip) == 1 ? 'fornecedor' : 'fornecedores'}">fornecedores</span></span>
+            <span class="contador"><strong th:text="${vips != null ? #lists.size(vips) : 0}">0</strong> preços</span>
+        </div>
     </div>
 
-    <div class="card mb-4 border-warning shadow-sm bg-body">
-        <div class="card-header bg-warning text-dark fw-bold">
-            <i class="bi bi-plus-circle me-1"></i> Cadastrar Preço Especial
-        </div>
-        <div class="card-body">
-            <form action="/admin/fornecedores-vip/novo" method="post" class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="small fw-bold text-body-secondary mb-1">CPF do Cliente</label>
-                    <input type="text" name="cpf" id="cpfVipInput" class="form-control" placeholder="000.000.000-00" maxlength="14" required>
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="cartao p-4" id="cartaoNovoVip">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="icone-titulo amarelo"><i class="bi bi-star-fill"></i></span>
+                    <h2 class="h5 fw-bold mb-0">Novo preço VIP</h2>
                 </div>
-                <div class="col-md-4">
-                    <label class="small fw-bold text-body-secondary mb-1">Material</label>
-                    <select name="material" class="form-select" required>
-                        <option value="" disabled selected>Selecione...</option>
-                        <option th:each="mat : ${materiais}" th:value="${mat.nome}" th:text="${mat.nome}"></option>
+                <p class="text-body-secondary small mb-3">Um preço por material. Para o mesmo fornecedor, repita o documento.</p>
+                <form action="/admin/fornecedores-vip/novo" method="post" id="formVip">
+                    <label class="form-label small fw-bold" for="cpfVipInput">CPF ou CNPJ do fornecedor</label>
+                    <input type="text" name="cpf" id="cpfVipInput" class="form-control mb-1" placeholder="000.000.000-00" maxlength="18" autocomplete="off" required>
+                    <div class="small text-danger mb-2 d-none" id="cpfVipErro">Documento inválido. Confira os números.</div>
+                    <div class="mb-3"></div>
+
+                    <label class="form-label small fw-bold" for="materialVip">Material</label>
+                    <select name="material" id="materialVip" class="form-select mb-1" required>
+                        <option value="" disabled selected>Escolha o material...</option>
+                        <option th:each="mat : ${materiais}" th:value="${mat.nome}"
+                                th:attr="data-preco=${mat.precoPorKg},data-un=${mat.unidade == 'UN' ? 'UN' : 'KG'}"
+                                th:text="${mat.nome + ' (' + (mat.unidade == 'UN' ? 'UN' : 'KG') + ')'}">Cobre (KG)</option>
                     </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="small fw-bold text-body-secondary mb-1">Preço VIP</label>
-                    <div class="input-group">
+                    <div class="small text-body-secondary mb-3" id="precoTabelaVip">&nbsp;</div>
+
+                    <label class="form-label small fw-bold" for="precoVip">Preço VIP</label>
+                    <div class="input-group mb-3">
                         <span class="input-group-text">R$</span>
-                        <input type="number" step="0.01" name="preco" class="form-control" placeholder="0.00" required>
+                        <input type="number" step="0.01" min="0.01" name="preco" id="precoVip" class="form-control" placeholder="0,00" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 fw-bold"><i class="bi bi-check2-circle"></i> Salvar preço VIP</button>
+                </form>
+                <div class="small text-body-secondary mt-3" th:if="${#lists.isEmpty(materiais)}">
+                    <i class="bi bi-info-circle"></i> Cadastre materiais na <a href="/admin/precos">Tabela de preços</a> primeiro.
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="cartao p-3 p-md-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <h2 class="h5 fw-bold mb-0">Fornecedores com preço especial</h2>
+                    <div class="busca" style="min-width: 240px;" th:if="${gruposVip != null and !gruposVip.isEmpty()}">
+                        <i class="bi bi-search"></i>
+                        <input type="search" id="buscaVip" class="form-control" placeholder="Buscar documento ou material..." aria-label="Buscar">
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-warning w-100 fw-bold shadow-sm">
-                        <i class="bi bi-save"></i> Salvar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
 
-    <div class="card shadow-sm border-0 mb-5 bg-body">
-        <div class="card-header bg-body pt-4 pb-3">
-            <h5 class="fw-bold m-0 text-body-emphasis">Lista de Preços Diferenciados</h5>
-        </div>
-        <div class="card-body p-0">
-            <table class="table table-hover align-middle mb-0 bg-body">
-                <thead class="table-light">
-                <tr>
-                    <th class="ps-4">CPF</th>
-                    <th>Material</th>
-                    <th>Preço Aplicado</th>
-                    <th class="text-end pe-4">Remover</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="vip : ${vips}">
-                    <td class="ps-4 fw-bold" th:text="${vip.cpf}"></td>
-                    <td class="text-uppercase" th:text="${vip.material}"></td>
-                    <td class="text-success fw-bold">R$ <span th:text="${vip.preco}"></span></td>
-                    <td class="text-end pe-4">
-                        <form action="/admin/fornecedores-vip/deletar" method="post" class="d-inline m-0"
-                              onsubmit="return confirm('Deseja remover este preço especial?')">
-                            <input type="hidden" name="cpf" th:value="${vip.cpf}">
-                            <input type="hidden" name="material" th:value="${vip.material}">
-                            <button type="submit" class="btn btn-outline-danger btn-sm shadow-sm">
-                                <i class="bi bi-trash3-fill"></i>
+                <div class="vazio text-center p-5" th:if="${gruposVip == null or gruposVip.isEmpty()}">
+                    <div class="vazio-icone mx-auto mb-3" style="background:#fff6dc;color:#b58100;"><i class="bi bi-star"></i></div>
+                    <div class="fw-bold">Nenhum preço VIP ainda</div>
+                    <div class="text-body-secondary small">Cadastre ao lado o CPF ou CNPJ do fornecedor e o preço combinado.</div>
+                </div>
+
+                <div class="lista-rolagem" th:unless="${gruposVip == null or gruposVip.isEmpty()}">
+                    <div class="grupo-vip" th:each="g : ${gruposVip}" th:attr="data-busca=${g.busca}">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <div class="item-avatar vip"><i class="bi bi-person-vcard"></i></div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-bold font-monospace"><span th:text="${g.documento}">000.000.000-00</span> <span class="badge text-bg-light border fw-normal" th:text="${g.tipoDocumento}">CPF</span></div>
+                                <div class="small text-body-secondary" th:text="${#lists.size(g.itens) == 1 ? '1 material' : #lists.size(g.itens) + ' materiais'}">2 materiais</div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-warning fw-bold mais-material" th:attr="data-cpf=${g.documento}">
+                                <i class="bi bi-plus-lg"></i> Material
                             </button>
-                        </form>
-                    </td>
-                </tr>
-                <tr th:if="${vips == null || vips.isEmpty()}">
-                    <td colspan="4" class="text-center py-4 text-muted fst-italic">Nenhum fornecedor VIP cadastrado.</td>
-                </tr>
-                </tbody>
-            </table>
+                        </div>
+                        <div class="vip-material" th:each="vip : ${g.itens}">
+                            <span class="item-nome flex-grow-1 text-truncate" th:text="${vip.material}">COBRE</span>
+                            <span class="fw-bold text-success text-nowrap">R$ <span th:text="${vip.preco}">0,00</span></span>
+                            <form action="/admin/fornecedores-vip/deletar" method="post" class="m-0"
+                                  onsubmit="return confirm('Remover este preço especial? O fornecedor volta a receber o preço da tabela neste material.')">
+                                <input type="hidden" name="cpf" th:value="${vip.cpf}">
+                                <input type="hidden" name="material" th:value="${vip.material}">
+                                <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-2" title="Remover"><i class="bi bi-x-circle-fill"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                    <div id="vipVazio" class="text-center py-4 text-body-secondary" style="display:none;">Nada encontrado.</div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- SCRIPT EXTERNO (Chama o JS limpo que criamos acima) -->
-<script th:src="@{/js/admin-fornecedores-vip.js}"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/documento.js(v=1)}"></script>
+<script th:src="@{/js/admin-fornecedores-vip.js(v=2)}"></script>
 </body>
 </html>

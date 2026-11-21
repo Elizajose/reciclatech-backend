@@ -1,31 +1,58 @@
+// Fase 32: Preços VIP. CPF ou CNPJ, preço da tabela ao lado, "+ Material" no cartão do fornecedor, busca.
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Lógica do Tema (Dark/Light)
-    const currentTheme = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-bs-theme', currentTheme);
+    try { document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('theme') || 'light'); } catch (e) { /* sem storage */ }
 
-    // 2. Máscara de CPF para o Fornecedor VIP
-    const cpfVipInput = document.getElementById('cpfVipInput');
-    if (cpfVipInput) {
-        cpfVipInput.addEventListener('input', function() {
-            let v = this.value.replace(/\D/g, ""); // Remove não-números
-            if (v.length > 11) v = v.substring(0, 11);
+    const doc = document.getElementById('cpfVipInput');
+    const erro = document.getElementById('cpfVipErro');
+    if (window.Documento) Documento.ligar(doc);
 
-            // Aplica a máscara visualmente
-            if (v.length > 9) {
-                v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
-            } else if (v.length > 6) {
-                v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
-            } else if (v.length > 3) {
-                v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
-            }
-            this.value = v;
+    const form = document.getElementById('formVip');
+    if (form) form.addEventListener('submit', (ev) => {
+        if (window.Documento && doc && !Documento.valido(doc.value)) {
+            ev.preventDefault();
+            if (erro) erro.classList.remove('d-none');
+            doc.focus();
+            return;
+        }
+        const b = form.querySelector('button[type=submit]');
+        if (b) b.disabled = true;
+    });
+    if (doc) doc.addEventListener('input', () => { if (erro) erro.classList.add('d-none'); });
+
+    // mostra o preço da tabela do material escolhido (para comparar com o VIP)
+    const sel = document.getElementById('materialVip');
+    const info = document.getElementById('precoTabelaVip');
+    if (sel && info) sel.addEventListener('change', () => {
+        const op = sel.options[sel.selectedIndex];
+        const p = op ? parseFloat(op.getAttribute('data-preco')) : NaN;
+        info.textContent = isNaN(p) ? '' : 'Tabela hoje: R$ ' + p.toFixed(2).replace('.', ',') + (op.getAttribute('data-un') === 'UN' ? ' por unidade' : ' por kg');
+    });
+
+    // "+ Material" preenche o documento e leva ao formulário
+    const cartao = document.getElementById('cartaoNovoVip');
+    document.querySelectorAll('.mais-material').forEach(b => b.addEventListener('click', () => {
+        if (doc) { doc.value = window.Documento ? Documento.formatar(b.getAttribute('data-cpf')) : b.getAttribute('data-cpf'); }
+        if (cartao) {
+            cartao.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            cartao.classList.add('destaque');
+            setTimeout(() => cartao.classList.remove('destaque'), 1500);
+        }
+        if (sel) sel.focus();
+    }));
+
+    const busca = document.getElementById('buscaVip');
+    const vazio = document.getElementById('vipVazio');
+    const sem = (t) => (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    if (busca) busca.addEventListener('input', () => {
+        const q = sem(busca.value.trim());
+        const qd = q.replace(/[^0-9a-z]/g, '');
+        let algum = false;
+        document.querySelectorAll('.grupo-vip').forEach(g => {
+            const t = sem(g.getAttribute('data-busca'));
+            const ok = !q || t.includes(q) || (qd && t.replace(/[^0-9a-z ]/g, '').includes(qd));
+            g.classList.toggle('d-none', !ok);
+            if (ok) algum = true;
         });
-    }
+        if (vazio) vazio.style.display = algum ? 'none' : '';
+    });
 });
-
-// 3. Centraliza o alerta para evitar poluição no código HTML
-function confirmarRemocaoVip(event) {
-    if (!confirm('Deseja remover este preço especial?')) {
-        event.preventDefault(); // Impede o link de excluir caso clique em "Cancelar"
-    }
-}

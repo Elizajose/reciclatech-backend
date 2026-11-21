@@ -46,21 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     const cpfInput = document.getElementById('cpfInput');
     if (cpfInput) {
-        cpfInput.addEventListener('input', function() {
-            let v = this.value.replace(/\D/g, ""); // Remove tudo que não é número
-            if (v.length > 11) v = v.substring(0, 11); // Trava em exatos 11 números
-
-            // Aplica a formatação 000.000.000-00 visualmente
-            if (v.length > 9) {
-                v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
-            } else if (v.length > 6) {
-                v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
-            } else if (v.length > 3) {
-                v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
-            }
-
-            this.value = v;
-        });
+        // Fase 32: aceita CPF ou CNPJ (documento.js)
+        if (window.Documento) Documento.ligar(cpfInput);
     }
 });
 // ==========================================
@@ -172,4 +159,38 @@ document.addEventListener('DOMContentLoaded', () => {
             if (botao) { botao.disabled = true; botao.textContent = 'Enviando...'; }
         });
     }
+});
+
+// ==========================================
+// Fase 32: o sininho confere a cada 2 minutos se o suporte respondeu (só com a aba visível)
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const sino = document.getElementById('sininhoChamados');
+    if (!sino || !window.fetch) return;
+    function atualizar() {
+        if (document.hidden) return;
+        fetch('/admin/chamados/nao-lidos', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+            .then(r => r.ok ? r.json() : null)
+            .then(d => {
+                if (!d || typeof d.naoLidos !== 'number') return;
+                const icone = sino.querySelector('i');
+                let num = document.getElementById('sininhoNumero');
+                if (d.naoLidos > 0) {
+                    if (!num) {
+                        num = document.createElement('span');
+                        num.id = 'sininhoNumero';
+                        num.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-2 border-success';
+                        sino.appendChild(num);
+                    }
+                    num.textContent = d.naoLidos > 9 ? '9+' : String(d.naoLidos);
+                    if (icone) { icone.classList.remove('bi-bell'); icone.classList.add('bi-bell-fill'); }
+                    sino.title = 'O suporte respondeu seu chamado';
+                } else if (num) {
+                    num.remove();
+                    if (icone) { icone.classList.remove('bi-bell-fill', 'sininho-tocando'); icone.classList.add('bi-bell'); }
+                }
+            })
+            .catch(() => { /* sem rede: tenta na próxima */ });
+    }
+    setInterval(atualizar, 120000);
 });

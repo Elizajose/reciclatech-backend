@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meus chamados | Coletaê</title>
+    <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" th:href="@{/css/admin-telas.css(v=1)}">
+    <link rel="stylesheet" th:href="@{/css/chamados.css(v=1)}">
+</head>
+<body class="bg-body-tertiary">
+<!-- Fase 32: chamados de suporte com conversa. O sininho do painel aponta para cá. -->
+<nav class="navbar navbar-dark bg-success shadow-sm">
+    <div class="container-fluid px-md-5">
+        <span class="navbar-brand fw-bold d-flex align-items-center gap-2 mb-0 min-w-0">
+            <i class="bi bi-chat-left-dots-fill fs-4"></i>
+            <span class="text-truncate" th:text="${session.nomeArmazem != null ? session.nomeArmazem : 'Seu armazém'}">Armazém</span>
+            <span class="d-none d-md-inline fw-normal opacity-75">· Meus chamados</span>
+        </span>
+        <a href="/admin/coletas" class="btn btn-light btn-sm btn-voltar"><i class="bi bi-arrow-left"></i> Voltar ao painel</a>
+    </div>
+</nav>
+
+<div class="container-lg mt-3" th:if="${erroTela != null or avisoTela != null or sucessoTela != null}">
+    <div th:replace="~{fragments/avisos :: avisos}"></div>
+</div>
+<div class="container-lg mt-3" th:if="${sucessoSuporte != null or erroSuporte != null}">
+    <div class="alert alert-success fw-bold d-flex gap-2" th:if="${sucessoSuporte != null}"><i class="bi bi-check-circle-fill mt-1"></i><span th:text="${sucessoSuporte}">ok</span></div>
+    <div class="alert alert-danger fw-bold d-flex gap-2" th:if="${erroSuporte != null}"><i class="bi bi-exclamation-triangle-fill mt-1"></i><span th:text="${erroSuporte}">erro</span></div>
+</div>
+
+<div class="container py-4" style="max-width: 1150px;">
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Meus chamados</h1>
+            <p class="text-body-secondary mb-0">Pedidos de ajuda ao suporte do Coletaê. Quando respondermos, o sininho do painel avisa.</p>
+        </div>
+        <button type="button" class="btn btn-success fw-bold" data-bs-toggle="modal" data-bs-target="#modalNovoChamado">
+            <i class="bi bi-plus-lg"></i> Abrir chamado
+        </button>
+    </div>
+
+    <div class="vazio text-center p-5 bg-body" th:if="${#lists.isEmpty(chamados)}">
+        <div class="vazio-icone mx-auto mb-3"><i class="bi bi-chat-left-text"></i></div>
+        <div class="fw-bold">Nenhum chamado ainda</div>
+        <div class="text-body-secondary small mb-3">Achou um erro ou ficou com dúvida? Abra um chamado: a resposta aparece aqui.</div>
+        <button type="button" class="btn btn-outline-success fw-bold" data-bs-toggle="modal" data-bs-target="#modalNovoChamado">Abrir meu primeiro chamado</button>
+    </div>
+
+    <div class="row g-4" th:unless="${#lists.isEmpty(chamados)}">
+        <div class="col-lg-4">
+            <div class="cartao p-2 lista-chamados">
+                <a th:each="c : ${chamados}" th:href="@{/admin/chamados(id=${c.id})}" class="chamado-item"
+                   th:classappend="${(chamado != null and chamado.id == c.id ? 'ativo ' : '') + (!c.lidoPeloArmazem ? 'nao-lido' : '')}">
+                    <div class="d-flex justify-content-between align-items-center gap-2">
+                        <span class="small text-body-secondary font-monospace" th:text="${c.codigo}">#00001</span>
+                        <span class="badge rounded-pill"
+                              th:classappend="${c.situacao == 'RESPONDIDO'} ? 'text-bg-primary' : (${c.situacao == 'FECHADO'} ? 'text-bg-secondary' : 'text-bg-warning')"
+                              th:text="${c.situacao == 'RESPONDIDO' ? 'Respondido' : (c.situacao == 'FECHADO' ? 'Resolvido' : 'Aguardando suporte')}">Aberto</span>
+                    </div>
+                    <div class="fw-bold text-body text-truncate mt-1"><span class="ponto-novo" th:if="${!c.lidoPeloArmazem}"></span><span th:text="${c.assunto}">Assunto</span></div>
+                    <div class="small text-body-secondary" th:text="${'Atualizado em ' + #temporals.format(c.atualizadoEm, 'dd/MM/yyyy HH:mm')}">Atualizado</div>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="cartao p-3 p-md-4" th:if="${chamado != null}">
+                <div class="d-flex flex-wrap justify-content-between gap-2 mb-3 pb-3 border-bottom">
+                    <div class="min-w-0">
+                        <div class="small text-body-secondary"><span class="font-monospace" th:text="${chamado.codigo}">#00001</span>
+                            · aberto em <span th:text="${#temporals.format(chamado.criadoEm, 'dd/MM/yyyy HH:mm')}">01/01</span>
+                            <span th:if="${chamado.abertoPor != null}" th:text="${'por ' + chamado.abertoPor}">por Ana</span></div>
+                        <h2 class="h5 fw-bold mb-0 text-break" th:text="${chamado.assunto}">Assunto</h2>
+                    </div>
+                    <span class="badge align-self-start fs-6 rounded-pill"
+                          th:classappend="${chamado.situacao == 'RESPONDIDO'} ? 'text-bg-primary' : (${chamado.situacao == 'FECHADO'} ? 'text-bg-secondary' : 'text-bg-warning')"
+                          th:text="${chamado.situacao == 'RESPONDIDO' ? 'Respondido' : (chamado.situacao == 'FECHADO' ? 'Resolvido' : 'Aguardando suporte')}">Aberto</span>
+                </div>
+
+                <div class="conversa mb-3">
+                    <div th:each="m : ${mensagens}" class="balao-linha" th:classappend="${m.doSuporte} ? 'suporte' : 'armazem'">
+                        <div class="balao">
+                            <div class="balao-autor">
+                                <i class="bi" th:classappend="${m.doSuporte} ? 'bi-headset' : 'bi-shop'"></i>
+                                <span th:text="${m.doSuporte ? 'Suporte Coletaê' : (m.autor != null ? m.autor : 'Você')}">Suporte</span>
+                                · <span th:text="${#temporals.format(m.criadoEm, 'dd/MM HH:mm')}">10/11 14:20</span>
+                            </div>
+                            <div class="balao-texto" th:text="${m.texto}">texto</div>
+                        </div>
+                    </div>
+                </div>
+
+                <form th:action="@{/admin/chamados/{id}/responder(id=${chamado.id})}" method="post" class="form-resposta">
+                    <label class="form-label small fw-bold" for="textoResposta"
+                           th:text="${chamado.situacao == 'FECHADO' ? 'O problema voltou? Escreva aqui e o chamado é reaberto.' : 'Responder ao suporte'}">Responder</label>
+                    <textarea name="texto" id="textoResposta" class="form-control mb-2" rows="3" maxlength="5000" required placeholder="Escreva sua mensagem..."></textarea>
+                    <div class="d-flex justify-content-between align-items-center gap-2">
+                        <span class="small text-body-secondary">Prints e arquivos: abra um chamado novo com o anexo.</span>
+                        <button type="submit" class="btn btn-success fw-bold"><i class="bi bi-send-fill"></i> Enviar</button>
+                    </div>
+                </form>
+            </div>
+            <div class="cartao p-5 text-center text-body-secondary" th:if="${chamado == null}">Escolha um chamado na lista.</div>
+        </div>
+    </div>
+</div>
+
+<!-- Novo chamado (mesmo envio do modal de ajuda do painel; volta para esta tela) -->
+<div class="modal fade" id="modalNovoChamado" tabindex="-1" aria-labelledby="tituloNovoChamado" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold" id="tituloNovoChamado"><i class="bi bi-life-preserver me-2"></i> Abrir chamado</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form action="/admin/suporte/enviar" method="POST" enctype="multipart/form-data" id="formNovoChamado">
+                <input type="hidden" name="voltar" value="chamados">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-bold small" for="ncAssunto">Assunto</label>
+                            <input type="text" name="assunto" id="ncAssunto" class="form-control" maxlength="120" placeholder="Ex.: Erro ao fechar o caixa" required>
+                        </div>
+                        <div class="col-12">
+                            <span class="form-label fw-bold small d-block mb-2">Prioridade</span>
+                            <div class="btn-group w-100" role="group" aria-label="Prioridade">
+                                <input type="radio" class="btn-check" name="prioridade" id="ncBaixa" value="baixa"><label class="btn btn-outline-secondary" for="ncBaixa">Dúvida</label>
+                                <input type="radio" class="btn-check" name="prioridade" id="ncNormal" value="normal" checked><label class="btn btn-outline-primary" for="ncNormal">Normal</label>
+                                <input type="radio" class="btn-check" name="prioridade" id="ncUrgente" value="urgente"><label class="btn btn-outline-danger" for="ncUrgente">Urgente: o sistema parou</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold small" for="ncDescricao">O que aconteceu?</label>
+                            <textarea name="descricao" id="ncDescricao" class="form-control" rows="4" maxlength="3000" required placeholder="Em qual tela você estava, onde clicou e qual mensagem apareceu."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small" for="ncEmail">E-mail para aviso <span class="fw-normal text-body-secondary">(opcional)</span></label>
+                            <input type="email" name="emailRetorno" id="ncEmail" class="form-control" maxlength="150" placeholder="seuemail@exemplo.com">
+                            <div class="form-text">Avisamos por e-mail também quando respondermos.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small" for="ncPrint">Print da tela <span class="fw-normal text-body-secondary">(opcional)</span></label>
+                            <input type="file" name="printTela" id="ncPrint" class="form-control" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary fw-bold" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-bold"><i class="bi bi-send-fill me-1"></i> Enviar chamado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/chamados.js(v=1)}"></script>
+</body>
+</html>

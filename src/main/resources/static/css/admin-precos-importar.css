@@ -1,0 +1,15 @@
+/* Fase 32: conferência editável da planilha */
+.tabela-conferencia thead th { background: var(--bs-tertiary-bg); color: var(--bs-secondary-color); font-weight: 700; white-space: nowrap; }
+.linha-erro td { background: rgba(220, 53, 69, .07) !important; }
+.linha-grande td { background: rgba(255, 193, 7, .14) !important; }
+.linha-apagada td { color: var(--bs-secondary-color); }
+.linha-apagada .campo { opacity: .75; }
+.campo.editado { border-color: #ffc107; box-shadow: 0 0 0 .15rem rgba(255, 193, 7, .35); }
+.filtros .btn { font-weight: 700; }
+.dica-edicao { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 14px; background: #e8f5ee; color: #0f5132; border: 1px solid #b7d8c6; }
+.dica-edicao i { font-size: 1.1rem; }
+[data-bs-theme="dark"] .dica-edicao { background: rgba(25, 135, 84, .15); color: #75b798; border-color: rgba(25, 135, 84, .4); }
+.barra-confirmar { position: sticky; bottom: 12px; z-index: 5; }
+.sem-unidade { border-color: #dc3545; color: #b02a37; font-weight: 700; background-color: #fff5f5; }
+[data-bs-theme="dark"] .sem-unidade { background-color: rgba(220, 53, 69, .12); color: #ea868f; }
+@media (max-width: 767.98px) { .barra-confirmar { position: static; } }

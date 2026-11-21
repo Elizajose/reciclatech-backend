@@ -1,55 +1,34 @@
+// Fase 32: Tabela de Preços (lista em cartões). Tema, ordem alfabética, busca e rótulo do preço.
 document.addEventListener('DOMContentLoaded', () => {
-    // Aplica o tema
-    const currentTheme = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-bs-theme', currentTheme);
+    try { document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('theme') || 'light'); } catch (e) { /* sem storage */ }
 
-    // ORDENAÇÃO ALFABÉTICA SEGURA
-    try {
-        let tbody = document.getElementById("tabelaMateriais");
-        if (tbody) {
-            let linhas = Array.from(tbody.querySelectorAll("tr:not(#msgVazia)"));
+    const lista = document.getElementById('tabelaMateriais');
+    const vazio = document.getElementById('msgVazia');
+    if (lista) {
+        const linhas = Array.from(lista.querySelectorAll('.linha-material'));
+        const nome = (el) => { const n = el.querySelector('.nome-item'); return n ? n.textContent.trim().toLowerCase() : ''; };
+        linhas.sort((a, b) => nome(a).localeCompare(nome(b), 'pt-BR'));
+        linhas.forEach(l => lista.insertBefore(l, vazio));
 
-            linhas.sort((a, b) => {
-                let elementoA = a.querySelector(".nome-item");
-                let elementoB = b.querySelector(".nome-item");
-
-                let nomeA = elementoA ? elementoA.innerText.trim().toLowerCase() : "";
-                let nomeB = elementoB ? elementoB.innerText.trim().toLowerCase() : "";
-
-                return nomeA.localeCompare(nomeB);
-            });
-
-            linhas.forEach(linha => tbody.appendChild(linha));
-        }
-    } catch (erro) {
-        console.log("Erro na ordenação da tabela.", erro);
+        const busca = document.getElementById('campoBusca');
+        const sem = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+        if (busca) busca.addEventListener('input', () => {
+            const q = sem(busca.value.trim());
+            let algum = false;
+            linhas.forEach(l => { const ok = !q || sem(nome(l)).includes(q); l.classList.toggle('d-none', !ok); if (ok) algum = true; });
+            if (vazio) vazio.style.display = algum ? 'none' : '';
+        });
     }
 
-    // Adiciona o evento de digitação na barra de busca (Sem sujar o HTML)
-    const campoBusca = document.getElementById("campoBusca");
-    if(campoBusca) {
-        campoBusca.addEventListener("keyup", filtrarTabela);
-    }
-});
+    // o rótulo do preço acompanha a unidade escolhida
+    const rotulo = document.getElementById('rotuloPreco');
+    document.querySelectorAll('input[name=unidade]').forEach(r => r.addEventListener('change', () => {
+        if (rotulo) rotulo.textContent = r.value === 'UN' && r.checked ? 'Preço por unidade' : 'Preço por quilo';
+    }));
 
-// Função que esconde as linhas que não combinam com a busca
-function filtrarTabela() {
-    let input = document.getElementById("campoBusca").value.toLowerCase();
-    let linhas = document.querySelectorAll("#tabelaMateriais tr:not(#msgVazia)");
-    let temResultado = false;
-
-    linhas.forEach(linha => {
-        let elementoNome = linha.querySelector(".nome-item");
-        if (elementoNome) {
-            let nomeItem = elementoNome.innerText.toLowerCase();
-            if (nomeItem.includes(input)) {
-                linha.style.display = "";
-                temResultado = true;
-            } else {
-                linha.style.display = "none";
-            }
-        }
+    const form = document.getElementById('formImportar');
+    if (form) form.addEventListener('submit', () => {
+        const b = form.querySelector('button[type=submit]');
+        if (b) { b.disabled = true; b.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Lendo a planilha...'; }
     });
-
-    document.getElementById("msgVazia").style.display = temResultado ? "none" : "";
-}
+});

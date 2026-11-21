@@ -1,0 +1,25 @@
+/* Fase 32: chamados (armazém e Master) */
+.lista-chamados { max-height: 70vh; overflow-y: auto; }
+.chamado-item { display: block; padding: 12px 14px; border-radius: 14px; text-decoration: none; color: inherit; border: 1px solid transparent; }
+.chamado-item + .chamado-item { margin-top: 4px; }
+.chamado-item:hover { background: var(--bs-tertiary-bg); }
+.chamado-item.ativo { background: #e8f5ee; border-color: #b7d8c6; }
+[data-bs-theme="dark"] .chamado-item.ativo { background: rgba(25, 135, 84, .18); border-color: rgba(25, 135, 84, .4); }
+.chamado-item.nao-lido .fw-bold { color: #0f5132; }
+.ponto-novo { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #dc3545; margin-right: 6px; vertical-align: middle; }
+
+.conversa { max-height: 55vh; overflow-y: auto; padding: 4px; }
+.balao-linha { display: flex; margin-bottom: 12px; }
+.balao-linha.armazem { justify-content: flex-end; }
+.balao { max-width: 82%; padding: 10px 14px; border-radius: 16px; }
+.balao-linha.armazem .balao { background: #e8f5ee; border-bottom-right-radius: 4px; }
+.balao-linha.suporte .balao { background: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color-translucent); border-bottom-left-radius: 4px; }
+[data-bs-theme="dark"] .balao-linha.armazem .balao { background: rgba(25, 135, 84, .22); }
+.balao-autor { font-size: .75rem; font-weight: 700; color: var(--bs-secondary-color); margin-bottom: 2px; }
+.balao-texto { white-space: pre-wrap; word-break: break-word; }
+
+/* no Master, o lado do suporte fica à direita */
+.master .balao-linha.armazem { justify-content: flex-start; }
+.master .balao-linha.suporte { justify-content: flex-end; }
+.master .balao-linha.suporte .balao { background: #e7f1ff; border-color: #b6d4fe; }
+.master .balao-linha.armazem .balao { background: var(--bs-tertiary-bg); }

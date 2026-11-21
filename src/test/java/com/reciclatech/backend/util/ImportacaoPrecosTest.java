@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -129,5 +130,81 @@ class ImportacaoPrecosTest {
         assertEquals(ImportacaoPrecos.Tipo.ALTERAR, item(p, "Cobre").tipo);
         assertEquals(3, item(p, "Cobre").linha);
         assertEquals(new BigDecimal("12.50"), item(p, "Cobre").precoNovo);
+    }
+
+    // ===== Fase 32 =====
+    private static ImportacaoPrecos.Previa conferir(Set<Integer> ignoradas, ImportacaoPrecos.Entrada... e) {
+        return ImportacaoPrecos.montar(List.of(e), ignoradas, ATUAIS, MAX);
+    }
+
+    @Test void materialNovoSemUnidadeViraErroEnaoKg() {
+        // o caso real: "Litro Dreher", 0,10, unidade em branco entrava como KG
+        ImportacaoPrecos.Previa p = conferir(Set.of(), new ImportacaoPrecos.Entrada(2, "Litro Dreher", "", "0,10"));
+        ImportacaoPrecos.Item it = p.itens.get(0);
+        assertEquals(ImportacaoPrecos.Tipo.ERRO, it.tipo);
+        assertTrue(it.mensagem.contains("KG") && it.mensagem.contains("UN"));
+        assertEquals("", it.getUnidadeCampo(), "a tela mostra 'Escolha', não KG");
+        assertEquals("0,10", it.getPrecoCampo());
+        assertFalse(p.temMudanca());
+    }
+
+    @Test void materialExistenteSemUnidadeUsaADoCadastro() {
+        ImportacaoPrecos.Previa p = conferir(Set.of(), new ImportacaoPrecos.Entrada(2, "litro pitú", " ", "0,70"));
+        ImportacaoPrecos.Item it = p.itens.get(0);
+        assertEquals(ImportacaoPrecos.Tipo.ALTERAR, it.tipo);
+        assertEquals("UN", it.unidade);
+        assertEquals("UN", it.getUnidadeCampo());
+    }
+
+    @Test void corrigirNaTelaTransformaErroEmNovo() {
+        ImportacaoPrecos.Previa p = conferir(Set.of(), new ImportacaoPrecos.Entrada(2, "Litro Dreher", "UN", "0,10"));
+        ImportacaoPrecos.Item it = p.itens.get(0);
+        assertEquals(ImportacaoPrecos.Tipo.NOVO, it.tipo);
+        assertEquals("UN", it.unidade);
+        assertEquals(new BigDecimal("0.10"), it.precoNovo);
+        assertTrue(p.temMudanca());
+    }
+
+    @Test void linhaDesmarcadaNaoEGravadaNemContaComoRepetida() {
+        ImportacaoPrecos.Previa p = conferir(Set.of(2),
+                new ImportacaoPrecos.Entrada(2, "Cobre", "KG", "99"),
+                new ImportacaoPrecos.Entrada(3, "Cobre", "KG", "11"));
+        assertEquals(ImportacaoPrecos.Tipo.IGNORADA, p.itens.get(0).tipo);
+        assertEquals(ImportacaoPrecos.Tipo.ALTERAR, p.itens.get(1).tipo, "a desmarcada não ocupa o lugar da 'primeira linha'");
+        assertEquals(1, p.ignoradas);
+        assertEquals(1, p.alterados);
+        assertEquals(0, p.variacoesGrandes);
+    }
+
+    @Test void tudoDesmarcadoNaoTemMudanca() {
+        ImportacaoPrecos.Previa p = conferir(Set.of(2), new ImportacaoPrecos.Entrada(2, "Ouro", "KG", "5"));
+        assertFalse(p.temMudanca());
+        assertEquals(ImportacaoPrecos.Tipo.IGNORADA, p.itens.get(0).tipo);
+    }
+
+    @Test void precoInvalidoContinuaNaTelaComoFoiEscrito() {
+        ImportacaoPrecos.Previa p = conferir(Set.of(), new ImportacaoPrecos.Entrada(2, "Ouro", "KG", "abc"));
+        assertEquals(ImportacaoPrecos.Tipo.ERRO, p.itens.get(0).tipo);
+        assertEquals("abc", p.itens.get(0).getPrecoCampo());
+        assertEquals("KG", p.itens.get(0).getUnidadeCampo());
+    }
+
+    @Test void extrairPulaTituloELinhasVazias() {
+        List<ImportacaoPrecos.Entrada> e = ImportacaoPrecos.extrair(List.of(
+                List.of("Material", "Unidade", "Preço"),
+                List.of("Latinhas", "KG", "4,80"),
+                List.of("", "", ""),
+                List.of("Litro Dreher", "", "0,10")));
+        assertEquals(2, e.size());
+        assertEquals(2, e.get(0).linha());
+        assertEquals(4, e.get(1).linha());
+        assertEquals("", e.get(1).unidade());
+    }
+
+    @Test void planilhaAntigaSemUnidadeNoNovoTambemDaErro() {
+        ImportacaoPrecos.Previa p = ImportacaoPrecos.montar(List.of(
+                List.of("Material", "Unidade", "Preço"),
+                List.of("Litro Dreher", "", "0,10")), ATUAIS, MAX);
+        assertEquals(ImportacaoPrecos.Tipo.ERRO, p.itens.get(0).tipo);
     }
 }

@@ -1,92 +1,122 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
 <head>
-    <title>Contas a Pagar - Coletaê</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Despesas | Coletaê</title>
+    <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-
-    <!-- SEU CSS EXTERNO -->
-    <link rel="stylesheet" th:href="@{/css/admin-despesas.css}">
+    <link rel="stylesheet" th:href="@{/css/admin-telas.css(v=1)}">
+    <link rel="stylesheet" th:href="@{/css/admin-despesas.css(v=2)}">
 </head>
 <body class="bg-body-tertiary">
 
-<nav class="navbar navbar-dark bg-danger shadow-sm mb-4">
-    <div class="container-fluid px-4">
-        <a class="navbar-brand fw-bold" href="/admin/analises"><i class="bi bi-arrow-left"></i> Voltar</a>
-        <span class="text-white fw-bold"><i class="bi bi-wallet2"></i> Despesas do Galpão</span>
+<!-- Fase 32: mesmo topo das outras telas do dono (antes era uma barra vermelha com "Voltar") -->
+<nav class="navbar navbar-dark bg-success shadow-sm">
+    <div class="container-fluid px-md-5">
+        <span class="navbar-brand fw-bold d-flex align-items-center gap-2 mb-0 min-w-0">
+            <img th:if="${versaoLogoPainel != null}" th:src="@{/admin/logo(v=${versaoLogoPainel})}" alt="Logo do armazém" class="nav-logo">
+            <i th:if="${versaoLogoPainel == null}" class="bi bi-recycle fs-3"></i>
+            <span class="text-truncate" th:text="${session.nomeArmazem != null ? session.nomeArmazem : 'Seu armazém'}">Armazém</span>
+            <span class="d-none d-md-inline fw-normal opacity-75">· Despesas</span>
+        </span>
+        <div class="d-flex gap-2">
+            <a href="/admin/analises" class="btn btn-outline-light btn-sm btn-voltar d-none d-sm-inline-flex"><i class="bi bi-graph-up"></i> Análises</a>
+            <a href="/admin/coletas" class="btn btn-light btn-sm btn-voltar"><i class="bi bi-arrow-left"></i> Voltar ao painel</a>
+        </div>
     </div>
 </nav>
+
 <div class="container-lg mt-3" th:if="${erroTela != null or avisoTela != null or sucessoTela != null}">
     <div th:replace="~{fragments/avisos :: avisos}"></div>
 </div>
 
+<div class="container py-4" style="max-width: 1100px;">
 
-<div class="container container-despesas">
-
-    <!-- Formulário para Nova Despesa -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-body">
-        <div class="card-body p-4">
-            <h5 class="fw-bold mb-3 text-body-emphasis">Registrar Nova Despesa (Luz, Água, Frete, etc)</h5>
-            <form action="/admin/despesas/nova" method="post" class="row g-3">
-                <div class="col-md-8">
-                    <input type="text" name="descricao" class="form-control" placeholder="Descrição (Ex: Conta de Energia)" required>
-                </div>
-                <div class="col-md-4">
-                    <div class="input-group">
-                        <span class="input-group-text bg-body-secondary border-end-0">R$</span>
-                        <input type="number" step="0.01" name="valor" class="form-control border-start-0" placeholder="0.00" required>
-                    </div>
-                </div>
-                <div class="col-12 text-end mt-3">
-                    <button type="submit" class="btn btn-danger fw-bold px-4"><i class="bi bi-plus-circle"></i> Adicionar Despesa</button>
-                </div>
-            </form>
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Despesas do armazém</h1>
+            <p class="text-body-secondary mb-0">Luz, água, frete, aluguel... Entram no cálculo do lucro em Análises.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="contador contador-vermelho" th:if="${totalMes != null}">
+                <span th:text="${nomeMes}">novembro</span>
+                <strong th:text="${'R$ ' + #numbers.formatDecimal(totalMes, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</strong>
+            </span>
+            <span class="contador" th:if="${totalMesAnterior != null}">
+                <span th:text="${nomeMesAnterior}">outubro</span>
+                <strong th:text="${'R$ ' + #numbers.formatDecimal(totalMesAnterior, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</strong>
+            </span>
         </div>
     </div>
 
-    <!-- Lista de Despesas -->
-    <div class="card border-0 shadow-sm rounded-4 bg-body">
-        <div class="card-body p-4">
-            <h6 class="text-muted fw-bold text-uppercase mb-3">Despesas Registradas</h6>
-            <div class="table-responsive">
-                <table class="table align-middle bg-body">
-                    <tbody>
-                    <tr th:each="d : ${despesas}">
-                        <td>
-                            <div class="bg-danger bg-opacity-10 text-danger rounded p-2 text-center d-inline-block me-3">
-                                <i class="bi bi-receipt"></i>
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="cartao p-4">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="icone-titulo vermelho"><i class="bi bi-receipt"></i></span>
+                    <h2 class="h5 fw-bold mb-0">Nova despesa</h2>
+                </div>
+                <p class="text-body-secondary small mb-3">Fica com a data de hoje e vai para o Histórico de alterações.</p>
+                <form action="/admin/despesas/nova" method="post" id="formDespesa">
+                    <label class="form-label small fw-bold" for="descDespesa">Descrição</label>
+                    <input type="text" name="descricao" id="descDespesa" class="form-control mb-2" maxlength="150" placeholder="Ex.: Conta de energia" required>
+                    <div class="d-flex flex-wrap gap-1 mb-3">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill sugestao">Energia</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill sugestao">Água</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill sugestao">Aluguel</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill sugestao">Frete</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill sugestao">Combustível</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill sugestao">Manutenção</button>
+                    </div>
+                    <label class="form-label small fw-bold" for="valorDespesa">Valor</label>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">R$</span>
+                        <input type="number" step="0.01" min="0.01" name="valor" id="valorDespesa" class="form-control" placeholder="0,00" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100 fw-bold"><i class="bi bi-plus-circle"></i> Registrar despesa</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="cartao p-3 p-md-4">
+                <h2 class="h5 fw-bold mb-3">Despesas registradas</h2>
+
+                <div class="vazio text-center p-5" th:if="${#lists.isEmpty(mesesDespesa)}">
+                    <div class="vazio-icone mx-auto mb-3" style="background:#fdecee;color:#dc3545;"><i class="bi bi-wallet2"></i></div>
+                    <div class="fw-bold">Nenhuma despesa registrada</div>
+                    <div class="text-body-secondary small">Registre ao lado as contas do mês para ver o lucro real em Análises.</div>
+                </div>
+
+                <div class="lista-rolagem" th:unless="${#lists.isEmpty(mesesDespesa)}">
+                    <div th:each="m : ${mesesDespesa}">
+                        <div class="rotulo-mes d-flex justify-content-between">
+                            <span th:text="${m.rotulo}">Novembro de 2026</span>
+                            <span th:text="${'R$ ' + #numbers.formatDecimal(m.soma, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</span>
+                        </div>
+                        <div class="item-linha" th:each="d : ${m.itens}">
+                            <div class="item-avatar despesa"><i class="bi bi-receipt"></i></div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-bold text-truncate" th:text="${d.descricao}">Conta de luz</div>
+                                <div class="small text-body-secondary" th:text="${d.dataBr != null ? d.dataBr : d.data}">20/10/2026</div>
                             </div>
-                            <span class="fw-bold text-body-emphasis" th:text="${d.descricao}">Conta de Luz</span>
-                            <div class="text-muted small" th:text="${d.data}">20/10/2026</div>
-                        </td>
-                        <td class="text-end fw-bold text-danger fs-5">
-                            - R$ <span th:text="${d.valor}">150,00</span>
-                        </td>
-                        <td class="text-end coluna-acao">
-                            <form action="/admin/despesas/deletar" method="post" class="d-inline m-0"
-                                  onsubmit="return confirm('Tem certeza que deseja excluir este registro de despesa do seu financeiro?')">
+                            <div class="fw-bold text-danger text-nowrap">- R$ <span th:text="${d.valor}">150,00</span></div>
+                            <form action="/admin/despesas/deletar" method="post" class="m-0"
+                                  onsubmit="return confirm('Excluir esta despesa? Ela sai do cálculo do lucro (fica registrada no Histórico).')">
                                 <input type="hidden" name="id" th:value="${d.id}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger shadow-sm">
-                                    <i class="bi bi-trash3-fill"></i>
-                                </button>
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir"><i class="bi bi-trash3"></i></button>
                             </form>
-                        </td>
-                    </tr>
-                    <tr th:if="${#lists.isEmpty(despesas)}">
-                        <td colspan="3" class="text-center text-muted py-4">Nenhuma despesa registrada ainda.</td>
-                    </tr>
-                    </tbody>
-                </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<!-- SCRIPT EXTERNO -->
-<script th:src="@{/js/admin-despesas.js}"></script>
+<script th:src="@{/js/admin-despesas.js(v=2)}"></script>
 </body>
 </html>

@@ -7,123 +7,152 @@
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>
-        body { font-family: Inter, system-ui, sans-serif; }
-        .contador { border-radius: 14px; padding: 14px 16px; height: 100%; }
-        .contador .num { font-size: 1.6rem; font-weight: 800; line-height: 1; }
-        .linha-erro td { background: rgba(220, 53, 69, .06) !important; }
-        .linha-grande td { background: rgba(255, 193, 7, .12) !important; }
-        .linha-igual td { color: var(--bs-secondary-color); }
-        .filtros .btn { font-weight: 700; }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/admin-telas.css(v=1)}">
+    <link rel="stylesheet" th:href="@{/css/admin-precos-importar.css(v=1)}">
 </head>
 <body class="bg-body-tertiary">
-<!-- Fase 31: conferência da importação. Nada foi gravado até "Confirmar importação". -->
-<div class="container py-4" style="max-width: 1000px;">
-    <a href="/admin/precos" class="small text-decoration-none text-body-secondary"><i class="bi bi-arrow-left"></i> Voltar à Tabela de Preços (cancela a importação)</a>
-    <h1 class="h3 fw-bold mt-2 mb-1"><i class="bi bi-file-earmark-check text-success"></i> Conferir a planilha</h1>
-    <p class="text-body-secondary mb-4">Arquivo <strong th:text="${nomeArquivo}">precos.xlsx</strong>. <strong>Nada foi gravado ainda.</strong> Confira e confirme no fim da página.</p>
+<!-- Fase 32: conferência editável. Nada é gravado até "Confirmar importação"; o servidor refaz todas as regras com o que está na tela. -->
+<nav class="navbar navbar-dark bg-success shadow-sm">
+    <div class="container-fluid px-md-5">
+        <span class="navbar-brand fw-bold d-flex align-items-center gap-2 mb-0 min-w-0">
+            <i class="bi bi-file-earmark-check fs-4"></i>
+            <span class="text-truncate">Conferir planilha</span>
+            <span class="d-none d-md-inline fw-normal opacity-75 text-truncate" th:text="${'· ' + (session.nomeArmazem != null ? session.nomeArmazem : '')}">· Armazém</span>
+        </span>
+        <a href="/admin/precos" class="btn btn-light btn-sm btn-voltar" id="btnCancelarTopo"><i class="bi bi-x-lg"></i> Cancelar importação</a>
+    </div>
+</nav>
 
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3"><div class="contador bg-success bg-opacity-10 text-success-emphasis"><div class="num" th:text="${previa.novos}">0</div>materiais novos</div></div>
-        <div class="col-6 col-md-3"><div class="contador bg-primary bg-opacity-10 text-primary-emphasis"><div class="num" th:text="${previa.alterados}">0</div>preços alterados</div></div>
-        <div class="col-6 col-md-3"><div class="contador bg-secondary bg-opacity-10"><div class="num" th:text="${previa.iguais}">0</div>sem mudança</div></div>
-        <div class="col-6 col-md-3"><div class="contador bg-danger bg-opacity-10 text-danger-emphasis"><div class="num" th:text="${previa.erros}">0</div>linhas com erro (ignoradas)</div></div>
+<div class="container py-4" style="max-width: 1150px;">
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+        <div class="min-w-0">
+            <h1 class="h3 fw-bold mb-1">Confira antes de gravar</h1>
+            <p class="text-body-secondary mb-0">
+                <i class="bi bi-file-earmark-spreadsheet"></i> <strong th:text="${nomeArquivo}">precos.xlsx</strong>
+                · <span class="badge rounded-pill text-bg-light border">Nada foi gravado ainda</span>
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="contador contador-verde"><strong th:text="${previa.novos}">0</strong> <span th:text="${previa.novos == 1 ? 'novo' : 'novos'}">novos</span></span>
+            <span class="contador contador-azul"><strong th:text="${previa.alterados}">0</strong> <span th:text="${previa.alterados == 1 ? 'alterado' : 'alterados'}">alterados</span></span>
+            <span class="contador"><strong th:text="${previa.iguais}">0</strong> <span th:text="${previa.iguais == 1 ? 'igual' : 'iguais'}">iguais</span></span>
+            <span class="contador contador-vermelho" th:if="${previa.erros > 0}"><strong th:text="${previa.erros}">0</strong> com erro</span>
+            <span class="contador" th:if="${previa.ignoradas > 0}"><strong th:text="${previa.ignoradas}">0</strong> <span th:text="${previa.ignoradas == 1 ? 'desmarcada' : 'desmarcadas'}">desmarcadas</span></span>
+        </div>
     </div>
 
-    <div class="alert alert-warning small" th:if="${previa.variacoesGrandes > 0}">
-        <i class="bi bi-exclamation-triangle-fill"></i>
-        <strong th:text="${previa.variacoesGrandes == 1 ? '1 preço' : previa.variacoesGrandes + ' preços'}">2 preços</strong>
-        mais que dobram ou caem pela metade (em amarelo). Confira se não é erro de digitação, como 45 no lugar de 4,5.
+    <div class="alert alert-info d-flex gap-2 align-items-start small" th:if="${avisoConferencia != null}">
+        <i class="bi bi-info-circle-fill mt-1"></i><span th:text="${avisoConferencia}">aviso</span>
     </div>
-    <div class="alert alert-light border small" th:if="${previa.foraDaPlanilha > 0}">
+
+    <div class="dica-edicao small mb-3">
+        <i class="bi bi-pencil-square"></i>
+        <span><strong>Dá para corrigir aqui mesmo:</strong> nome, unidade (KG ou UN) e preço. Desmarque a linha que não quer importar.
+        Depois clique em <strong>Revisar correções</strong> para ver como fica.</span>
+    </div>
+
+    <div class="alert alert-danger small d-flex gap-2" th:if="${previa.erros > 0}">
+        <i class="bi bi-exclamation-octagon-fill mt-1"></i>
+        <span><strong th:text="${previa.erros == 1 ? '1 linha com erro' : previa.erros + ' linhas com erro'}">2 linhas</strong>
+        (em vermelho) não serão gravadas. Corrija na tabela ou deixe assim para importar só o resto.</span>
+    </div>
+    <div class="alert alert-warning small d-flex gap-2" th:if="${previa.variacoesGrandes > 0}">
+        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+        <span><strong th:text="${previa.variacoesGrandes == 1 ? '1 preço mais que dobra ou cai pela metade' : previa.variacoesGrandes + ' preços mais que dobram ou caem pela metade'}">2 preços</strong>
+        (em amarelo). Confira se não é erro de digitação, como 45 no lugar de 4,5.</span>
+    </div>
+    <div class="small text-body-secondary mb-3" th:if="${previa.foraDaPlanilha > 0}">
         <i class="bi bi-info-circle"></i>
-        <span th:text="${previa.foraDaPlanilha == 1 ? '1 material cadastrado não está' : previa.foraDaPlanilha + ' materiais cadastrados não estão'}">3 materiais não estão</span>
-        na planilha e <strong>continuam como estão</strong>. A planilha nunca apaga materiais.
+        <span th:text="${previa.foraDaPlanilha == 1 ? '1 material cadastrado não está na planilha e continua como está.' : previa.foraDaPlanilha + ' materiais cadastrados não estão na planilha e continuam como estão.'}">3 não estão</span>
+        A planilha nunca apaga materiais.
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-body pb-0">
-            <div class="btn-group btn-group-sm filtros flex-wrap" role="group" aria-label="Filtrar">
-                <input type="radio" class="btn-check" name="filtro" id="fTudo" value="" checked><label class="btn btn-outline-secondary" for="fTudo">Tudo</label>
-                <input type="radio" class="btn-check" name="filtro" id="fMuda" value="muda"><label class="btn btn-outline-primary" for="fMuda">O que muda</label>
-                <input type="radio" class="btn-check" name="filtro" id="fErro" value="ERRO"><label class="btn btn-outline-danger" for="fErro">Erros</label>
+    <form action="/admin/precos/importar/confirmar" method="post" id="formConferencia">
+        <input type="hidden" name="token" th:value="${token}">
+
+        <div class="cartao mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 p-3 pb-0">
+                <div class="btn-group btn-group-sm filtros flex-wrap" role="group" aria-label="Filtrar">
+                    <input type="radio" class="btn-check" name="filtro" id="fTudo" value="" checked><label class="btn btn-outline-secondary" for="fTudo">Tudo</label>
+                    <input type="radio" class="btn-check" name="filtro" id="fMuda" value="muda"><label class="btn btn-outline-primary" for="fMuda">O que muda</label>
+                    <input type="radio" class="btn-check" name="filtro" id="fErro" value="ERRO"><label class="btn btn-outline-danger" for="fErro">Erros</label>
+                </div>
+                <span class="small text-body-secondary" id="avisoEditado" style="display:none;"><i class="bi bi-pencil-fill text-warning"></i> Você alterou valores: clique em <strong>Revisar correções</strong>.</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0 mt-2 tabela-conferencia">
+                    <thead class="small text-uppercase">
+                    <tr>
+                        <th class="ps-3" title="Importar esta linha"><i class="bi bi-check2-square"></i></th>
+                        <th>Linha</th><th style="min-width: 200px;">Material</th><th style="width: 128px;">Unid.</th>
+                        <th class="text-end">Hoje</th><th style="width: 140px;">Novo preço</th><th class="pe-3" style="min-width: 190px;">Situação</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="it : ${previa.itens}" th:attr="data-tipo=${it.tipo}"
+                        th:classappend="${it.tipo.name() == 'ERRO'} ? 'linha-erro' : (${it.variacaoGrande} ? 'linha-grande' : (${it.tipo.name() == 'IGUAL' or it.tipo.name() == 'IGNORADA'} ? 'linha-apagada' : ''))">
+                        <td class="ps-3">
+                            <input type="hidden" name="linha" th:value="${it.linha}">
+                            <input class="form-check-input incluir" type="checkbox" name="incluir" th:value="${it.linha}"
+                                   th:checked="${it.tipo.name() != 'IGNORADA'}" aria-label="Importar esta linha">
+                        </td>
+                        <td class="text-body-secondary small" th:text="${it.linha}">2</td>
+                        <td><input type="text" name="nome" class="form-control form-control-sm fw-bold campo" maxlength="100" th:value="${it.nomeCampo}" aria-label="Material"></td>
+                        <td>
+                            <select name="unidade" class="form-select form-select-sm campo" aria-label="Unidade"
+                                    th:classappend="${it.unidadeCampo == ''} ? 'sem-unidade' : ''">
+                                <option value="" th:selected="${it.unidadeCampo == ''}">Escolha...</option>
+                                <option value="KG" th:selected="${it.unidadeCampo == 'KG'}">KG</option>
+                                <option value="UN" th:selected="${it.unidadeCampo == 'UN'}">UN</option>
+                            </select>
+                        </td>
+                        <td class="text-end text-nowrap small" th:text="${it.precoAnterior != null ? 'R$ ' + #numbers.formatDecimal(it.precoAnterior, 1, 'POINT', 2, 'COMMA') : '-'}">R$ 4,50</td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">R$</span>
+                                <input type="text" name="preco" class="form-control fw-bold campo" inputmode="decimal" maxlength="20" th:value="${it.precoCampo}" aria-label="Novo preço">
+                            </div>
+                        </td>
+                        <td class="pe-3 small">
+                            <span th:if="${it.tipo.name() == 'NOVO'}" class="badge bg-success">Novo</span>
+                            <span th:if="${it.tipo.name() == 'ALTERAR'}" class="badge bg-primary">Altera</span>
+                            <span th:if="${it.tipo.name() == 'IGUAL'}" class="badge bg-secondary">Igual</span>
+                            <span th:if="${it.tipo.name() == 'ERRO'}" class="badge bg-danger">Erro</span>
+                            <span th:if="${it.tipo.name() == 'IGNORADA'}" class="badge text-bg-light border">Desmarcada</span>
+                            <span th:if="${it.variacao != null and it.tipo.name() == 'ALTERAR'}" class="fw-bold ms-1" th:text="${(it.variacao.signum() > 0 ? '+' : '') + #numbers.formatDecimal(it.variacao, 1, 'POINT', 1, 'COMMA') + '%'}">+6,7%</span>
+                            <div class="text-body-secondary mt-1" th:if="${it.tipo.name() == 'ERRO' or it.variacaoGrande}" th:text="${it.mensagem}">mensagem</div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-        <div class="table-responsive">
-            <table class="table align-middle mb-0 mt-2">
-                <thead class="table-light small text-uppercase">
-                <tr><th class="ps-3">Linha</th><th>Material</th><th>Unid.</th><th class="text-end">Hoje</th><th class="text-end">Planilha</th><th class="pe-3">Situação</th></tr>
-                </thead>
-                <tbody>
-                <tr th:each="it : ${previa.itens}" th:attr="data-tipo=${it.tipo}"
-                    th:classappend="${it.tipo.name() == 'ERRO'} ? 'linha-erro' : (${it.variacaoGrande} ? 'linha-grande' : (${it.tipo.name() == 'IGUAL'} ? 'linha-igual' : ''))">
-                    <td class="ps-3 text-body-secondary" th:text="${it.linha}">2</td>
-                    <td class="fw-bold" th:text="${it.material}">Latinhas</td>
-                    <td th:text="${it.unidade != null ? it.unidade : '-'}">KG</td>
-                    <td class="text-end" th:text="${it.precoAnterior != null ? 'R$ ' + #numbers.formatDecimal(it.precoAnterior, 1, 'POINT', 2, 'COMMA') : '-'}">R$ 4,50</td>
-                    <td class="text-end fw-bold" th:text="${it.precoNovo != null ? 'R$ ' + #numbers.formatDecimal(it.precoNovo, 1, 'POINT', 2, 'COMMA') : '-'}">R$ 4,80</td>
-                    <td class="pe-3 small">
-                        <span th:if="${it.tipo.name() == 'NOVO'}" class="badge bg-success">Novo</span>
-                        <span th:if="${it.tipo.name() == 'ALTERAR'}" class="badge bg-primary">Altera</span>
-                        <span th:if="${it.tipo.name() == 'IGUAL'}" class="badge bg-secondary">Igual</span>
-                        <span th:if="${it.tipo.name() == 'ERRO'}" class="badge bg-danger">Erro</span>
-                        <span th:if="${it.variacao != null}" class="fw-bold ms-1" th:text="${(it.variacao.signum() > 0 ? '+' : '') + #numbers.formatDecimal(it.variacao, 1, 'POINT', 1, 'COMMA') + '%'}">+6,7%</span>
-                        <div class="text-body-secondary" th:if="${it.tipo.name() == 'ERRO' or it.variacaoGrande}" th:text="${it.mensagem}">mensagem</div>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
 
-    <div class="card border-0 shadow-sm rounded-4" th:if="${previa.temMudanca()}">
-        <div class="card-body">
-            <form action="/admin/precos/importar/confirmar" method="post" id="formConfirmar">
-                <input type="hidden" name="token" th:value="${token}">
-                <div class="form-check mb-3" th:if="${previa.variacoesGrandes > 0}">
-                    <input class="form-check-input" type="checkbox" name="confirmarVariacoes" id="confirmarVariacoes" value="sim" required>
-                    <label class="form-check-label fw-bold" for="confirmarVariacoes">Conferi os preços em amarelo e estão certos.</label>
+        <div class="cartao p-3 p-md-4 barra-confirmar">
+            <div class="form-check mb-3" th:if="${previa.variacoesGrandes > 0}">
+                <input class="form-check-input" type="checkbox" name="confirmarVariacoes" id="confirmarVariacoes" value="sim">
+                <label class="form-check-label fw-bold" for="confirmarVariacoes">Conferi os preços em amarelo e estão certos.</label>
+            </div>
+            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                <span class="small text-body-secondary">Tudo é gravado de uma vez e fica no Histórico. Se algo falhar, nada é gravado.</span>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="/admin/precos" class="btn btn-outline-secondary fw-bold"><i class="bi bi-x-lg"></i> Cancelar</a>
+                    <button type="submit" name="acao" value="revisar" class="btn btn-outline-primary fw-bold" id="btnRevisar">
+                        <i class="bi bi-arrow-repeat"></i> Revisar correções
+                    </button>
+                    <button type="submit" name="acao" value="confirmar" class="btn btn-success fw-bold" id="btnConfirmar"
+                            th:disabled="${!previa.temMudanca()}">
+                        <i class="bi bi-check2-circle"></i>
+                        Confirmar importação (<span th:text="${previa.novos + previa.alterados}">3</span>)
+                    </button>
                 </div>
-                <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
-                    <span class="small text-body-secondary">Tudo é gravado de uma vez e fica no Histórico de alterações. Se algo falhar, nada é gravado.</span>
-                    <div class="d-flex gap-2">
-                        <a href="/admin/precos" class="btn btn-outline-secondary fw-bold">Cancelar</a>
-                        <button type="submit" class="btn btn-success fw-bold">
-                            <i class="bi bi-check2-circle"></i>
-                            Confirmar importação (<span th:text="${previa.novos + previa.alterados}">3</span>)
-                        </button>
-                    </div>
-                </div>
-            </form>
+            </div>
+            <div class="small text-body-secondary mt-2" th:unless="${previa.temMudanca()}">
+                Nada a gravar por enquanto: nenhuma linha marcada traz material novo ou preço diferente. Corrija as linhas com erro e clique em Revisar.
+            </div>
         </div>
-    </div>
-    <div class="alert alert-info" th:unless="${previa.temMudanca()}">
-        Nada a importar: a planilha não traz material novo nem preço diferente dos atuais.
-        <a href="/admin/precos" class="fw-bold">Voltar à Tabela de Preços</a>
-    </div>
+    </form>
 </div>
-<script>
-    // filtro da tabela e trava contra duplo clique
-    (function () {
-        document.querySelectorAll('input[name=filtro]').forEach(function (r) {
-            r.addEventListener('change', function () {
-                var f = document.querySelector('input[name=filtro]:checked').value;
-                document.querySelectorAll('tbody tr[data-tipo]').forEach(function (tr) {
-                    var t = tr.getAttribute('data-tipo');
-                    var mostra = !f || (f === 'muda' ? (t === 'NOVO' || t === 'ALTERAR') : t === f);
-                    tr.classList.toggle('d-none', !mostra);
-                });
-            });
-        });
-        var form = document.getElementById('formConfirmar');
-        if (form) form.addEventListener('submit', function () {
-            var b = form.querySelector('button[type=submit]');
-            if (b) { b.disabled = true; b.textContent = 'Gravando...'; }
-        });
-        var tema = localStorage.getItem('theme');
-        if (tema) document.documentElement.setAttribute('data-bs-theme', tema);
-    })();
-</script>
+<script th:src="@{/js/admin-precos-importar.js(v=1)}"></script>
 </body>
 </html>

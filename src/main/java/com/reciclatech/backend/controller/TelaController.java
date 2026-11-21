@@ -54,6 +54,9 @@ public class TelaController {
     @Autowired(required = false)
     private org.springframework.mail.javamail.JavaMailSender mailSender;
 
+    @Autowired(required = false)
+    private com.reciclatech.backend.service.ChamadoService chamadoService;   // Fase 32: chamados guardados no sistema
+
     // Senha Master configurada no application.properties (variável SENHA_MASTER)
     @Value("${coletae.senha-master}")
     private String senhaMasterConfigurada;
@@ -275,6 +278,22 @@ public class TelaController {
      * "Trocar de armazém" só aparece para o dono que tem 2 armazéns ou mais.
      * Qualquer falha aqui só esconde as imagens: a tela abre normalmente.
      */
+    /** Fase 32: só a logo do armazém para o topo das telas de cadastro (preços, VIP, despesas). */
+    private void logoDoTopo(Model model, HttpSession session) {
+        try {
+            Object idSessao = session.getAttribute("idPlanilhaAtiva");
+            if (imagemContaService != null && idSessao != null) {
+                model.addAttribute("versaoLogoPainel", imagemContaService.versao(
+                        com.reciclatech.backend.service.ImagemContaService.ARMAZEM, Long.parseLong(idSessao.toString())));
+            }
+        } catch (RuntimeException e) { /* sem logo: a tela abre normalmente */ }
+    }
+
+    private static String nomeDoMes(int m) {
+        return new String[]{"janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto",
+                "setembro", "outubro", "novembro", "dezembro"}[m - 1];
+    }
+
     private void prepararTopoDoPainel(Model model, HttpSession session) {
         Long armazemId = null;
         Long parceiroId = session.getAttribute("parceiroId") instanceof Long p ? p : null;
@@ -292,6 +311,10 @@ public class TelaController {
         } catch (RuntimeException e) {
             log.warn("Topo do painel sem imagens: {}", e.getMessage());
         }
+        // Fase 32: sininho de respostas do suporte
+        try {
+            if (chamadoService != null && armazemId != null) model.addAttribute("chamadosNaoLidos", chamadoService.naoLidosDoArmazem(armazemId));
+        } catch (RuntimeException e) { log.warn("Sininho sem contagem: {}", e.getMessage()); }
         boolean podeTrocar = false;
         if (parceiroId != null) {
             try {
@@ -336,7 +359,7 @@ public class TelaController {
         String cpfPadronizado = "";
         if (cpf != null && !cpf.trim().isEmpty()) {
             if (!DocumentoValidator.valido(cpf)) {
-                ra.addFlashAttribute("erroTela", "CPF inválido. Confira os números ou deixe em branco.");
+                ra.addFlashAttribute("erroTela", "CPF ou CNPJ inválido. Confira ou deixe em branco.");
                 return "redirect:/admin/coletas";
             }
             cpfPadronizado = DocumentoValidator.formatar(cpf);
@@ -479,7 +502,7 @@ public class TelaController {
             String cpfGravar = null;
             if (cpfFinal != null && !cpfFinal.trim().isEmpty()) {
                 if (!DocumentoValidator.valido(cpfFinal)) {
-                    ra.addFlashAttribute("erroTela", "CPF inválido. Nada foi gravado; refaça a pesagem com o CPF correto (ou sem CPF).");
+                    ra.addFlashAttribute("erroTela", "CPF ou CNPJ inválido. Nada foi gravado; refaça a pesagem com o documento correto (ou sem ele).");
                     return "redirect:/admin/coletas";
                 }
                 cpfGravar = DocumentoValidator.formatar(cpfFinal);
@@ -746,17 +769,25 @@ public class TelaController {
     private static final String S_IMPORTACAO = "importacaoPrecos";
     private static final long IMPORTACAO_VALIDADE_MS = 15 * 60 * 1000L;
 
-    /** O que fica guardado na sessão entre a conferência e a confirmação (só textos e números: serializável). */
+    /**
+     * O que fica guardado na sessão entre a conferência e a confirmação (só textos e números: serializável).
+     * Fase 32: guarda as LINHAS da planilha; a cada "Revisar" ou "Confirmar" a conferência é refeita com o que está na tela.
+     */
     static final class ImportacaoPendente implements java.io.Serializable {
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 2L;
         final String token;
         final String armazemId;
-        final long criadaEm;
-        final int variacoesGrandes;
-        final java.util.ArrayList<String[]> novos = new java.util.ArrayList<>();       // {nome, unidade, preço}
-        final java.util.ArrayList<Object[]> alteracoes = new java.util.ArrayList<>();  // {id (Long), preço (BigDecimal)}
-        ImportacaoPendente(String token, String armazemId, int variacoesGrandes) {
-            this.token = token; this.armazemId = armazemId; this.criadaEm = System.currentTimeMillis(); this.variacoesGrandes = variacoesGrandes;
+        long criadaEm;                 // renovado a cada "Revisar" (o dono pode levar um tempo corrigindo)
+        final String nomeArquivo;
+        java.util.ArrayList<String[]> linhas = new java.util.ArrayList<>();   // {nº da linha, nome, unidade, preço}
+        java.util.HashSet<Integer> ignoradas = new java.util.HashSet<>();     // linhas desmarcadas na última conferência
+        ImportacaoPendente(String token, String armazemId, String nomeArquivo) {
+            this.token = token; this.armazemId = armazemId; this.criadaEm = System.currentTimeMillis(); this.nomeArquivo = nomeArquivo;
+        }
+        List<com.reciclatech.backend.util.ImportacaoPrecos.Entrada> entradas() {
+            List<com.reciclatech.backend.util.ImportacaoPrecos.Entrada> l = new ArrayList<>();
+            for (String[] x : linhas) l.add(new com.reciclatech.backend.util.ImportacaoPrecos.Entrada(Integer.parseInt(x[0]), x[1], x[2], x[3]));
+            return l;
         }
     }
 
@@ -806,21 +837,16 @@ public class TelaController {
         }
         try {
             List<List<String>> tabela = com.reciclatech.backend.util.PlanilhaLeitura.ler(arquivo.getBytes());
+            List<com.reciclatech.backend.util.ImportacaoPrecos.Entrada> entradas = com.reciclatech.backend.util.ImportacaoPrecos.extrair(tabela);
+            String nomeArquivo = arquivo.getOriginalFilename() == null ? "planilha" : arquivo.getOriginalFilename();
             com.reciclatech.backend.util.ImportacaoPrecos.Previa previa = com.reciclatech.backend.util.ImportacaoPrecos.montar(
-                    tabela, googleSheetsService.materiaisParaImportacao(), Valores.PRECO_MAX);
+                    entradas, Set.of(), googleSheetsService.materiaisParaImportacao(), Valores.PRECO_MAX);
             ImportacaoPendente pendente = new ImportacaoPendente(java.util.UUID.randomUUID().toString(),
-                    String.valueOf(session.getAttribute("idPlanilhaAtiva")), previa.variacoesGrandes);
-            for (com.reciclatech.backend.util.ImportacaoPrecos.Item it : previa.itens) {
-                if (it.tipo == com.reciclatech.backend.util.ImportacaoPrecos.Tipo.NOVO) {
-                    pendente.novos.add(new String[]{it.material, it.unidade, it.precoNovo.toPlainString()});
-                } else if (it.tipo == com.reciclatech.backend.util.ImportacaoPrecos.Tipo.ALTERAR) {
-                    pendente.alteracoes.add(new Object[]{it.idExistente, it.precoNovo});
-                }
+                    String.valueOf(session.getAttribute("idPlanilhaAtiva")), nomeArquivo);
+            for (com.reciclatech.backend.util.ImportacaoPrecos.Entrada e : entradas) {
+                pendente.linhas.add(new String[]{String.valueOf(e.linha()), e.nome(), e.unidade(), e.preco()});
             }
-            if (previa.temMudanca()) session.setAttribute(S_IMPORTACAO, pendente);
-            model.addAttribute("previa", previa);
-            model.addAttribute("token", pendente.token);
-            model.addAttribute("nomeArquivo", arquivo.getOriginalFilename() == null ? "planilha" : arquivo.getOriginalFilename());
+            prepararConferencia(model, previa, pendente, null, session);
             return "admin-precos-importar";
         } catch (IllegalArgumentException e) {
             ra.addFlashAttribute("erroTela", e.getMessage());
@@ -832,10 +858,49 @@ public class TelaController {
         }
     }
 
-    /** Grava o que foi conferido (tudo ou nada). */
+    private static String corta(String v, int max) { return v.length() > max ? v.substring(0, max) : v; }
+
+    /** Troca a coluna {@code col} da linha pelo valor da tela (se veio); diz se mudou. */
+    private static boolean trocar(String[] linha, int col, List<String> tela, int i, int max) {
+        if (tela == null || i >= tela.size() || tela.get(i) == null) return false;
+        String novo = corta(tela.get(i).trim(), max);
+        String antes = linha[col] == null ? "" : linha[col].trim();
+        linha[col] = novo;
+        return !novo.equals(antes);
+    }
+
+    private void prepararConferencia(Model model, com.reciclatech.backend.util.ImportacaoPrecos.Previa previa, ImportacaoPendente p, String aviso, HttpSession session) {
+        // guarda as linhas exatamente como a tela vai mostrar: assim "mudou" só acusa o que o dono editou
+        Map<Integer, String[]> porLinha = new HashMap<>();
+        for (String[] l : p.linhas) porLinha.put(Integer.parseInt(l[0]), l);
+        for (com.reciclatech.backend.util.ImportacaoPrecos.Item it : previa.itens) {
+            String[] l = porLinha.get(it.linha);
+            if (l == null) continue;
+            l[1] = it.getNomeCampo() == null ? "" : it.getNomeCampo();
+            l[2] = it.getUnidadeCampo();
+            l[3] = it.getPrecoCampo();
+        }
+        model.addAttribute("previa", previa);
+        model.addAttribute("token", p.token);
+        model.addAttribute("nomeArquivo", p.nomeArquivo);
+        if (aviso != null) model.addAttribute("avisoConferencia", aviso);
+        session.setAttribute(S_IMPORTACAO, p);   // grava de novo: sessão serializada também pega as linhas atualizadas
+    }
+
+    /**
+     * Fase 32: "Revisar" (refaz a conferência com as correções feitas na tela) ou "Confirmar" (grava, tudo ou nada).
+     * O servidor sempre refaz as regras com o que veio da tela; nada do navegador é aceito sem conferir.
+     */
     @PostMapping("/admin/precos/importar/confirmar")
-    public String confirmarImportacao(@RequestParam String token, @RequestParam(required = false) String confirmarVariacoes,
-                                      HttpSession session, RedirectAttributes ra) {
+    public String confirmarImportacao(@RequestParam String token,
+                                      @RequestParam(required = false) String acao,
+                                      @RequestParam(required = false) String confirmarVariacoes,
+                                      @RequestParam(value = "linha", required = false) List<String> linhasTela,
+                                      @RequestParam(value = "nome", required = false) List<String> nomesTela,
+                                      @RequestParam(value = "unidade", required = false) List<String> unidadesTela,
+                                      @RequestParam(value = "preco", required = false) List<String> precosTela,
+                                      @RequestParam(value = "incluir", required = false) List<String> incluirTela,
+                                      HttpSession session, Model model, RedirectAttributes ra) {
         if (!gestorDePrecos(session)) return "redirect:/admin/coletas";
         Object guardado = session.getAttribute(S_IMPORTACAO);
         if (!(guardado instanceof ImportacaoPendente p) || !p.token.equals(token)
@@ -845,19 +910,67 @@ public class TelaController {
             ra.addFlashAttribute("erroTela", "A conferência expirou ou já foi usada. Envie a planilha de novo.");
             return "redirect:/admin/precos";
         }
-        if (p.variacoesGrandes > 0 && confirmarVariacoes == null) {
-            ra.addFlashAttribute("erroTela", "Marque a confirmação das variações grandes de preço antes de importar. Envie a planilha de novo.");
+        // aplica as correções da tela, só nas linhas que vieram da planilha (não dá para inventar linha nova)
+        Map<String, String[]> porLinha = new LinkedHashMap<>();
+        for (String[] l : p.linhas) porLinha.put(l[0], l);
+        boolean mudou = false;
+        int n = linhasTela == null ? 0 : linhasTela.size();
+        for (int i = 0; i < n; i++) {
+            String[] l = porLinha.get(linhasTela.get(i));
+            if (l == null) continue;
+            mudou |= trocar(l, 1, nomesTela, i, 120);
+            mudou |= trocar(l, 2, unidadesTela, i, 10);
+            mudou |= trocar(l, 3, precosTela, i, 30);
+        }
+        Set<Integer> ignoradas = new HashSet<>(p.ignoradas);
+        if (linhasTela != null) {
+            Set<String> marcadas = incluirTela == null ? Set.of() : new HashSet<>(incluirTela);
+            ignoradas.clear();
+            for (String l : linhasTela) if (porLinha.containsKey(l) && !marcadas.contains(l)) ignoradas.add(Integer.parseInt(l));
+        }
+        mudou |= !ignoradas.equals(p.ignoradas);
+        p.ignoradas = new java.util.HashSet<>(ignoradas);
+        com.reciclatech.backend.util.ImportacaoPrecos.Previa previa;
+        try {
+            previa = com.reciclatech.backend.util.ImportacaoPrecos.montar(p.entradas(), ignoradas,
+                    googleSheetsService.materiaisParaImportacao(), Valores.PRECO_MAX);
+        } catch (IllegalArgumentException e) {
             session.removeAttribute(S_IMPORTACAO);
+            ra.addFlashAttribute("erroTela", e.getMessage());
             return "redirect:/admin/precos";
         }
+        p.criadaEm = System.currentTimeMillis();
+        if (!"confirmar".equals(acao)) {
+            prepararConferencia(model, previa, p, mudou ? "Conferência refeita com as suas correções. Nada foi gravado ainda: confira e confirme."
+                    : "Nada mudou na tela. Confira e confirme.", session);
+            return "admin-precos-importar";
+        }
+        if (mudou) {   // mudou algo e clicou direto em Confirmar: mostra a conferência nova antes de gravar
+            prepararConferencia(model, previa, p, "Você mudou valores na tela. Veja a conferência atualizada e clique em Confirmar de novo. Nada foi gravado ainda.", session);
+            return "admin-precos-importar";
+        }
+        if (!previa.temMudanca()) {
+            prepararConferencia(model, previa, p, "Nada a gravar: nenhuma linha marcada traz material novo ou preço diferente.", session);
+            return "admin-precos-importar";
+        }
+        if (previa.variacoesGrandes > 0 && confirmarVariacoes == null) {
+            prepararConferencia(model, previa, p, "Marque a confirmação dos preços em amarelo antes de importar.", session);
+            return "admin-precos-importar";
+        }
+        List<String[]> novos = new ArrayList<>();
+        List<Object[]> alteracoes = new ArrayList<>();
+        for (com.reciclatech.backend.util.ImportacaoPrecos.Item it : previa.itens) {
+            if (it.tipo == com.reciclatech.backend.util.ImportacaoPrecos.Tipo.NOVO) novos.add(new String[]{it.material, it.unidade, it.precoNovo.toPlainString()});
+            else if (it.tipo == com.reciclatech.backend.util.ImportacaoPrecos.Tipo.ALTERAR) alteracoes.add(new Object[]{it.idExistente, it.precoNovo});
+        }
         try {
-            int[] r = googleSheetsService.aplicarImportacaoPrecos(p.novos, p.alteracoes);
+            int[] r = googleSheetsService.aplicarImportacaoPrecos(novos, alteracoes);
             session.removeAttribute(S_IMPORTACAO);
             ra.addFlashAttribute("sucessoTela", "Planilha importada: " + r[0] + (r[0] == 1 ? " material novo" : " materiais novos")
                     + " e " + r[1] + (r[1] == 1 ? " preço alterado." : " preços alterados.") + " Tudo ficou registrado no Histórico.");
         } catch (IllegalArgumentException e) {
-            session.removeAttribute(S_IMPORTACAO);
-            ra.addFlashAttribute("erroTela", e.getMessage() + " Nada foi gravado.");
+            prepararConferencia(model, previa, p, e.getMessage() + " Nada foi gravado.", session);
+            return "admin-precos-importar";
         } catch (Exception e) {
             log.error("Falha ao aplicar a importação de preços", e);
             session.removeAttribute(S_IMPORTACAO);
@@ -878,6 +991,7 @@ public class TelaController {
 
         try { m.addAttribute("materiais", googleSheetsService.listarMateriais()); }
         catch (Exception e) { m.addAttribute("materiais", new ArrayList<>()); }
+        logoDoTopo(m, s);
         return "admin-precos";
     }
 
@@ -976,9 +1090,29 @@ public class TelaController {
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 
         try {
-            model.addAttribute("vips", googleSheetsService.listarFornecedoresVip());
+            List<Map<String, String>> vips = googleSheetsService.listarFornecedoresVip();
+            model.addAttribute("vips", vips);
+            // Fase 32: um cartão por fornecedor (CPF/CNPJ), com os materiais dele
+            Map<String, List<Map<String, String>>> grupos = new java.util.TreeMap<>();
+            for (Map<String, String> v : vips) grupos.computeIfAbsent(v.get("cpf"), k -> new ArrayList<>()).add(v);
+            List<Map<String, Object>> cartoes = new ArrayList<>();
+            for (Map.Entry<String, List<Map<String, String>>> g : grupos.entrySet()) {
+                g.getValue().sort(Comparator.comparing(x -> String.valueOf(x.get("material"))));
+                String documento = DocumentoValidator.formatar(g.getKey());
+                StringBuilder busca = new StringBuilder(g.getKey()).append(' ').append(documento);
+                for (Map<String, String> x : g.getValue()) busca.append(' ').append(x.get("material"));
+                Map<String, Object> c = new HashMap<>();
+                c.put("cpf", g.getKey());
+                c.put("documento", documento);
+                c.put("tipoDocumento", DocumentoValidator.normalizar(g.getKey()).length() == 14 ? "CNPJ" : "CPF");
+                c.put("itens", g.getValue());
+                c.put("busca", busca.toString());
+                cartoes.add(c);
+            }
+            model.addAttribute("gruposVip", cartoes);
             model.addAttribute("materiais", googleSheetsService.listarMateriais());
         } catch (Exception e) { log.warn("Falha ignorada", e); }
+        logoDoTopo(model, session);
         return "admin-fornecedores-vip";
     }
 
@@ -1268,8 +1402,50 @@ public class TelaController {
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         response.setHeader("Pragma", "no-cache"); response.setDateHeader("Expires", 0);
 
-        try { model.addAttribute("despesas", googleSheetsService.listarDespesas()); }
-        catch (Exception e) { model.addAttribute("despesas", new ArrayList<>()); }
+        List<Map<String, String>> despesas;
+        try { despesas = googleSheetsService.listarDespesas(); }
+        catch (Exception e) { despesas = new ArrayList<>(); }
+        model.addAttribute("despesas", despesas);
+        // Fase 32: despesas agrupadas por mês (a lista já vem da mais nova para a mais antiga)
+        Map<String, Map<String, Object>> meses = new LinkedHashMap<>();
+        for (Map<String, String> d : despesas) {
+            String mes = d.getOrDefault("mes", "");
+            Map<String, Object> g = meses.computeIfAbsent(mes, k -> {
+                Map<String, Object> n = new HashMap<>();
+                String rotulo = k;
+                try {
+                    java.time.YearMonth ym = java.time.YearMonth.parse(k);
+                    String nm = nomeDoMes(ym.getMonthValue());
+                    rotulo = Character.toUpperCase(nm.charAt(0)) + nm.substring(1) + " de " + ym.getYear();
+                } catch (RuntimeException ignorado) { /* mês ilegível: mostra como veio */ }
+                n.put("rotulo", rotulo);
+                n.put("itens", new ArrayList<Map<String, String>>());
+                n.put("soma", BigDecimal.ZERO);
+                return n;
+            });
+            ((List<Map<String, String>>) g.get("itens")).add(d);
+            try { g.put("soma", ((BigDecimal) g.get("soma")).add(new BigDecimal(d.get("valor").replace(".", "").replace(",", ".")))); }
+            catch (RuntimeException ignorado) { /* valor ilegível fica fora da soma */ }
+        }
+        model.addAttribute("mesesDespesa", new ArrayList<>(meses.values()));
+        // Fase 32: resumo no topo (total do mês atual e do mês passado)
+        try {
+            java.time.LocalDate hoje = java.time.LocalDate.now(java.time.ZoneId.of("America/Recife"));
+            java.time.YearMonth mes = java.time.YearMonth.from(hoje), anterior = mes.minusMonths(1);
+            BigDecimal noMes = BigDecimal.ZERO, noAnterior = BigDecimal.ZERO;
+            for (com.reciclatech.backend.model.Despesa d : googleSheetsService.listarDespesasBrutas()) {
+                if (d.getDataDespesa() == null || d.getValor() == null) continue;
+                java.time.YearMonth m = java.time.YearMonth.from(d.getDataDespesa());
+                if (m.equals(mes)) noMes = noMes.add(d.getValor());
+                else if (m.equals(anterior)) noAnterior = noAnterior.add(d.getValor());
+            }
+            model.addAttribute("totalMes", noMes);
+            model.addAttribute("totalMesAnterior", noAnterior);
+            model.addAttribute("nomeMes", nomeDoMes(mes.getMonthValue()));
+            model.addAttribute("nomeMesAnterior", nomeDoMes(anterior.getMonthValue()));
+            model.addAttribute("mesAtual", mes.toString());
+        } catch (Exception e) { log.warn("Resumo de despesas indisponível: {}", e.getMessage()); }
+        logoDoTopo(model, session);
         return "admin-despesas";
     }
 
@@ -1554,33 +1730,46 @@ public class TelaController {
             @RequestParam String descricao,
             @RequestParam(required = false) String emailRetorno,
             @RequestParam(required = false) org.springframework.web.multipart.MultipartFile printTela,
+            @RequestParam(required = false) String voltar,
             jakarta.servlet.http.HttpSession session,
             org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
 
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+        String destinoChamado = "chamados".equals(voltar) ? "redirect:/admin/chamados" : "redirect:/admin/coletas";
         if (printTela != null && !printTela.isEmpty() && !anexoPermitido(printTela)) {
             redirectAttributes.addFlashAttribute("erroSuporte", "Anexo não permitido. Envie apenas imagem (PNG, JPG, WEBP, GIF) ou PDF de até 5 MB.");
-            return "redirect:/admin/coletas";
+            return destinoChamado;
         }
         // no máximo 5 chamados por hora por armazém (evita abuso e gasto da cota do e-mail)
         String chaveChamado = "chamado:" + session.getAttribute("idPlanilhaAtiva");
         if (!limitadorPublico.permitir(chaveChamado, 5, 60 * 60 * 1000L)) {
             redirectAttributes.addFlashAttribute("erroSuporte", "Você já enviou vários chamados na última hora. Aguarde um pouco ou chame no WhatsApp.");
-            return "redirect:/admin/coletas";
+            return destinoChamado;
         }
         if (emailRetorno != null && !emailRetorno.isBlank()
                 && !com.reciclatech.backend.util.EmailValido.formatoValido(emailRetorno)) {
             redirectAttributes.addFlashAttribute("erroSuporte", "O e-mail de retorno parece inválido. Confira e tente de novo.");
-            return "redirect:/admin/coletas";
+            return destinoChamado;
         }
         // Fase 30: limites de tamanho (a tela já limita; aqui é a garantia)
         if (assunto.isBlank() || assunto.length() > 150 || descricao.isBlank() || descricao.length() > 5000) {
             redirectAttributes.addFlashAttribute("erroSuporte", "Preencha o assunto (até 150 letras) e a descrição (até 5000 letras).");
-            return "redirect:/admin/coletas";
+            return destinoChamado;
         }
         // evita quebra de linha no assunto do e-mail (injeção de cabeçalho)
         assunto = assunto.replaceAll("[\\r\\n]+", " ").trim();
         prioridade = prioridade.replaceAll("[\\r\\n]+", " ").trim();
+        // Fase 32: guarda o chamado no sistema (conversa + sininho). Se falhar, o e-mail ainda sai como antes.
+        com.reciclatech.backend.model.Chamado registrado = null;
+        if (chamadoService != null) {
+            try {
+                Long armazemChamado = Long.parseLong(String.valueOf(session.getAttribute("idPlanilhaAtiva")));
+                registrado = chamadoService.abrir(armazemChamado, (String) session.getAttribute("nomeArmazem"),
+                        ChamadoController.autorDa(session), assunto, prioridade, descricao, emailRetorno);
+            } catch (Exception e) {
+                log.error("Chamado não ficou gravado no sistema (segue só por e-mail)", e);
+            }
+        }
         try {
             String nomeArmazem = (String) session.getAttribute("nomeArmazem");
             String telefoneAdmin = (String) session.getAttribute("telefone");
@@ -1589,7 +1778,7 @@ public class TelaController {
             org.springframework.mail.javamail.MimeMessageHelper helper = new org.springframework.mail.javamail.MimeMessageHelper(message, true, "UTF-8");
 
             helper.setTo(emailSuporte);
-            helper.setSubject("[CHAMADO " + prioridade.toUpperCase() + "] " + assunto);
+            helper.setSubject("[CHAMADO " + (registrado != null ? registrado.getCodigo() + " " : "") + prioridade.toUpperCase() + "] " + assunto);
 
             if (emailRetorno != null && !emailRetorno.trim().isEmpty()) {
                 helper.setReplyTo(emailRetorno.replaceAll("[\\r\\n]+", "").trim());
@@ -1606,7 +1795,9 @@ public class TelaController {
                     + "<p><b>E-mail de Retorno:</b> " + (emailRetorno != null && !emailRetorno.isEmpty() ? org.springframework.web.util.HtmlUtils.htmlEscape(emailRetorno) : "Não informado") + "</p>"
                     + "<p><b>Descrição do Problema:</b><br>" + org.springframework.web.util.HtmlUtils.htmlEscape(descricao).replace("\n", "<br>") + "</p>"
                     + "<hr style='border:1px solid #eee; margin:20px 0;'>"
-                    + "<p>" + linkZap + "</p>";
+                    + "<p>" + linkZap + "</p>"
+                    + (registrado != null ? "<p style='color:#555;'><b>Responda pelo painel Master &gt; Chamados</b> (" + registrado.getCodigo()
+                        + "): o armazém vê a resposta no sininho. Resposta dada só por este e-mail não aparece no Coletaê.</p>" : "");
 
             helper.setText(corpoHTML, true);
 
@@ -1615,13 +1806,20 @@ public class TelaController {
             }
 
             mailSender.send(message);
-            redirectAttributes.addFlashAttribute("sucessoSuporte", "Chamado enviado com sucesso! Nossa equipe técnica analisará o caso.");
+            redirectAttributes.addFlashAttribute("sucessoSuporte", registrado != null
+                    ? "Chamado " + registrado.getCodigo() + " enviado! A resposta aparece no sininho do menu do perfil (Meus chamados)."
+                    : "Chamado enviado com sucesso! Nossa equipe técnica analisará o caso.");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("erroSuporte", "Ocorreu um erro ao enviar seu chamado. Tente novamente ou chame no WhatsApp.");
             log.error("Erro inesperado", e);
+            if (registrado != null) {
+                // gravou no sistema, só o e-mail de aviso falhou: o chamado aparece no painel Master mesmo assim
+                redirectAttributes.addFlashAttribute("sucessoSuporte", "Chamado " + registrado.getCodigo() + " registrado. A resposta aparece no sininho (Meus chamados).");
+            } else {
+                redirectAttributes.addFlashAttribute("erroSuporte", "Ocorreu um erro ao enviar seu chamado. Tente novamente ou chame no WhatsApp.");
+            }
         }
 
-        return "redirect:/admin/coletas";
+        return destinoChamado;
     }
 
 
@@ -1634,6 +1832,8 @@ public class TelaController {
         if (session.getAttribute("masterLogado") == null) {
             return "redirect:/login";
         }
+        try { if (chamadoService != null) model.addAttribute("chamadosPendentes", chamadoService.naoLidosDoSuporte()); }
+        catch (RuntimeException e) { log.warn("Contagem de chamados indisponível: {}", e.getMessage()); }
 
         try {
             List<Map<String, Object>> clientesBanco = (List<Map<String, Object>>) (List<?>) googleSheetsService.listarTodosArmazensSaaS();

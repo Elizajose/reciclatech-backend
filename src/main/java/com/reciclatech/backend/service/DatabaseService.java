@@ -935,6 +935,9 @@ public class DatabaseService {
             map.put("descricao", d.getDescricao());
             map.put("valor", String.format("%.2f", d.getValor()).replace(".", ","));
             map.put("data", d.getDataDespesa().toString());
+            // Fase 32: data no formato brasileiro e o mês, para a tela agrupar
+            map.put("dataBr", d.getDataDespesa().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            map.put("mes", d.getDataDespesa().getYear() + "-" + String.format("%02d", d.getDataDespesa().getMonthValue()));
             return map;
         }).collect(Collectors.toList());
     }
@@ -1079,7 +1082,7 @@ public class DatabaseService {
 
     @Transactional(rollbackFor = Exception.class)
     public void salvarFornecedorVip(String cpf, String material, BigDecimal preco, boolean confirmado) throws IOException {
-        if (!com.reciclatech.backend.util.DocumentoValidator.valido(cpf)) throw new IllegalArgumentException("CPF inválido.");
+        if (!com.reciclatech.backend.util.DocumentoValidator.valido(cpf)) throw new IllegalArgumentException("CPF ou CNPJ inválido.");
         if (!com.reciclatech.backend.util.Valores.positivoAte(preco, com.reciclatech.backend.util.Valores.PRECO_MAX)) {
             throw new IllegalArgumentException("Informe um preço maior que zero.");
         }

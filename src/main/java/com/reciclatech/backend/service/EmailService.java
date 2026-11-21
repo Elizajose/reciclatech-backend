@@ -73,4 +73,25 @@ public class EmailService {
             log.error("Falha ao enviar e-mail de redefinição: {}", e.getMessage());
         }
     }
+
+    /** Fase 32: avisa o armazém que o suporte respondeu o chamado. Nunca lança exceção. */
+    public void enviarRespostaChamado(String para, String nomeArmazem, String codigo, String assunto, String resposta, String link) {
+        JavaMailSender sender = mailSender.getIfAvailable();
+        if (sender == null || remetente == null || remetente.isBlank() || para == null || para.isBlank()) return;
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom(remetente);
+            msg.setTo(para);
+            msg.setSubject(("Coletaê: resposta ao chamado " + codigo + " - " + assunto).replaceAll("[\\r\\n]+", " "));
+            msg.setText("Olá" + (nomeArmazem == null || nomeArmazem.isBlank() ? "" : ", " + nomeArmazem) + "!\n\n"
+                    + "O suporte respondeu o seu chamado " + codigo + " (" + assunto + "):\n\n"
+                    + resposta + "\n\n"
+                    + (link == null || link.isBlank() ? "Veja e responda no Coletaê: menu do perfil > Meus chamados.\n"
+                                                      : "Veja e responda no Coletaê: " + link + "\n")
+                    + "\nPara continuar a conversa, responda pelo Coletaê (respostas a este e-mail não entram no chamado).");
+            sender.send(msg);
+        } catch (Exception e) {
+            log.error("Falha ao enviar aviso de resposta de chamado: {}", e.getMessage());
+        }
+    }
 }
