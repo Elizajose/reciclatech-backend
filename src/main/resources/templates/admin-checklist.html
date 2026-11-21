@@ -38,6 +38,14 @@
             </div>
 
             <div class="card-body bg-body p-2 p-md-4 area-scroll">
+                <!-- Fase 30: armazém sem materiais cadastrados -->
+                <div th:if="${#lists.isEmpty(todosMateriais)}" class="text-center py-5 px-3">
+                    <i class="bi bi-tags fs-1 text-success d-block mb-2"></i>
+                    <h5 class="fw-bold">Nenhum material com preço neste armazém</h5>
+                    <p class="text-body-secondary small mb-3">Para pesar, cadastre os materiais e os preços na Tabela de Preços.
+                        Este atendimento continua na fila; você pode voltar depois ou cancelá-lo no painel (lixeira).</p>
+                    <a th:if="${session.perfilUser == 'GESTOR'}" href="/admin/precos" class="btn btn-success fw-bold">Ir para a Tabela de Preços</a>
+                </div>
                 <div th:each="mat : ${todosMateriais}" class="row align-items-center border-bottom py-3 mx-0 material-row">
 
                     <div class="col-12 col-lg-4 mb-3 mb-lg-0 text-center text-lg-start">
@@ -91,8 +99,9 @@
                         </button>
                     </div>
                     <div class="col-md-4">
-                        <a href="/admin/coletas" class="btn btn-outline-secondary btn-lg w-100 fw-bold py-3" onclick="limparRascunho()">
-                            Cancelar
+                        <a href="/admin/coletas" class="btn btn-outline-secondary btn-lg w-100 fw-bold py-3" onclick="limparRascunho()"
+                           title="Descarta os pesos digitados e volta ao painel. O atendimento continua na fila; para cancelá-lo, use a lixeira no painel.">
+                            Sair sem salvar
                         </a>
                     </div>
                 </div>

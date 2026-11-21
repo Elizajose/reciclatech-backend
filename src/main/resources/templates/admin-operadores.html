@@ -3,173 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coletaê- Gestão de Funcionários</title>
-    <!-- Bootstrap 5 -->
+    <title th:text="${'Equipe - ' + (session.nomeArmazem != null ? session.nomeArmazem : 'Armazém') + ' | Coletaê'}">Equipe | Coletaê</title>
+    <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>
-        body { background-color: #f8f9fa; }
-        .navbar-custom { background-color: #198754; }
-        .card-custom { border-radius: 10px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/admin-operadores.css}">
 </head>
-<body>
+<body class="bg-body-tertiary">
 
-<!-- CABEÇALHO -->
-<nav class="navbar navbar-dark navbar-custom mb-4 px-3">
-    <div class="container-fluid">
-        <span class="navbar-brand mb-0 h1 fw-bold">♻️ ColetaAí - Gestão de Equipe</span>
-        <a href="/admin/coletas" class="btn btn-light btn-sm fw-bold">Voltar ao Balcão</a>
+<!-- Fase 30: topo com a logo e o nome do armazém (a equipe é do armazém, não do Coletaê) -->
+<nav class="navbar navbar-dark bg-success shadow-sm">
+    <div class="container-fluid px-md-5">
+        <span class="navbar-brand fw-bold d-flex align-items-center gap-2 mb-0 min-w-0">
+            <img th:if="${versaoLogoPainel != null}" th:src="@{/admin/logo(v=${versaoLogoPainel})}" alt="Logo do armazém" class="nav-logo">
+            <i th:if="${versaoLogoPainel == null}" class="bi bi-recycle fs-3"></i>
+            <span class="text-truncate" th:text="${session.nomeArmazem != null ? session.nomeArmazem : 'Seu armazém'}">Armazém</span>
+            <span class="d-none d-md-inline fw-normal opacity-75">· Gestão de Equipe</span>
+        </span>
+        <a href="/admin/coletas" class="btn btn-light btn-sm fw-bold"><i class="bi bi-arrow-left"></i> Voltar ao painel</a>
     </div>
 </nav>
+
 <div class="container-lg mt-3" th:if="${erroTela != null or avisoTela != null or sucessoTela != null}">
     <div th:replace="~{fragments/avisos :: avisos}"></div>
 </div>
 
+<div class="container py-4" style="max-width: 1100px;">
 
-<div class="container">
-
-    <!-- ALERTAS DE ERRO OU SUCESSO -->
-    <div th:if="${param.erro != null}" class="alert alert-danger" role="alert">
+    <div th:if="${param.erro != null}" class="alert alert-danger small fw-bold" role="alert">
         Não foi possível cadastrar. Esse usuário já existe neste armazém (ou está em branco).
     </div>
 
-    <div class="alert alert-success d-flex flex-wrap align-items-center gap-2" th:if="${codigoArmazem != null and !codigoArmazem.isEmpty()}">
-        <i class="bi bi-key-fill"></i>
-        <span>Código do seu armazém para o login dos operadores:</span>
-        <strong class="fs-5 font-monospace user-select-all" th:text="${codigoArmazem}">K7M2QX</strong>
-        <span class="small text-muted w-100">Na tela de login, o operador escolhe "Sou operador" e digita este código, o usuário e a senha dele.</span>
+    <!-- Cabeçalho -->
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Equipe do balcão</h1>
+            <p class="text-body-secondary mb-0">Operadores fazem pesagens, recibos e atendem os agendamentos. Não veem o financeiro.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="contador"><strong th:text="${#lists.size(operadores)}">0</strong> <span th:text="${#lists.size(operadores) == 1 ? 'operador' : 'operadores'}">operadores</span></span>
+            <span class="contador contador-ativo"><strong th:text="${#lists.size(operadores.?[ativo])}">0</strong> ativos</span>
+        </div>
     </div>
 
-    <div class="row">
-        <!-- COLUNA ESQUERDA: FORMULÁRIO DE CADASTRO -->
-        <div class="col-md-4 mb-4">
-            <div class="card card-custom p-3">
-                <div class="card-body">
-                    <h5 class="card-title text-success fw-bold mb-3">Novo Operador</h5>
-                    <p class="text-muted small">Crie um acesso para seu balconista. Ele não terá acesso ao financeiro.</p>
-
-                    <!-- Formulário com autocomplete desativado -->
-                    <form action="/admin/operadores/novo" method="POST" autocomplete="off">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">Nome Completo</label>
-                            <input type="text" name="nome" class="form-control" placeholder="Ex: João da Silva" autocomplete="off" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">Usuário (único neste armazém)</label>
-                            <input type="text" name="login" class="form-control" placeholder="Ex: joao.balcao" autocomplete="off" required>
-                        </div>
-                        <div class="mb-4">
-                            <label class="form-label fw-bold small">Senha de Acesso</label>
-                            <input type="password" name="senha" class="form-control" placeholder="***" autocomplete="new-password" required>
-                        </div>
-                        <button type="submit" class="btn btn-success w-100 fw-bold">Cadastrar Acesso</button>
-                    </form>
+    <!-- Como o operador entra -->
+    <div class="codigo-card mb-4" th:if="${codigoArmazem != null and !codigoArmazem.isEmpty()}">
+        <div class="row g-3 align-items-center">
+            <div class="col-lg-5">
+                <div class="small text-white-50 fw-bold text-uppercase">Código do armazém</div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="codigo-valor font-monospace user-select-all" id="codigoArmazem" th:text="${codigoArmazem}">K7M2QX</span>
+                    <button type="button" class="btn btn-sm btn-light fw-bold" id="copiarCodigo" title="Copiar o código">
+                        <i class="bi bi-clipboard"></i> <span>Copiar</span>
+                    </button>
                 </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="small fw-bold mb-2">Como o operador entra</div>
+                <ol class="passos mb-0">
+                    <li>Na tela de entrada, escolhe <strong>"Sou operador"</strong>.</li>
+                    <li>Digita este <strong>código</strong>, o <strong>usuário</strong> e a <strong>senha</strong> dele.</li>
+                    <li>Pronto: ele cai direto no balcão deste armazém.</li>
+                </ol>
             </div>
         </div>
+    </div>
 
-        <!-- COLUNA DIREITA: LISTA DE FUNCIONÁRIOS -->
-        <div class="col-md-8">
-            <div class="card card-custom p-3">
-                <div class="card-body">
+    <div class="row g-4">
+        <!-- Novo operador -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body p-4">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="icone-titulo"><i class="bi bi-person-plus-fill"></i></span>
+                    <h2 class="h5 fw-bold mb-0">Novo operador</h2>
+                </div>
+                <p class="text-body-secondary small mb-3">Crie um acesso para cada balconista. Cada um com o seu usuário: assim o recibo mostra quem atendeu.</p>
 
-                    <!-- CABEÇALHO DA TABELA COM O BOTÃO SÓLIDO -->
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="card-title text-success fw-bold m-0">Equipe Cadastrada</h5>
-                        <button type="button" class="btn btn-sm btn-dark d-flex align-items-center gap-2 px-3 py-2 shadow-sm rounded-pill fw-bold" onclick="togglePrivacy()" id="privacyBtn" title="Ocultar/Exibir Dados">
-                            <i class="bi bi-eye-slash fs-6" id="privacyIcon"></i>
-                            <span id="privacyText" style="font-size: 0.85rem;">Ocultar Dados</span>
-                        </button>
+                <form action="/admin/operadores/novo" method="POST" autocomplete="off" id="formOperador">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small" for="opNome">Nome completo</label>
+                        <input type="text" name="nome" id="opNome" class="form-control" placeholder="Ex.: João da Silva" maxlength="100" autocomplete="off" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small" for="opLogin">Usuário</label>
+                        <div class="input-group">
+                            <span class="input-group-text">@</span>
+                            <input type="text" name="login" id="opLogin" class="form-control" placeholder="joao.silva" maxlength="40" autocomplete="off" required
+                                   pattern="\S+" title="Sem espaços">
+                        </div>
+                        <div class="form-text">Sugerido a partir do nome. Sem espaços, até 40 letras. Único neste armazém.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small" for="opSenha">Senha de acesso</label>
+                        <div class="input-group">
+                            <input type="password" name="senha" id="opSenha" class="form-control" autocomplete="new-password" maxlength="72" required
+                                   th:attr="minlength=${senhaOperadorMin}">
+                            <button type="button" class="btn btn-outline-secondary" id="verSenhaOp" title="Mostrar senha" aria-label="Mostrar senha"><i class="bi bi-eye"></i></button>
+                        </div>
+                        <div class="form-text">Pelo menos <span th:text="${senhaOperadorMin}">6</span> caracteres. Passe a senha ao operador pessoalmente.</div>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 fw-bold"><i class="bi bi-check2-circle"></i> Cadastrar operador</button>
+                </form>
+            </div></div>
+        </div>
+
+        <!-- Lista da equipe -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="icone-titulo"><i class="bi bi-people-fill"></i></span>
+                        <h2 class="h5 fw-bold mb-0">Equipe cadastrada</h2>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-dark rounded-pill fw-bold d-flex align-items-center gap-2 px-3"
+                            onclick="togglePrivacy()" id="privacyBtn" title="Esconder nomes e usuários (para mostrar a tela a alguém)"
+                            th:if="${!#lists.isEmpty(operadores)}">
+                        <i class="bi bi-eye-slash" id="privacyIcon"></i>
+                        <span id="privacyText">Ocultar dados</span>
+                    </button>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <div th:each="op : ${operadores}" class="membro" th:classappend="${op.ativo} ? '' : 'membro-bloqueado'">
+                        <div class="membro-avatar" aria-hidden="true"
+                             th:text="${op.nome != null and !#strings.isEmpty(op.nome) ? #strings.toUpperCase(#strings.substring(op.nome,0,1)) : '?'}">J</div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="fw-bold text-truncate operator-field" th:text="${op.nome}" th:attr="data-real=${op.nome}">Nome</div>
+                            <div class="small text-body-secondary text-truncate">@<span class="operator-field" th:text="${op.login}" th:attr="data-real=${op.login}">login</span></div>
+                        </div>
+                        <span th:if="${op.ativo}" class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle">Ativo</span>
+                        <span th:unless="${op.ativo}" class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis border">Bloqueado</span>
+                        <form action="/admin/operadores/status" method="POST" class="m-0 form-status" th:data-confirmar="${op.ativo}">
+                            <input type="hidden" name="id" th:value="${op.id}">
+                            <input type="hidden" name="ativo" th:value="${op.ativo ? 'false' : 'true'}">
+                            <button type="submit" class="btn btn-sm fw-bold text-nowrap" th:classappend="${op.ativo ? 'btn-outline-danger' : 'btn-outline-success'}">
+                                <i class="bi" th:classappend="${op.ativo ? 'bi-lock' : 'bi-unlock'}"></i>
+                                <span th:text="${op.ativo ? 'Bloquear' : 'Liberar'}">Bloquear</span>
+                            </button>
+                        </form>
                     </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                            <tr>
-                                <th>Nome</th>
-                                <th>Login</th>
-                                <th>Status</th>
-                                <th class="text-end">Ação</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <!-- Thymeleaf faz o loop na lista de operadores -->
-                            <tr th:each="op : ${operadores}">
-                                <!-- Coluna Nome com atributo data-real -->
-                                <td class="fw-bold operator-field" th:text="${op.nome}" th:data-real="${op.nome}">Nome do Funcionario</td>
-
-                                <!-- Coluna Login com atributo data-real -->
-                                <td class="text-muted operator-field" th:text="${op.login}" th:data-real="${op.login}">login.func</td>
-
-                                <!-- Coluna Status com atributo data-real guardando o texto do status -->
-                                <td>
-                                    <span class="operator-status-wrapper">
-                                        <span th:if="${op.ativo}" class="badge bg-success operator-field" th:data-real="Ativo">Ativo</span>
-                                        <span th:unless="${op.ativo}" class="badge bg-secondary operator-field" th:data-real="Bloqueado">Bloqueado</span>
-                                    </span>
-                                </td>
-
-                                <td class="text-end">
-                                    <!-- Botão de Bloquear / Desbloquear -->
-                                    <form action="/admin/operadores/status" method="POST" class="d-inline">
-                                        <input type="hidden" name="id" th:value="${op.id}">
-                                        <input th:if="${op.ativo}" type="hidden" name="ativo" value="false">
-                                        <input th:unless="${op.ativo}" type="hidden" name="ativo" value="true">
-
-                                        <button type="submit" class="btn btn-sm" th:classappend="${op.ativo ? 'btn-outline-danger' : 'btn-outline-success'}">
-                                            <span th:text="${op.ativo ? 'Bloquear Acesso' : 'Liberar Acesso'}"></span>
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                            <!-- Caso a lista esteja vazia -->
-                            <tr th:if="${#lists.isEmpty(operadores)}">
-                                <td colspan="4" class="text-center text-muted py-4">
-                                    Nenhum operador cadastrado ainda.
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
+                    <div th:if="${#lists.isEmpty(operadores)}" class="vazio text-center py-5">
+                        <div class="vazio-icone mx-auto mb-3"><i class="bi bi-people"></i></div>
+                        <h3 class="h6 fw-bold mb-1">Nenhum operador cadastrado ainda</h3>
+                        <p class="small text-body-secondary mb-0">Cadastre ao lado quem trabalha no balcão.<br>Você (dono) continua entrando com o seu e-mail.</p>
                     </div>
                 </div>
-            </div>
+            </div></div>
         </div>
     </div>
 </div>
 
-<!-- SCRIPT DE PRIVACIDADE TOTAL DA LINHA -->
-<script>
-    let dataHidden = false;
-
-    function togglePrivacy() {
-        dataHidden = !dataHidden;
-        const fields = document.querySelectorAll('.operator-field');
-        const icon = document.getElementById('privacyIcon');
-        const textLabel = document.getElementById('privacyText');
-        const btn = document.getElementById('privacyBtn');
-
-        fields.forEach(el => {
-            if (dataHidden) {
-                el.textContent = '••••••••';
-            } else {
-                el.textContent = el.getAttribute('data-real');
-            }
-        });
-
-        if (dataHidden) {
-            icon.classList.replace('bi-eye-slash', 'bi-eye');
-            textLabel.textContent = 'Exibir Dados';
-            btn.classList.replace('btn-dark', 'btn-outline-dark');
-        } else {
-            icon.classList.replace('bi-eye', 'bi-eye-slash');
-            textLabel.textContent = 'Ocultar Dados';
-            btn.classList.replace('btn-outline-dark', 'btn-dark');
-        }
-    }
-</script>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/admin-operadores.js(v=1)}"></script>
 </body>
 </html>

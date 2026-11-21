@@ -1,0 +1,30 @@
+/* Fase 30: tela de Gestão de Equipe */
+.min-w-0 { min-width: 0; }
+.nav-logo { width: 38px; height: 38px; border-radius: 10px; object-fit: cover; border: 2px solid rgba(255, 255, 255, .8); background: #fff; }
+
+.contador { display: inline-flex; align-items: baseline; gap: 6px; padding: 8px 14px; border-radius: 50px; background: #fff; border: 1px solid #e5e7eb; font-size: .9rem; }
+.contador strong { font-size: 1.1rem; }
+.contador-ativo { background: #e8f5ee; border-color: #b7d8c6; color: #146c43; }
+
+.codigo-card { border-radius: 18px; padding: 22px 24px; color: #fff; background: linear-gradient(120deg, #0f5132 0%, #198754 60%, #2fa36b 100%); }
+.codigo-valor { font-size: 2rem; font-weight: 900; letter-spacing: 4px; }
+.passos { padding-left: 1.2rem; font-size: .9rem; }
+.passos li { margin-bottom: 2px; }
+
+.icone-titulo { width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: #e8f5ee; color: #198754; }
+
+.membro { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid #e9ecef; border-radius: 14px; background: #fff; transition: box-shadow .2s, border-color .2s; }
+.membro:hover { border-color: #b7d8c6; box-shadow: 0 6px 16px -10px rgba(0, 0, 0, .25); }
+.membro-avatar { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #fff; background: #198754; }
+.membro-bloqueado { background: #f8f9fa; }
+.membro-bloqueado .membro-avatar { background: #adb5bd; }
+
+.vazio { border: 2px dashed #dee2e6; border-radius: 16px; }
+.vazio-icone { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; background: #e8f5ee; color: #198754; }
+
+@media (max-width: 575.98px) {
+    .membro { flex-wrap: wrap; }
+    .membro form { width: 100%; }
+    .membro form .btn { width: 100%; }
+    .codigo-valor { font-size: 1.6rem; }
+}

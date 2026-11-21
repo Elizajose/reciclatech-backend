@@ -386,33 +386,40 @@
     <i class="bi bi-life-preserver me-1"></i> Precisa de Ajuda?
 </button>
 
-<div class="modal fade" id="modalSuporte" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-dark text-white border-0">
-                <h5 class="modal-title fw-bold"><i class="bi bi-headset me-2 text-warning"></i> Central de Suporte Coletaê</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-0">
-                <ul class="nav nav-tabs nav-fill bg-light pt-2 px-2" id="ajudaTabs" role="tablist">
+<!-- Fase 30: Central de Ajuda com busca, tutoriais, chamado e contato direto -->
+<div class="modal fade" id="modalSuporte" tabindex="-1" aria-labelledby="modalSuporteTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="ajuda-topo text-white p-4">
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                        <h5 class="fw-bold mb-1" id="modalSuporteTitulo"><i class="bi bi-life-preserver me-2"></i>Central de Ajuda</h5>
+                        <p class="small mb-0 text-white-50">Tutoriais rápidos, abrir um chamado ou falar direto com a gente.</p>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <ul class="nav ajuda-abas mt-3" id="ajudaTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active fw-bold text-dark border-bottom-0" data-bs-toggle="tab" data-bs-target="#tab-faq" type="button" role="tab">
-                            <i class="bi bi-journal-text text-primary me-1"></i> Base de Conhecimento
-                        </button>
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-faq" type="button" role="tab"><i class="bi bi-play-circle me-1"></i> Tutoriais</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link fw-bold text-muted border-bottom-0" data-bs-toggle="tab" data-bs-target="#tab-chamado" type="button" role="tab">
-                            <i class="bi bi-envelope-paper text-success me-1"></i> Abrir Chamado Técnico
-                        </button>
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-chamado" type="button" role="tab"><i class="bi bi-envelope-paper me-1"></i> Abrir chamado</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-contato" type="button" role="tab"><i class="bi bi-whatsapp me-1"></i> Contato</button>
                     </li>
                 </ul>
-
-                <div class="tab-content p-4 text-body">
+            </div>
+            <div class="modal-body p-4 text-body">
+                <div class="tab-content">
                     <div class="tab-pane fade show active" id="tab-faq" role="tabpanel">
-                        <h6 class="fw-bold mb-3 text-secondary">Perguntas Frequentes & Tutoriais</h6>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text bg-body"><i class="bi bi-search"></i></span>
+                            <input type="search" class="form-control" id="buscaAjuda" placeholder="Buscar: operador, recibo, VIP, preço..." aria-label="Buscar nos tutoriais">
+                        </div>
                         <div class="accordion" id="accordionFaq">
 
-                            <div class="accordion-item shadow-sm mb-2 border-0 rounded">
+                            <div class="accordion-item ajuda-item mb-2">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button collapsed fw-bold rounded" type="button" data-bs-toggle="collapse" data-bs-target="#faqOperadores">
                                         <i class="bi bi-people-fill text-success me-2"></i> Como cadastrar e gerenciar operadores (funcionários)?
@@ -428,7 +435,7 @@
                                 </div>
                             </div>
 
-                            <div class="accordion-item shadow-sm mb-2 border-0 rounded">
+                            <div class="accordion-item ajuda-item mb-2">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button collapsed fw-bold rounded" type="button" data-bs-toggle="collapse" data-bs-target="#faqBalcao">
                                         <i class="bi bi-shop text-primary me-2"></i> Como realizar um Atendimento de Balcão e emitir o recibo digital?
@@ -444,7 +451,7 @@
                                 </div>
                             </div>
 
-                            <div class="accordion-item shadow-sm mb-2 border-0 rounded">
+                            <div class="accordion-item ajuda-item mb-2">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button collapsed fw-bold rounded" type="button" data-bs-toggle="collapse" data-bs-target="#faqSaida">
                                         <i class="bi bi-truck text-warning me-2"></i> Como cadastrar cliente VIP?
@@ -460,7 +467,7 @@
                                 </div>
                             </div>
 
-                            <div class="accordion-item shadow-sm mb-2 border-0 rounded">
+                            <div class="accordion-item ajuda-item mb-2">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button collapsed fw-bold rounded" type="button" data-bs-toggle="collapse" data-bs-target="#faqCaixa">
                                         <i class="bi bi-bar-chart-fill text-danger me-2"></i> Como cadastrar os materiais recicláveis?
@@ -477,50 +484,70 @@
                             </div>
 
                         </div>
+                        <div id="ajudaNada" class="text-center text-body-secondary small py-4 d-none">
+                            Nada encontrado. Tente outra palavra ou <a href="#" data-ir-aba="#tab-chamado" class="fw-bold text-success">abra um chamado</a>.
+                        </div>
                     </div>
 
                     <div class="tab-pane fade" id="tab-chamado" role="tabpanel">
-                        <div class="alert alert-info small border-0 shadow-sm rounded-3 mb-4">
-                            <i class="bi bi-info-circle-fill me-1"></i> Precisa de ajuda com algum erro? Descreva abaixo e nossa equipe técnica investigará o caso.
-                        </div>
-                        <form action="/admin/suporte/enviar" method="POST" enctype="multipart/form-data" onsubmit="btnEnviar = this.querySelector('button[type=submit]'); btnEnviar.disabled = true; btnEnviar.innerHTML = '<i class=\'bi bi-hourglass-split spin\'></i> Enviando...';">
+                        <p class="small text-body-secondary mb-3"><i class="bi bi-info-circle me-1"></i>Descreva o que aconteceu. Um print da tela ajuda muito a resolver mais rápido.</p>
+                        <form action="/admin/suporte/enviar" method="POST" enctype="multipart/form-data" id="formChamado">
                             <div class="row g-3">
-                                <div class="col-md-8">
-                                    <label class="form-label fw-bold small">Assunto do Chamado</label>
-                                    <input type="text" name="assunto" class="form-control bg-body-tertiary border-0 shadow-sm" placeholder="Ex: Erro ao fechar caixa..." required>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold small">Prioridade</label>
-                                    <select name="prioridade" class="form-select bg-body-tertiary border-0 shadow-sm text-dark fw-bold" required>
-                                        <option value="baixa">Baixa (Dúvida)</option>
-                                        <option value="normal" selected>Normal</option>
-                                        <option value="urgente">Urgente (Erro no Sistema)</option>
-                                    </select>
-                                </div>
-
                                 <div class="col-12">
-                                    <label class="form-label fw-bold small">E-mail para resposta (Opcional)</label>
-                                    <input type="email" name="emailRetorno" class="form-control bg-body-tertiary border-0 shadow-sm" placeholder="seuemail@exemplo.com">
-                                    <div class="form-text small">Ou responderemos direto no WhatsApp cadastrado no galpão.</div>
+                                    <label class="form-label fw-bold small" for="chamadoAssunto">Assunto</label>
+                                    <input type="text" name="assunto" id="chamadoAssunto" class="form-control" placeholder="Ex.: Erro ao fechar o caixa" maxlength="120" required>
                                 </div>
-
                                 <div class="col-12">
-                                    <label class="form-label fw-bold small"><i class="bi bi-camera-fill text-secondary"></i> Anexar Print da Tela (Opcional)</label>
-                                    <input type="file" name="printTela" class="form-control bg-body-tertiary border-0 shadow-sm" accept="image/png, image/jpeg, image/jpg">
+                                    <span class="form-label fw-bold small d-block mb-2">Prioridade</span>
+                                    <div class="btn-group w-100 prioridade" role="group" aria-label="Prioridade">
+                                        <input type="radio" class="btn-check" name="prioridade" id="prBaixa" value="baixa" autocomplete="off">
+                                        <label class="btn btn-outline-secondary" for="prBaixa">Dúvida</label>
+                                        <input type="radio" class="btn-check" name="prioridade" id="prNormal" value="normal" autocomplete="off" checked>
+                                        <label class="btn btn-outline-primary" for="prNormal">Normal</label>
+                                        <input type="radio" class="btn-check" name="prioridade" id="prUrgente" value="urgente" autocomplete="off">
+                                        <label class="btn btn-outline-danger" for="prUrgente">Urgente: o sistema parou</label>
+                                    </div>
                                 </div>
-
                                 <div class="col-12">
-                                    <label class="form-label fw-bold small">Descrição Detalhada do Problema</label>
-                                    <textarea name="descricao" class="form-control bg-body-tertiary border-0 shadow-sm" rows="4" placeholder="Explique com detalhes o que aconteceu, onde você clicou e qual o erro exibido..." required></textarea>
+                                    <label class="form-label fw-bold small" for="chamadoDescricao">O que aconteceu?</label>
+                                    <textarea name="descricao" id="chamadoDescricao" class="form-control" rows="4" maxlength="3000" required
+                                              placeholder="Em qual tela você estava, onde clicou e qual mensagem apareceu."></textarea>
+                                    <div class="form-text text-end"><span id="chamadoContador">0</span>/3000</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small" for="chamadoEmail">E-mail para resposta <span class="fw-normal text-body-secondary">(opcional)</span></label>
+                                    <input type="email" name="emailRetorno" id="chamadoEmail" class="form-control" placeholder="seuemail@exemplo.com" maxlength="150">
+                                    <div class="form-text">Sem e-mail, respondemos no WhatsApp do armazém.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small" for="chamadoPrint">Print da tela <span class="fw-normal text-body-secondary">(opcional)</span></label>
+                                    <input type="file" name="printTela" id="chamadoPrint" class="form-control" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf">
+                                    <div class="form-text">Imagem ou PDF de até 5 MB.</div>
                                 </div>
                             </div>
-                            <div class="text-end mt-4">
-                                <button type="button" class="btn btn-outline-secondary px-4 me-2 fw-bold" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="submit" class="btn btn-success px-4 fw-bold shadow-sm">
-                                    <i class="bi bi-send-fill me-1"></i> Enviar Chamado
-                                </button>
+                            <div class="d-flex justify-content-end gap-2 mt-4">
+                                <button type="button" class="btn btn-outline-secondary fw-bold" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-success fw-bold px-4"><i class="bi bi-send-fill me-1"></i> Enviar chamado</button>
                             </div>
                         </form>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-contato" role="tabpanel">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <a class="contato-card text-decoration-none" href="https://wa.me/5587991919496?text=Ol%C3%A1!%20Preciso%20de%20ajuda%20com%20o%20Colet%C3%AA." target="_blank" rel="noopener">
+                                    <span class="contato-icone bg-success text-white"><i class="bi bi-whatsapp"></i></span>
+                                    <span><span class="fw-bold d-block text-body">WhatsApp</span><small class="text-body-secondary">(87) 99191-9496 · dúvidas rápidas</small></span>
+                                </a>
+                            </div>
+                            <div class="col-md-6">
+                                <a class="contato-card text-decoration-none" href="mailto:contatocoletae@gmail.com">
+                                    <span class="contato-icone bg-primary text-white"><i class="bi bi-envelope-fill"></i></span>
+                                    <span><span class="fw-bold d-block text-body">E-mail</span><small class="text-body-secondary">contatocoletae@gmail.com</small></span>
+                                </a>
+                            </div>
+                        </div>
+                        <p class="small text-body-secondary mt-3 mb-0">Para erros no sistema, prefira <a href="#" data-ir-aba="#tab-chamado" class="fw-bold text-success">abrir um chamado</a>: ele chega com o nome do armazém e o print.</p>
                     </div>
                 </div>
             </div>
@@ -530,7 +557,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<script th:src="@{/js/admin-lista-coletas.js?v=3}"></script>
+<script th:src="@{/js/admin-lista-coletas.js?v=4}"></script>
 
 </body>
 </html>

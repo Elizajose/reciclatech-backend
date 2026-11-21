@@ -342,6 +342,16 @@ public class TelaController {
             cpfPadronizado = DocumentoValidator.formatar(cpf);
         }
 
+        // Fase 30: sem nenhum material na Tabela de Preços não há o que pesar; antes o pedido ficava preso na fila
+        try {
+            if (googleSheetsService.listarMateriais().isEmpty()) {
+                ra.addFlashAttribute("erroTela", "Cadastre pelo menos um material na Tabela de Preços antes de iniciar uma pesagem.");
+                return "redirect:/admin/coletas";
+            }
+        } catch (Exception e) {
+            log.warn("Não foi possível conferir os materiais antes da pesagem: {}", e.getMessage());
+        }
+
         try {
             // Cliente de balcão não tem telefone: a chave é o número (id) gerado pelo banco, nunca mais a hora do relógio.
             Usuario usuarioBalcao = new Usuario();
@@ -1190,6 +1200,8 @@ public class TelaController {
 
         model.addAttribute("operadores", googleSheetsService.listarFuncionarios());
         model.addAttribute("codigoArmazem", googleSheetsService.obterCodigoArmazemLogado());
+        model.addAttribute("senhaOperadorMin", DatabaseService.SENHA_OPERADOR_MIN);
+        prepararTopoDoPainel(model, session); // Fase 30: logo e nome do armazém no topo
         return "admin-operadores";
     }
 
@@ -1357,6 +1369,11 @@ public class TelaController {
         if (emailRetorno != null && !emailRetorno.isBlank()
                 && !com.reciclatech.backend.util.EmailValido.formatoValido(emailRetorno)) {
             redirectAttributes.addFlashAttribute("erroSuporte", "O e-mail de retorno parece inválido. Confira e tente de novo.");
+            return "redirect:/admin/coletas";
+        }
+        // Fase 30: limites de tamanho (a tela já limita; aqui é a garantia)
+        if (assunto.isBlank() || assunto.length() > 150 || descricao.isBlank() || descricao.length() > 5000) {
+            redirectAttributes.addFlashAttribute("erroSuporte", "Preencha o assunto (até 150 letras) e a descrição (até 5000 letras).");
             return "redirect:/admin/coletas";
         }
         // evita quebra de linha no assunto do e-mail (injeção de cabeçalho)

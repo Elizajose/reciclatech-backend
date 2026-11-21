@@ -120,3 +120,56 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     modal.addEventListener('shown.bs.modal', () => { if (atual) atual.focus(); });
 });
+
+// ==========================================
+// Fase 30: Central de Ajuda (busca nos tutoriais, contador e envio do chamado)
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const semAcento = t => (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+    const busca = document.getElementById('buscaAjuda');
+    const nada = document.getElementById('ajudaNada');
+    if (busca) {
+        busca.addEventListener('input', () => {
+            const termo = semAcento(busca.value.trim());
+            let algum = false;
+            document.querySelectorAll('#accordionFaq .accordion-item').forEach(item => {
+                const mostra = !termo || semAcento(item.textContent).includes(termo);
+                item.classList.toggle('d-none', !mostra);
+                if (mostra) algum = true;
+            });
+            if (nada) nada.classList.toggle('d-none', algum);
+        });
+    }
+
+    // links "abra um chamado" dentro da ajuda trocam de aba
+    document.querySelectorAll('[data-ir-aba]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const botao = document.querySelector('#ajudaTabs [data-bs-target="' + link.dataset.irAba + '"]');
+            if (botao && window.bootstrap && bootstrap.Tab) bootstrap.Tab.getOrCreateInstance(botao).show();
+        });
+    });
+
+    const descricao = document.getElementById('chamadoDescricao');
+    const contador = document.getElementById('chamadoContador');
+    if (descricao && contador) {
+        const atualizar = () => { contador.textContent = descricao.value.length; };
+        descricao.addEventListener('input', atualizar);
+        atualizar();
+    }
+
+    const formChamado = document.getElementById('formChamado');
+    if (formChamado) {
+        formChamado.addEventListener('submit', (e) => {
+            const arquivo = document.getElementById('chamadoPrint');
+            if (arquivo && arquivo.files && arquivo.files[0] && arquivo.files[0].size > 5 * 1024 * 1024) {
+                e.preventDefault();
+                alert('O print passa de 5 MB. Escolha uma imagem menor.');
+                return;
+            }
+            const botao = formChamado.querySelector('button[type=submit]');
+            if (botao) { botao.disabled = true; botao.textContent = 'Enviando...'; }
+        });
+    }
+});

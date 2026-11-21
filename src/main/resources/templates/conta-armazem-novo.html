@@ -65,9 +65,12 @@
                 </div>
 
                 <div th:unless="${personalizado}">
-                    <div th:if="${somentePersonalizado}" class="alert alert-warning small py-2">
-                        Você já tem um armazém nos planos START/PRO, que permitem 1 armazém por conta. Para cadastrar outro, escolha o <strong>Personalizado</strong>.
-                        Seu armazém atual continua como está por enquanto; ao ativar a assinatura, o suporte passa todos os seus armazéns para o Personalizado.</div>
+                    <div th:if="${somentePersonalizado}" class="alert alert-info small py-2">
+                        <div class="fw-bold mb-1"><i class="bi bi-info-circle-fill"></i> Você não perde nada do armazém que já tem.</div>
+                        Os planos START e PRO são para 1 armazém. Por isso o novo entra no <strong>Personalizado</strong>.
+                        O armazém atual continua funcionando normalmente, com todos os dados e o plano dele.
+                        Quando você ativar a assinatura, nossa equipe passa todos os seus armazéns para o Personalizado e a cobrança vira uma só.
+                    </div>
 
                     <label class="plano" for="pStart" th:classappend="${somentePersonalizado} ? 'desativado'">
                         <span class="d-flex justify-content-between align-items-center gap-2">

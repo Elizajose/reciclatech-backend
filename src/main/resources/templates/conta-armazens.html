@@ -141,6 +141,9 @@
                     <span class="badge bg-light text-dark border" th:text="${a.plano}">START</span>
                 </div>
                 <div class="small text-muted" th:text="${infoStatus.get(a.id)}">Situação</div>
+                <div class="small text-primary mt-1" th:if="${personalizado and a.plano != 'PERSONALIZADO'}">
+                    <i class="bi bi-arrow-repeat"></i> Continua no <span th:text="${a.plano}">START</span> por enquanto; entra no Personalizado quando a assinatura for ativada.
+                </div>
                 <div class="codigo small mt-3" th:if="${a.codigo != null}">
                     <i class="bi bi-key"></i> Código dos operadores:
                     <strong class="font-monospace user-select-all" th:text="${a.codigo}">K7M2QX</strong>
