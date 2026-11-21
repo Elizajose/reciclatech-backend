@@ -574,6 +574,10 @@ public class TelaController {
 
             List<com.reciclatech.backend.util.Recibos.Grupo> grupos =
                     com.reciclatech.backend.util.Recibos.agrupar(googleSheetsService.buscarVendasPorUsuario(id));
+            // Fase 33: operador só abre os recibos que ele atendeu (nem pelo endereço direto)
+            boolean soOsProprios = googleSheetsService.veSoOsProprios();
+            if (soOsProprios) grupos = grupos.stream().filter(googleSheetsService::podeVerRecibo).collect(Collectors.toList());
+            model.addAttribute("soOsProprios", soOsProprios);
             com.reciclatech.backend.util.Recibos.Grupo escolhido =
                     com.reciclatech.backend.util.Recibos.escolher(grupos, recibo).orElse(null);
             List<Oferta> vendasReais = escolhido == null ? new ArrayList<>() : escolhido.itens;
@@ -664,6 +668,7 @@ public class TelaController {
         model.addAttribute("ehHoje", escolhido.equals(hoje));
         model.addAttribute("diaAnterior", escolhido.minusDays(1));
         model.addAttribute("diaSeguinte", escolhido.plusDays(1));
+        model.addAttribute("soOsProprios", googleSheetsService.veSoOsProprios());
         try {
             List<DatabaseService.ReciboDoDia> recibos = googleSheetsService.recibosDoDia(escolhido);
             model.addAttribute("recibos", recibos);
@@ -1150,6 +1155,53 @@ public class TelaController {
     // =========================================================================
     // 6. FINANCEIRO E ANÁLISES (RESTRITO GESTOR)
     // =========================================================================
+
+    /** Fase 33: atendimentos por funcionário (só o dono/gestor; fica dentro do Financeiro). */
+    @GetMapping("/admin/analises/equipe")
+    public String desempenhoEquipe(@RequestParam(required = false) String periodo,
+                                   @RequestParam(required = false) String de,
+                                   @RequestParam(required = false) String ate,
+                                   Model model, HttpSession session, HttpServletResponse response) {
+        if (session.getAttribute("adminLogado") == null) return "redirect:/login";
+        if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
+        if (!"GESTOR".equalsIgnoreCase((String) session.getAttribute("perfilUser"))) return "redirect:/admin/coletas";
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
+        LocalDate hoje = LocalDate.now(ZoneId.of("America/Recife"));
+        String p = periodo == null ? "mes" : periodo;
+        LocalDate ini, fim = hoje;
+        switch (p) {
+            case "hoje" -> ini = hoje;
+            case "7d" -> ini = hoje.minusDays(6);
+            case "30d" -> ini = hoje.minusDays(29);
+            case "mesPassado" -> { ini = hoje.withDayOfMonth(1).minusMonths(1); fim = hoje.withDayOfMonth(1).minusDays(1); }
+            case "custom" -> {
+                try {
+                    ini = LocalDate.parse(de); fim = LocalDate.parse(ate);
+                    if (fim.isAfter(hoje)) fim = hoje;
+                    if (ini.isAfter(fim)) { LocalDate t = ini; ini = fim; fim = t; }
+                    if (ini.isBefore(fim.minusDays(366))) ini = fim.minusDays(366);
+                } catch (RuntimeException e) { p = "mes"; ini = hoje.withDayOfMonth(1); fim = hoje; }
+            }
+            default -> { p = "mes"; ini = hoje.withDayOfMonth(1); }
+        }
+        model.addAttribute("periodoSel", p);
+        model.addAttribute("periodoDe", ini);
+        model.addAttribute("periodoAte", fim);
+        try {
+            List<com.reciclatech.backend.util.DesempenhoEquipe.Funcionario> equipe = new ArrayList<>();
+            for (com.reciclatech.backend.model.Funcionario f : googleSheetsService.listarFuncionarios()) {
+                equipe.add(new com.reciclatech.backend.util.DesempenhoEquipe.Funcionario(f.getId(), f.getNome(), f.isAtivo()));
+            }
+            model.addAttribute("desempenho", com.reciclatech.backend.util.DesempenhoEquipe.calcular(
+                    googleSheetsService.getHistoricoCompleto(), equipe, mapaUnidades(googleSheetsService.listarMateriais()), ini, fim));
+        } catch (Exception e) {
+            log.error("Erro no desempenho da equipe", e);
+            model.addAttribute("erroTela", "Não foi possível calcular agora. Tente de novo.");
+        }
+        logoDoTopo(model, session);
+        return "admin-equipe-desempenho";
+    }
 
     @GetMapping("/admin/analises")
     public String mostrarAnalises(@RequestParam(required = false) String periodo,

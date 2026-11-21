@@ -257,6 +257,13 @@
         const preco = el("span", "cot-mat-preco notranslate");
         preco.appendChild(document.createTextNode(dinheiro(m.preco)));
         preco.appendChild(el("small", "text-muted fw-normal ms-1", "/" + (m.unidade || "KG").toLowerCase()));
+        // Fase 33: o mesmo destaque do "Quem paga mais", para as duas visões não parecerem diferentes
+        if (m.melhor) {
+            li.classList.add("cot-mat-melhor");
+            const t = el("i", "bi bi-trophy-fill cot-trofeu me-1");
+            t.title = "Maior preço da região para este material";
+            preco.insertBefore(t, preco.firstChild);
+        }
         li.appendChild(nome);
         li.appendChild(preco);
         return li;
@@ -360,11 +367,14 @@
             if (salvo && lista.some(m => m.chave === salvo)) {
                 sel.value = salvo;
                 escolherMaterial(salvo);
+            } else if (lista.length) {
+                // Fase 33: sem escolha anterior, abre no material mais comum da região
+                sel.value = lista[0].chave;
+                escolherMaterial(lista[0].chave);
             } else {
                 estado.material = "";
                 ranking.innerHTML = "";
-                ranking.appendChild(el("p", "text-center text-muted py-3 mb-0",
-                    lista.length ? "Escolha um material para ver quem paga mais por ele nesta região." : "Os armazéns desta região ainda não cadastraram preços."));
+                ranking.appendChild(el("p", "text-center text-muted py-3 mb-0", "Os armazéns desta região ainda não cadastraram preços."));
             }
         } catch (e) {
             if (meu !== pedidoAtual) return;
@@ -398,8 +408,13 @@
                 return;
             }
             const un = (dados.material.unidade || "KG").toLowerCase();
-            ranking.appendChild(el("p", "small text-muted text-center mb-2",
-                "Quem paga mais por " + (dados.material.nome || "este material") + " (" + un + ")"));
+            // Fase 33: título grande com o material, para não confundir com outro material lembrado da última visita
+            const tit = el("div", "cot-rank-titulo text-center mb-3");
+            tit.appendChild(document.createTextNode("Quem paga mais por "));
+            tit.appendChild(el("strong", "cot-rank-material notranslate", (dados.material.nome || "este material")));
+            tit.appendChild(document.createTextNode(" (" + un + ")"));
+            tit.appendChild(el("div", "small text-muted fw-normal", "Para outro material, escolha nos botões ou na lista acima."));
+            ranking.appendChild(tit);
             const ol = el("ol", "list-unstyled mb-0");
             itens.forEach(it => {
                 const li = el("li", "cot-rank d-flex align-items-center gap-3" + (it.melhor ? " cot-rank-melhor" : ""));

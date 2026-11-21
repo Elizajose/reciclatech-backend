@@ -165,4 +165,30 @@ class CotacaoPublicaTest {
         assertEquals(1, x.precos().size());
         assertEquals("Vidro", x.precos().get(0).nome());
     }
+
+    // Fase 33: o caso do teste real — Latinhas 7,40 x 8,00 e Panelas 6,50 x 6,10
+    @Test void cartaoMarcaQuemPagaMaisEmCadaMaterialIgualAoRanking() {
+        List<CotacaoPublica.ArmazemCot> l = List.of(
+                a(1, "Reciclagem Dois Irmãos", "PE", "Salgueiro", p("Latinhas", "KG", "7.40", 0), p("Panelas_Aluminio", "KG", "6.50", 0), p("Só aqui", "KG", "1.00", 0)),
+                a(2, "SalgueiroVerde", "PE", "Salgueiro", p("Latinhas", "KG", "8.00", 0), p("Panelas_Aluminio", "KG", "6.10", 0)));
+        Map<String, Object> r = CotacaoPublica.armazens(l, "PE", "salgueiro", null, 0, HOJE);
+        List<?> itens = (List<?>) r.get("itens");
+        Map<String, Boolean> melhor = new java.util.HashMap<>();
+        for (Object o : itens) {
+            Map<?, ?> a = (Map<?, ?>) o;
+            for (Object m : (List<?>) a.get("materiais")) {
+                Map<?, ?> mm = (Map<?, ?>) m;
+                melhor.put(a.get("nome") + "/" + mm.get("nome"), (Boolean) mm.get("melhor"));
+            }
+        }
+        assertTrue(melhor.get("SalgueiroVerde/Latinhas"));
+        assertFalse(melhor.get("Reciclagem Dois Irmãos/Latinhas"));
+        assertTrue(melhor.get("Reciclagem Dois Irmãos/Panelas_Aluminio"));
+        assertFalse(melhor.get("SalgueiroVerde/Panelas_Aluminio"));
+        assertFalse(melhor.get("Reciclagem Dois Irmãos/Só aqui"), "sem disputa não marca");
+
+        Map<?, ?> rk = CotacaoPublica.ranking(l, "PE", "salgueiro", CotacaoPublica.chaveMaterial("Latinhas", "KG"), HOJE);
+        Map<?, ?> primeiro = (Map<?, ?>) ((List<?>) rk.get("itens")).get(0);
+        assertEquals("SalgueiroVerde", primeiro.get("nome"));
+    }
 }

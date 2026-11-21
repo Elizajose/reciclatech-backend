@@ -89,6 +89,24 @@ public final class Recibos {
         return m;
     }
 
+    /**
+     * Fase 33: o operador só vê os recibos que ele mesmo atendeu.
+     * Vale quem tem o id do funcionário gravado na venda (a partir da Fase 33). Para os recibos das Fases 31–32
+     * (com código, mas sem o id), vale o nome do atendente gravado. Vendas antigas sem código não aparecem para operador.
+     */
+    public static boolean doAtendente(Grupo g, Long funcionarioId, String nome) {
+        if (g == null) return false;
+        boolean algumId = false;
+        for (Oferta o : g.itens) {
+            if (o.getFuncionarioId() != null) {
+                algumId = true;
+                if (o.getFuncionarioId().equals(funcionarioId)) return true;
+            }
+        }
+        if (algumId || g.lote == null || nome == null || nome.isBlank() || g.atendente == null) return false;
+        return g.atendente.trim().equalsIgnoreCase(nome.trim());
+    }
+
     /** "Maria da Silva (SAÍDA)" -> "Maria S." (verificação pública: sem o nome completo). */
     public static String nomeResumido(String nome) {
         if (nome == null) return "";

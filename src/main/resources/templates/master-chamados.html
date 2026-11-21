@@ -31,7 +31,10 @@
             <a class="btn fw-bold" th:classappend="${filtro == 'fechados'} ? 'btn-dark' : 'btn-outline-dark'" href="/master/chamados?filtro=fechados">Resolvidos</a>
             <a class="btn fw-bold" th:classappend="${filtro == 'todos'} ? 'btn-dark' : 'btn-outline-dark'" href="/master/chamados?filtro=todos">Todos</a>
         </div>
-        <span class="contador contador-vermelho"><strong th:text="${naoLidosSuporte}">0</strong> com mensagem nova</span>
+        <!-- Fase 33: vermelho só quando há mensagem nova (o "0" em vermelho parecia erro) -->
+        <span class="contador contador-vermelho" th:if="${naoLidosSuporte > 0}"><strong th:text="${naoLidosSuporte}">1</strong>
+            <span th:text="${naoLidosSuporte == 1 ? 'chamado com mensagem nova' : 'chamados com mensagem nova'}">com mensagem nova</span></span>
+        <span class="contador contador-verde" th:unless="${naoLidosSuporte > 0}"><i class="bi bi-check2-circle"></i> Nenhuma mensagem nova</span>
     </div>
 
     <div class="alert alert-light border small">

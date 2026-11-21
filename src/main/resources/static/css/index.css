@@ -136,3 +136,9 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.025em; }
     .cot-rank > .flex-shrink-0:last-child { width: 100%; }
     .cot-rank > .flex-shrink-0:last-child .btn { width: 100%; }
 }
+
+/* Fase 33: destaque de quem paga mais também no cartão do armazém, e título do ranking */
+.cot-mat-melhor .cot-mat-preco { color: #b45309; }
+.cot-trofeu { color: #f59e0b; font-size: .85rem; }
+.cot-rank-titulo { font-size: 1.05rem; color: var(--dark, #1f2937); }
+.cot-rank-material { color: var(--primary, #198754); text-transform: uppercase; font-weight: 900; }

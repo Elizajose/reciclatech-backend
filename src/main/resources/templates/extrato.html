@@ -21,10 +21,14 @@
     <button type="button" onclick="window.print()" class="btn btn-success btn-sm fw-bold"><i class="bi bi-printer"></i> Imprimir / salvar PDF</button>
 </div>
 
-<div th:if="${reciboPedidoNaoExiste}" class="alert alert-warning text-center mx-auto no-print" style="max-width: 820px;">
-    Esse recibo não foi encontrado para este cliente. Abaixo está o recibo mais recente dele.
+<div th:if="${reciboPedidoNaoExiste and soOsProprios != true}" class="alert alert-warning text-center mx-auto no-print" style="max-width: 820px;">
+    Esse recibo não foi encontrado para este cliente.
 </div>
-<div th:if="${vendas == null || vendas.isEmpty()}" class="alert alert-warning text-center mx-auto no-print" style="max-width: 820px;">
+<!-- Fase 33: operador só vê os recibos que ele atendeu -->
+<div th:if="${soOsProprios == true and (vendas == null || vendas.isEmpty())}" class="alert alert-warning text-center mx-auto no-print" style="max-width: 820px;">
+    Este recibo não é de um atendimento seu. Cada operador vê só os recibos que atendeu; o dono do armazém vê todos.
+</div>
+<div th:if="${soOsProprios != true and (vendas == null || vendas.isEmpty())}" class="alert alert-warning text-center mx-auto no-print" style="max-width: 820px;">
     Nenhum material neste recibo. Se acabou de finalizar, aperte F5.
 </div>
 

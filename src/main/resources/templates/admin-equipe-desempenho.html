@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desempenho da equipe | Coletaê</title>
+    <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" th:href="@{/css/admin-telas.css(v=1)}">
+    <link rel="stylesheet" th:href="@{/css/admin-equipe-desempenho.css(v=1)}">
+</head>
+<body class="bg-body-tertiary">
+<!-- Fase 33: atendimentos por funcionário (dentro do Financeiro, só o dono/gestor) -->
+<nav class="navbar navbar-dark bg-success shadow-sm">
+    <div class="container-fluid px-md-5">
+        <span class="navbar-brand fw-bold d-flex align-items-center gap-2 mb-0 min-w-0">
+            <img th:if="${versaoLogoPainel != null}" th:src="@{/admin/logo(v=${versaoLogoPainel})}" alt="Logo do armazém" class="nav-logo">
+            <i th:if="${versaoLogoPainel == null}" class="bi bi-recycle fs-3"></i>
+            <span class="text-truncate" th:text="${session.nomeArmazem != null ? session.nomeArmazem : 'Seu armazém'}">Armazém</span>
+            <span class="d-none d-md-inline fw-normal opacity-75">· Desempenho da equipe</span>
+        </span>
+        <div class="d-flex gap-2">
+            <a href="/admin/analises" class="btn btn-outline-light btn-sm btn-voltar d-none d-sm-inline-flex"><i class="bi bi-graph-up"></i> Financeiro</a>
+            <a href="/admin/coletas" class="btn btn-light btn-sm btn-voltar"><i class="bi bi-arrow-left"></i> Voltar ao painel</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container-lg mt-3" th:if="${erroTela != null}">
+    <div class="alert alert-danger fw-bold" th:text="${erroTela}">erro</div>
+</div>
+
+<div class="container py-4" style="max-width: 1150px;">
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Desempenho da equipe</h1>
+            <p class="text-body-secondary mb-0">Atendimentos de compra no balcão por funcionário: quantos, quanto material entrou e quanto foi pago.</p>
+        </div>
+    </div>
+
+    <div class="cartao p-3 mb-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Período">
+            <a href="/admin/analises/equipe?periodo=hoje" class="btn btn-outline-success fw-bold" th:classappend="${periodoSel == 'hoje'} ? 'active'">Hoje</a>
+            <a href="/admin/analises/equipe?periodo=7d" class="btn btn-outline-success fw-bold" th:classappend="${periodoSel == '7d'} ? 'active'">7 dias</a>
+            <a href="/admin/analises/equipe?periodo=30d" class="btn btn-outline-success fw-bold" th:classappend="${periodoSel == '30d'} ? 'active'">30 dias</a>
+            <a href="/admin/analises/equipe?periodo=mes" class="btn btn-outline-success fw-bold" th:classappend="${periodoSel == 'mes'} ? 'active'">Este mês</a>
+            <a href="/admin/analises/equipe?periodo=mesPassado" class="btn btn-outline-success fw-bold" th:classappend="${periodoSel == 'mesPassado'} ? 'active'">Mês passado</a>
+        </div>
+        <form action="/admin/analises/equipe" method="get" class="d-flex flex-wrap align-items-center gap-2">
+            <input type="hidden" name="periodo" value="custom">
+            <input type="date" name="de" class="form-control form-control-sm" style="width: 150px;" th:value="${periodoDe}" aria-label="De">
+            <span class="small text-body-secondary">até</span>
+            <input type="date" name="ate" class="form-control form-control-sm" style="width: 150px;" th:value="${periodoAte}" aria-label="Até">
+            <button type="submit" class="btn btn-sm btn-success fw-bold">Ver</button>
+        </form>
+    </div>
+
+    <th:block th:if="${desempenho != null}">
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <span class="contador"><i class="bi bi-calendar3"></i>
+                <span th:text="${#temporals.format(periodoDe, 'dd/MM/yyyy') + (periodoDe == periodoAte ? '' : ' a ' + #temporals.format(periodoAte, 'dd/MM/yyyy'))}">01/11 a 21/11</span></span>
+            <span class="contador contador-verde"><strong th:text="${desempenho.atendimentos}">0</strong> atendimentos</span>
+            <span class="contador" th:if="${desempenho.kg.signum() > 0}"><strong th:text="${#numbers.formatDecimal(desempenho.kg, 1, 'POINT', 1, 'COMMA')}">0</strong> kg</span>
+            <span class="contador contador-azul" th:if="${desempenho.un.signum() > 0}"><strong th:text="${#numbers.formatDecimal(desempenho.un, 1, 'POINT', 0, 'COMMA')}">0</strong> un</span>
+            <span class="contador contador-amarelo"><strong th:text="${'R$ ' + #numbers.formatDecimal(desempenho.total, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</strong> pagos</span>
+        </div>
+
+        <div class="vazio text-center p-5 bg-body" th:if="${#lists.isEmpty(desempenho.linhas)}">
+            <div class="vazio-icone mx-auto mb-3"><i class="bi bi-people"></i></div>
+            <div class="fw-bold">Nenhum atendimento neste período</div>
+            <div class="text-body-secondary small">Escolha outro período ou cadastre a equipe em <a href="/admin/operadores">Gestão de Equipe</a>.</div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6 col-xl-4" th:each="l, st : ${desempenho.linhas}">
+                <div class="cartao p-3 h-100 pessoa" th:classappend="${l.atendimentos == 0} ? 'sem-movimento' : ''">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <div class="pessoa-avatar" th:classappend="${l.chave == 'SEM'} ? 'cinza' : ''"
+                             th:text="${l.chave == 'SEM' ? '?' : #strings.toUpperCase(#strings.substring(l.nome, 0, 1))}">L</div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="fw-bold text-truncate" th:text="${l.nome}">Luiz</div>
+                            <div class="small text-body-secondary">
+                                <span th:if="${l.funcionario and l.ativo}">Operador</span>
+                                <span th:if="${l.funcionario and !l.ativo}">Operador (bloqueado ou removido)</span>
+                                <span th:if="${!l.funcionario and l.chave != 'SEM'}">Dono / gestor</span>
+                                <span th:if="${l.chave == 'SEM'}">Antes do registro de quem atendeu</span>
+                            </div>
+                        </div>
+                        <span class="badge rounded-pill text-bg-warning" th:if="${st.index == 0 and l.total.signum() > 0 and #lists.size(desempenho.linhas) > 1}"><i class="bi bi-trophy-fill"></i> 1º</span>
+                    </div>
+                    <div class="row g-2 text-center mb-3">
+                        <div class="col-4"><div class="metrica"><div class="metrica-num" th:text="${l.atendimentos}">0</div><div class="metrica-rot">atendimentos</div></div></div>
+                        <div class="col-4"><div class="metrica">
+                            <div class="metrica-num" th:text="${l.kg.signum() > 0 or l.un.signum() == 0 ? #numbers.formatDecimal(l.kg, 1, 'POINT', 1, 'COMMA') : #numbers.formatDecimal(l.un, 1, 'POINT', 0, 'COMMA')}">0</div>
+                            <div class="metrica-rot" th:text="${l.kg.signum() > 0 or l.un.signum() == 0 ? 'kg' : 'un'}">kg</div></div></div>
+                        <div class="col-4"><div class="metrica"><div class="metrica-num" th:text="${#numbers.formatDecimal(l.total, 1, 'POINT', 2, 'COMMA')}">0</div><div class="metrica-rot">R$ pagos</div></div></div>
+                    </div>
+                    <div class="small text-body-secondary mb-1 d-flex justify-content-between">
+                        <span th:text="${'Participação: ' + #numbers.formatDecimal(l.participacao, 1, 'POINT', 1, 'COMMA') + '%'}">Participação</span>
+                        <span th:if="${l.atendimentos > 0}" th:text="${'Média R$ ' + #numbers.formatDecimal(l.media, 1, 'POINT', 2, 'COMMA')}">Média</span>
+                    </div>
+                    <div class="progress mb-3" style="height: 6px;" role="progressbar" aria-label="Participação no valor do período">
+                        <div class="progress-bar bg-success" th:style="${'width: ' + l.participacao + '%'}"></div>
+                    </div>
+                    <div class="small" th:if="${l.kg.signum() > 0 and l.un.signum() > 0}">
+                        <i class="bi bi-box-seam text-body-secondary"></i> também <strong th:text="${#numbers.formatDecimal(l.un, 1, 'POINT', 0, 'COMMA') + ' un'}">10 un</strong>
+                    </div>
+                    <div class="small text-truncate" th:if="${!#lists.isEmpty(l.principais)}">
+                        <i class="bi bi-recycle text-success"></i> <span th:text="${#strings.listJoin(l.principais, ', ')}">Cobre, Latinhas</span>
+                    </div>
+                    <div class="small text-body-secondary" th:if="${l.ultimo != null}">
+                        <i class="bi bi-clock"></i> Último: <span th:text="${l.chave == 'SEM' ? #temporals.format(l.ultimo, 'dd/MM') : #temporals.format(l.ultimo, 'dd/MM HH:mm')}">21/11 16:27</span>
+                    </div>
+                    <div class="small text-body-secondary" th:if="${l.atendimentos == 0}">Sem atendimentos neste período.</div>
+                </div>
+            </div>
+        </div>
+
+        <p class="small text-body-secondary mt-4 mb-0">
+            <i class="bi bi-info-circle"></i> Conta só as compras finalizadas no balcão (recibos). Um atendimento = um recibo.
+            Compras feitas antes desta versão contam pelo nome de quem atendeu; as mais antigas, sem esse registro, aparecem em "Sem registro".
+        </p>
+    </th:block>
+</div>
+<script>try { document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('theme') || 'light'); } catch (e) {}</script>
+</body>
+</html>

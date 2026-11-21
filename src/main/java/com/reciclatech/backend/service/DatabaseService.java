@@ -560,6 +560,7 @@ public class DatabaseService {
         List<ReciboDoDia> lista = new ArrayList<>();
         for (Map.Entry<Long, List<Oferta>> e : porCliente.entrySet()) {
             for (com.reciclatech.backend.util.Recibos.Grupo g : com.reciclatech.backend.util.Recibos.agrupar(e.getValue())) {
+                if (!podeVerRecibo(g)) continue;   // Fase 33: operador vê só os recibos dele
                 lista.add(new ReciboDoDia(clientes.get(e.getKey()), g));
             }
         }
@@ -625,6 +626,7 @@ public class DatabaseService {
             o.setLote(lote);
             o.setCriadoEm(agora);
             o.setAtendente(quem);
+            o.setFuncionarioId(funcionarioLogadoId());
             o.setArmazem(getArmazemLogado());
             o.setMaterial(row.get(1).toString());
 
@@ -658,6 +660,22 @@ public class DatabaseService {
         public final boolean ok;
         public final String ocupadoPor; // preenchido quando outro operador já está atendendo
         InicioAtendimento(boolean ok, String ocupadoPor) { this.ok = ok; this.ocupadoPor = ocupadoPor; }
+    }
+
+    /** Fase 33: id do funcionário logado (entrou com o código do armazém); nulo para o dono/gestor e o login antigo. */
+    public Long funcionarioLogadoId() {
+        if (!"FUNC".equals(session.getAttribute("origemLogin"))) return null;
+        return session.getAttribute("credId") instanceof Long id ? id : null;
+    }
+
+    /** Fase 33: operador (não gestor) vê só o que ele atendeu. */
+    public boolean veSoOsProprios() {
+        return !"GESTOR".equalsIgnoreCase(String.valueOf(session.getAttribute("perfilUser")));
+    }
+
+    /** Fase 33: o recibo pode ser visto por quem está logado? (gestor vê todos; operador, só os dele) */
+    public boolean podeVerRecibo(com.reciclatech.backend.util.Recibos.Grupo g) {
+        return !veSoOsProprios() || com.reciclatech.backend.util.Recibos.doAtendente(g, funcionarioLogadoId(), atendenteAtual());
     }
 
     private String atendenteAtual() {

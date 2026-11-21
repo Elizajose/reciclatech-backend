@@ -1,0 +1,7 @@
+/* Fase 33: desempenho da equipe */
+.pessoa-avatar { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #fff; background: #198754; font-size: 1.1rem; }
+.pessoa-avatar.cinza { background: #adb5bd; }
+.metrica { background: var(--bs-tertiary-bg); border-radius: 12px; padding: 8px 4px; }
+.metrica-num { font-weight: 900; font-size: 1.15rem; line-height: 1.1; white-space: nowrap; }
+.metrica-rot { font-size: .72rem; color: var(--bs-secondary-color); text-transform: uppercase; letter-spacing: .3px; }
+.sem-movimento { opacity: .7; }

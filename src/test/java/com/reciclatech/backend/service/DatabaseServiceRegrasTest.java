@@ -218,6 +218,35 @@ class DatabaseServiceRegrasTest {
         assertNull(s.finalizarAtendimentoComRecibo(c.getId().toString(), null, lote(c, "Latinha", 5, "8.00", "40")));
     }
 
+    @Test
+    void operadorVeSoOsRecibosQueEleAtendeuEODonoVeTodos() throws Exception {
+        DatabaseService s = preparar();
+        material("Latinha", "8.00");
+        Usuario ana = cliente("Ana");
+        Usuario bia = cliente("Bia");
+        // Luiz (funcionário 10) atende a Ana
+        sessao.put("perfilUser", "OPERADOR"); sessao.put("origemLogin", "FUNC"); sessao.put("credId", 10L); sessao.put("atendenteNome", "Luiz");
+        pedido(ana, Oferta.StatusOferta.EM_ATENDIMENTO);
+        s.finalizarAtendimentoComRecibo(ana.getId().toString(), null, lote(ana, "Latinha", 10, "8.00", "80"));
+        // Pablo (funcionário 11) atende a Bia
+        sessao.put("credId", 11L); sessao.put("atendenteNome", "Pablo");
+        pedido(bia, Oferta.StatusOferta.EM_ATENDIMENTO);
+        s.finalizarAtendimentoComRecibo(bia.getId().toString(), null, lote(bia, "Latinha", 5, "8.00", "40"));
+        LocalDate hoje = LocalDate.now(ZoneId.of("America/Recife"));
+
+        List<DatabaseService.ReciboDoDia> doPablo = s.recibosDoDia(hoje);
+        assertEquals(1, doPablo.size());
+        assertEquals("Bia", doPablo.get(0).cliente.getNome());
+        assertEquals(Long.valueOf(11L), doPablo.get(0).recibo.itens.get(0).getFuncionarioId());
+
+        sessao.put("credId", 10L); sessao.put("atendenteNome", "Luiz");
+        assertEquals("Ana", s.recibosDoDia(hoje).get(0).cliente.getNome());
+        assertEquals(1, s.recibosDoDia(hoje).size());
+
+        sessao.put("perfilUser", "GESTOR"); sessao.put("origemLogin", "PARCEIRO"); sessao.remove("credId");
+        assertEquals(2, s.recibosDoDia(hoje).size(), "o dono vê todos");
+    }
+
     // ------------------------------------------------------------------ Fase 31: importação de preços (tudo ou nada, com histórico)
 
     @Test

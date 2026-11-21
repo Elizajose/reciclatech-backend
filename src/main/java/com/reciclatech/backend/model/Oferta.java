@@ -41,6 +41,10 @@ public class Oferta {
     @Column(name = "criado_em")
     private java.time.LocalDateTime criadoEm;
 
+    /** Fase 33: operador (funcionário) que atendeu. Nulo = dono/gestor ou venda antiga. Coluna nova e opcional. */
+    @Column(name = "funcionario_id")
+    private Long funcionarioId;
+
     public enum StatusOferta {
         DISPONIVEL, EM_ATENDIMENTO, FINALIZADO, CANCELADO, VENDIDO, SAIDA_INDUSTRIA, AJUSTE_POSITIVO, AJUSTE_NEGATIVO
     }
@@ -68,6 +72,8 @@ public class Oferta {
     public void setLote(String lote) { this.lote = lote; }
     public java.time.LocalDateTime getCriadoEm() { return criadoEm; }
     public void setCriadoEm(java.time.LocalDateTime criadoEm) { this.criadoEm = criadoEm; }
+    public Long getFuncionarioId() { return funcionarioId; }
+    public void setFuncionarioId(Long funcionarioId) { this.funcionarioId = funcionarioId; }
     public StatusOferta getStatus() { return status; }
     public void setStatus(StatusOferta status) { this.status = status; }
     public String getAtendente() { return atendente; }

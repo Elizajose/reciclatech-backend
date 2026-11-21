@@ -38,7 +38,8 @@
     <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
         <div>
             <h1 class="h3 fw-bold mb-1">Equipe do balcão</h1>
-            <p class="text-body-secondary mb-0">Operadores fazem pesagens, recibos e atendem os agendamentos. Não veem o financeiro.</p>
+            <p class="text-body-secondary mb-0">Operadores fazem pesagens, recibos e atendem os agendamentos. Cada um vê só os recibos que atendeu e não vê o financeiro.</p>
+            <a href="/admin/analises/equipe" class="small fw-bold text-success text-decoration-none" th:if="${session.planoAssinatura == 'PRO' or session.planoAssinatura == 'PERSONALIZADO'}"><i class="bi bi-bar-chart-line"></i> Ver desempenho da equipe</a>
         </div>
         <div class="d-flex gap-2">
             <span class="contador"><strong th:text="${#lists.size(operadores)}">0</strong> <span th:text="${#lists.size(operadores) == 1 ? 'operador' : 'operadores'}">operadores</span></span>

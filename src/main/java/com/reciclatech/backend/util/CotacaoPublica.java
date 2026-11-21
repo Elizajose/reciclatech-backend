@@ -197,6 +197,15 @@ public final class CotacaoPublica {
         List<ContMaterial> comuns = contarMateriais(daRegiao);
         for (int i = 0; i < comuns.size(); i++) posicao.put(comuns.get(i).chave(), i);
 
+        // Fase 33: maior preço de cada material na região (o cartão marca quem paga mais, igual ao "Quem paga mais")
+        Map<String, BigDecimal> maiorPreco = new HashMap<>();
+        Map<String, Integer> quantos = new HashMap<>();
+        for (ArmazemCot a : daRegiao) {
+            Map<String, BigDecimal> doArmazem = new HashMap<>();
+            for (Preco p : a.precos()) doArmazem.merge(p.chaveMaterial(), p.preco(), BigDecimal::max);
+            doArmazem.forEach((k, v) -> { maiorPreco.merge(k, v, BigDecimal::max); quantos.merge(k, 1, Integer::sum); });
+        }
+
         int pag = Math.max(0, pagina);
         int inicio = (int) Math.min((long) pag * POR_PAGINA, filtrados.size());
         int fim = Math.min(inicio + POR_PAGINA, filtrados.size());
@@ -209,7 +218,11 @@ public final class CotacaoPublica {
             List<Map<String, Object>> mats = new ArrayList<>();
             LocalDate ultima = null;
             for (Preco p : ordem) {
-                mats.add(precoJson(p, hoje));
+                Map<String, Object> pj = precoJson(p, hoje);
+                // só marca quando há disputa (2+ armazéns com o material) e este é o maior preço
+                pj.put("melhor", quantos.getOrDefault(p.chaveMaterial(), 0) >= 2
+                        && p.preco().compareTo(maiorPreco.get(p.chaveMaterial())) == 0);
+                mats.add(pj);
                 if (p.atualizadoEm() != null && (ultima == null || p.atualizadoEm().isAfter(ultima))) ultima = p.atualizadoEm();
             }
             Map<String, Object> item = new LinkedHashMap<>();
