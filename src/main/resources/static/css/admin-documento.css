@@ -1,58 +1,88 @@
-body {
-    font-family: 'Courier New', Courier, monospace;
-    background-color: #555;
-    padding: 40px;
+/* Fase 31: recibo de compra / romaneio de saída — A4 retrato, 1 página, legível também em impressora preto e branco */
+@page { size: A4 portrait; margin: 12mm; }
+
+body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; background: #4b5563; padding: 24px 12px 40px; color: #111827; }
+
+.acoes-topo { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 16px; }
+
+.folha { background: #fff; max-width: 820px; margin: 0 auto; padding: 36px 40px; border-radius: 6px; box-shadow: 0 10px 40px rgba(0, 0, 0, .35); font-size: 13px; }
+
+/* cabeçalho */
+.cab { display: flex; justify-content: space-between; gap: 24px; padding-bottom: 16px; border-bottom: 3px solid #198754; }
+.cab-armazem { display: flex; gap: 14px; align-items: flex-start; min-width: 0; }
+.cab-logo { width: 64px; height: 64px; object-fit: cover; border-radius: 12px; border: 1px solid #e5e7eb; flex-shrink: 0; }
+.cab-nome { font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; line-height: 1.15; }
+.cab-dados { display: flex; flex-direction: column; color: #4b5563; font-size: 12px; margin-top: 4px; line-height: 1.45; }
+.cab-doc { text-align: right; flex-shrink: 0; }
+.cab-tipo { font-size: 16px; font-weight: 800; letter-spacing: 1px; color: #146c43; }
+.cab-sub { font-size: 11px; color: #6b7280; margin-bottom: 6px; }
+.cab-tab { margin-left: auto; font-size: 12px; }
+.cab-tab td { padding: 1px 0 1px 10px; }
+.cab-tab td:first-child { color: #6b7280; text-align: right; }
+
+/* blocos */
+.bloco { margin-top: 18px; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 16px; }
+.bloco-titulo { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin-bottom: 8px; }
+.bloco-grade { display: grid; grid-template-columns: 2fr 1fr; gap: 8px 24px; }
+.bloco-grade .rot { display: block; font-size: 11px; color: #6b7280; }
+.bloco-grade .val { font-weight: 700; }
+
+/* itens */
+.itens { width: 100%; margin-top: 18px; border-collapse: collapse; }
+.itens th { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #374151; background: #f3f4f6; padding: 8px 10px; border-bottom: 2px solid #d1d5db; }
+.itens td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; }
+.itens tbody tr:nth-child(even) td { background: #fafafa; }
+.itens .un { color: #6b7280; font-size: 11px; }
+.itens tfoot td { border-bottom: 0; color: #4b5563; padding-top: 6px; }
+
+/* total */
+.total { margin-top: 14px; display: flex; justify-content: space-between; align-items: center; gap: 16px; border: 2px solid #198754; border-radius: 10px; padding: 12px 18px; background: #f0fdf4; }
+.total-rot { font-weight: 800; text-transform: uppercase; letter-spacing: .5px; }
+.total-ext { font-size: 12px; color: #374151; font-style: italic; }
+.total-val { font-size: 24px; font-weight: 900; color: #146c43; white-space: nowrap; }
+
+.declaracao { margin: 18px 0 0; font-size: 12.5px; line-height: 1.6; text-align: justify; }
+
+/* assinaturas */
+.assinaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 48px; }
+.ass { text-align: center; }
+.ass-linha { border-top: 1px solid #111827; margin-bottom: 6px; }
+.ass-nome { font-weight: 700; font-size: 12px; }
+.ass-papel { font-size: 11px; color: #6b7280; }
+
+/* rodapé */
+.rodape { margin-top: 28px; padding-top: 14px; border-top: 1px dashed #d1d5db; }
+.rodape-qr { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+#qrcode img, #qrcode canvas { width: 78px !important; height: 78px !important; }
+.quebra { word-break: break-all; color: #374151; }
+.obs { font-size: 10.5px; color: #6b7280; line-height: 1.45; margin: 0; }
+.marca { font-size: 10px; color: #9ca3af; text-align: right; margin-top: 8px; letter-spacing: .5px; }
+
+/* outros recibos */
+.outros { max-width: 820px; margin: 18px auto 0; color: #fff; }
+
+/* celular */
+@media (max-width: 640px) {
+    body { padding: 10px 6px; }
+    .folha { padding: 20px 16px; }
+    .cab { flex-direction: column; }
+    .cab-doc { text-align: left; }
+    .cab-tab { margin-left: 0; }
+    .cab-tab td:first-child { text-align: left; }
+    .bloco-grade { grid-template-columns: 1fr; }
+    .total { flex-direction: column; align-items: flex-start; }
+    .assinaturas { grid-template-columns: 1fr; gap: 36px; }
 }
 
-.folha {
-    background: white;
-    max-width: 850px;
-    margin: 0 auto;
-    padding: 40px;
-    position: relative;
-    border-radius: 4px;
-    min-height: 1000px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
-}
-
-.header-box { border: 2px solid #212529; padding: 20px; margin-bottom: 20px; text-align: center; }
-.info-box { border: 1px solid #212529; padding: 15px; margin-bottom: 20px; }
-
-.table-custom { border: 1px solid #212529; margin-bottom: 20px; width: 100%; }
-.table-custom th { border: 1px solid #212529; padding: 10px; background-color: #f8f9fa; text-align: center; }
-.table-custom td { border: 1px solid #212529; padding: 10px; vertical-align: middle; }
-
-.total-box { border: 2px solid #212529; padding: 15px; font-size: 1.3rem; font-weight: bold; text-align: right; background-color: #f8f9fa; }
-
-.linha-assinatura {
-    border-top: 1px solid #212529;
-    width: 90%;
-    margin: 0 auto;
-    text-align: center;
-    padding-top: 5px;
-    font-size: 0.9rem;
-    font-weight: bold;
-}
-
-.logo-footer-ajustada { width: 85px; height: 85px; object-fit: contain; }
-#qrcode { display: inline-block; }
-#qrcode img { width: 85px; height: 85px; }
-
-@media (max-width: 768px) {
-    body { padding: 10px; background: #f8f9fa; }
-    .folha { padding: 20px; width: 100%; max-width: 100%; min-height: auto; box-shadow: none; }
-    .row.assinaturas .col-6 { width: 100% !important; margin-bottom: 30px; }
-    .info-box .col-8, .info-box .col-4 { width: 100% !important; margin-bottom: 10px; }
-}
-
-body.modo-cliente .no-print,
-body.modo-cliente .botoes-topo {
-    display: none !important;
-}
-body.modo-cliente { background: #f8f9fa; padding: 20px 10px; }
+/* QR Code lido pelo cliente: só o documento */
+body.modo-cliente .no-print, body.modo-cliente .botoes-topo { display: none !important; }
+body.modo-cliente { background: #f3f4f6; }
 
 @media print {
-    body { background: white; padding: 0; }
+    body { background: #fff; padding: 0; }
     .no-print { display: none !important; }
-    .folha { box-shadow: none !important; margin: 0; width: 100%; max-width: 100%; padding: 30px; border: none; }
+    .folha { box-shadow: none; border-radius: 0; max-width: none; padding: 0; }
+    .total { background: #fff; }
+    .itens tbody tr:nth-child(even) td { background: #fff; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }

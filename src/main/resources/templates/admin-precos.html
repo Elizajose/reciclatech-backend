@@ -102,12 +102,17 @@
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item text-success fw-bold d-flex align-items-center" href="#" onclick="alert('Funcionalidade de exportar para Excel será liberada em breve!')">
-                                <i class="bi bi-file-earmark-excel-fill me-2 fs-5"></i> Salvar em Excel
+                            <a class="dropdown-item text-success fw-bold d-flex align-items-center" href="/admin/precos/planilha">
+                                <i class="bi bi-file-earmark-excel-fill me-2 fs-5"></i> Baixar planilha do Excel (.xlsx)
                             </a>
                         </li>
                     </ul>
                 </div>
+
+                <!-- Fase 31: importar preços por planilha -->
+                <button type="button" class="btn btn-success fw-bold d-flex align-items-center gap-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalImportar">
+                    <i class="bi bi-file-earmark-arrow-up"></i> Importar planilha
+                </button>
 
                 <div class="input-group shadow-sm" style="max-width: 300px;">
                     <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
@@ -167,6 +172,39 @@
         </div>
     </div>
 
+</div>
+
+<!-- Fase 31: janela de importação -->
+<div class="modal fade" id="modalImportar" tabindex="-1" aria-labelledby="modalImportarTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold" id="modalImportarTitulo"><i class="bi bi-file-earmark-excel me-2"></i> Atualizar preços pelo Excel</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form action="/admin/precos/importar" method="post" enctype="multipart/form-data" id="formImportar">
+                <div class="modal-body text-body">
+                    <ol class="small ps-3 mb-3">
+                        <li class="mb-1"><a href="/admin/precos/planilha" class="fw-bold text-success">Baixe a planilha</a> com os seus preços de hoje.</li>
+                        <li class="mb-1">No Excel, altere a coluna <strong>Preço</strong> ou acrescente materiais (nome, <strong>KG</strong> ou <strong>UN</strong> e preço). Salve.</li>
+                        <li>Envie o arquivo aqui. Você confere tudo antes de gravar.</li>
+                    </ol>
+                    <div class="formato mb-3">
+                        <table class="table table-sm table-bordered mb-0 small text-center">
+                            <thead class="table-success"><tr><th>A · Material</th><th>B · Unidade</th><th>C · Preço</th></tr></thead>
+                            <tbody><tr><td>Latinhas</td><td>KG</td><td>4,50</td></tr><tr><td>Litro Pitú</td><td>UN</td><td>0,65</td></tr></tbody>
+                        </table>
+                    </div>
+                    <input type="file" name="arquivo" class="form-control" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" required>
+                    <div class="form-text">Excel (.xlsx) ou .csv, até 1 MB. PDF não é aceito. A planilha nunca apaga materiais.</div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-bold"><i class="bi bi-search"></i> Conferir planilha</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

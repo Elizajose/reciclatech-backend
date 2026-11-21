@@ -1,31 +1,27 @@
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: var(--bs-tertiary-bg);
-}
+/* Fase 31: revisão */
+body { font-family: 'Inter', system-ui, sans-serif; }
+.min-w-0 { min-width: 0; }
+.topo-revisao { background: linear-gradient(120deg, #0f5132 0%, #198754 60%, #2fa36b 100%); color: #fff; padding: 14px 0; }
+.passo { font-size: .85rem; font-weight: 700; padding: 4px 12px; border-radius: 50px; background: rgba(255, 255, 255, .12); color: rgba(255, 255, 255, .8); }
+.passo-ativo { background: #fff; color: #146c43; }
 
-.container-revisao {
-    max-width: 850px;
-}
+.cliente-avatar { width: 50px; height: 50px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.3rem; color: #fff; background: #198754; }
 
-.card {
-    border-radius: 16px;
-    border: none;
-}
+.cabecalho-itens, .item-revisao { grid-template-columns: minmax(0, 1.4fr) 110px minmax(170px, 1fr) 110px; gap: 14px; align-items: center; }
+.cabecalho-itens { font-size: .75rem; text-transform: uppercase; letter-spacing: .5px; color: var(--bs-secondary-color); padding-bottom: 8px; border-bottom: 1px solid var(--bs-border-color-translucent); }
+.item-revisao { display: grid; padding-top: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--bs-border-color-translucent); }
+.item-revisao:last-child { border-bottom: 0; }
+.item-revisao .qtd { display: inline-block; font-weight: 700; padding: 4px 10px; border-radius: 50px; background: var(--bs-tertiary-bg); }
+.item-revisao.preco-alterado { background: rgba(13, 202, 240, .06); }
+.subtotal { white-space: nowrap; }
 
-.table-revisao th {
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    color: var(--bs-secondary-color);
-    letter-spacing: 0.5px;
-    border-bottom: 2px solid var(--bs-border-color);
-}
+.total-card { position: sticky; bottom: 12px; }
+.total-valor { font-size: 2rem; font-weight: 900; color: #198754; line-height: 1.1; }
+[data-bs-theme="dark"] .total-valor { color: #75b798; }
+.form-control:focus { box-shadow: none; border-color: #198754; }
 
-.table-revisao td {
-    vertical-align: middle;
-    padding: 15px 10px;
-}
-
-.form-control:focus {
-    box-shadow: none;
-    border-color: #198754;
+@media (max-width: 767.98px) {
+    .item-revisao { grid-template-columns: 1fr 1fr; }
+    .item-revisao > div:first-of-type { grid-column: 1 / -1; }
+    .total-valor { font-size: 1.6rem; }
 }

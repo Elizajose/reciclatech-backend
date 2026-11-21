@@ -86,3 +86,49 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
+
+// ==========================================
+// Fase 31: subtotal por material, total ao vivo e marca de preço negociado
+// ==========================================
+function atualizarTotalRevisao() {
+    const fmt = n => Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    let total = 0, kg = 0, un = 0;
+    document.querySelectorAll('.item-revisao').forEach(item => {
+        const peso = parseFloat(item.dataset.peso) || 0;
+        const tabela = parseFloat(item.dataset.tabela) || 0;
+        const campo = item.querySelector('.campo-preco');
+        const preco = parseFloat((campo.value || '').replace(',', '.')) || 0;
+        const sub = Math.round(peso * preco * 100) / 100;   // mesmo arredondamento do servidor (2 casas)
+        total += sub;
+        const unidade = (item.querySelector('.qtd') || {}).textContent || '';
+        if (/ un$/.test(unidade.trim())) un += peso; else kg += peso;
+        const subEl = item.querySelector('.subtotal');
+        if (subEl) subEl.textContent = 'R$ ' + fmt(sub);
+        const diferente = tabela > 0 && Math.abs(preco - tabela) > 0.0001;
+        item.classList.toggle('preco-alterado', diferente);
+        const tag = item.querySelector('.negociado');
+        if (tag) tag.classList.toggle('d-none', !diferente);
+        const voltar = item.querySelector('.voltar-tabela');
+        if (voltar) voltar.classList.toggle('d-none', !diferente);
+    });
+    const t = document.getElementById('totalRevisao');
+    if (t) t.textContent = 'R$ ' + fmt(total);
+    const p = document.getElementById('totalPesos');
+    if (p) {
+        const partes = [];
+        if (kg > 0) partes.push(fmt(kg) + ' kg');
+        if (un > 0) partes.push(fmt(un) + ' un');
+        p.textContent = partes.join(' + ');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.campo-preco').forEach(c => c.addEventListener('input', atualizarTotalRevisao));
+    document.querySelectorAll('.voltar-tabela').forEach(b => b.addEventListener('click', () => {
+        const item = b.closest('.item-revisao');
+        const campo = item.querySelector('.campo-preco');
+        campo.value = (parseFloat(item.dataset.tabela) || 0).toFixed(2);
+        campo.dispatchEvent(new Event('input', { bubbles: true }));
+    }));
+    atualizarTotalRevisao(); // depois do rascunho restaurado (listener registrado antes)
+});

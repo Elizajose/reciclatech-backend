@@ -34,6 +34,13 @@ public class Oferta {
     @Column(length = 120)
     private String atendente;
 
+    // Fase 31: identifica o atendimento (recibo) e a hora; nulos nas vendas antigas
+    @Column(length = 16)
+    private String lote;
+
+    @Column(name = "criado_em")
+    private java.time.LocalDateTime criadoEm;
+
     public enum StatusOferta {
         DISPONIVEL, EM_ATENDIMENTO, FINALIZADO, CANCELADO, VENDIDO, SAIDA_INDUSTRIA, AJUSTE_POSITIVO, AJUSTE_NEGATIVO
     }
@@ -57,6 +64,10 @@ public class Oferta {
     public void setData(String data) { this.data = data; }
     public BigDecimal getPrecoEstimado() { return precoEstimado; }
     public void setPrecoEstimado(BigDecimal precoEstimado) { this.precoEstimado = precoEstimado; }
+    public String getLote() { return lote; }
+    public void setLote(String lote) { this.lote = lote; }
+    public java.time.LocalDateTime getCriadoEm() { return criadoEm; }
+    public void setCriadoEm(java.time.LocalDateTime criadoEm) { this.criadoEm = criadoEm; }
     public StatusOferta getStatus() { return status; }
     public void setStatus(StatusOferta status) { this.status = status; }
     public String getAtendente() { return atendente; }

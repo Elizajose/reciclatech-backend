@@ -1,104 +1,97 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
 <head>
-    <title>Central de Extratos - Coletaê</title>
+    <title>Recibos - Coletaê</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
-
-    <!-- Bootstrap 5.3 & Google Fonts -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-
-    <!-- CSS EXTERNO -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" th:href="@{/css/admin-extratos.css}">
 </head>
-<body class="p-3 p-md-5">
+<body class="bg-body-tertiary">
 
-<div class="container-fluid" style="max-width: 1000px;">
+<!-- Fase 31: um recibo por atendimento, escolha do dia, hora, itens, total e quem atendeu -->
+<div class="container py-4 py-md-5" style="max-width: 1100px;">
 
-    <!-- CABEÇALHO -->
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
         <div>
-            <h2 class="fw-bold m-0 d-flex align-items-center gap-2">
-                <i class="bi bi-receipt text-success"></i> Central de Extratos
-                <!-- Tag contando o número de atendimentos -->
-                <span class="badge bg-success bg-opacity-10 text-success rounded-pill fs-6 py-1 px-3 border border-success border-opacity-25" th:text="${#lists.size(usuarios)} + ' Hoje'"></span>
-            </h2>
-            <p class="text-muted mb-0 mt-1 small"><i class="bi bi-check2-circle"></i> Histórico de atendimentos e vendas finalizadas.</p>
+            <a href="/admin/coletas" class="text-decoration-none small text-body-secondary"><i class="bi bi-arrow-left"></i> Voltar ao painel</a>
+            <h1 class="h3 fw-bold mb-1 mt-1 d-flex align-items-center gap-2"><i class="bi bi-receipt-cutoff text-success"></i> Recibos</h1>
+            <p class="text-body-secondary small mb-0">Um recibo por atendimento finalizado no balcão.</p>
         </div>
-        <div class="d-flex gap-3 align-items-center">
-            <!-- Barra de Pesquisa JS -->
-            <div class="search-bar shadow-sm">
-                <i class="bi bi-search text-muted"></i>
-                <input type="text" id="searchInput" placeholder="Buscar catador ou ID...">
+        <!-- escolha do dia -->
+        <form method="get" action="/meus-extratos" class="d-flex align-items-center gap-2 seletor-dia">
+            <a class="btn btn-outline-secondary btn-sm" th:href="@{/meus-extratos(dia=${diaAnterior})}" title="Dia anterior" aria-label="Dia anterior"><i class="bi bi-chevron-left"></i></a>
+            <input type="date" name="dia" class="form-control form-control-sm" th:value="${dia}" th:attr="max=${hoje}" aria-label="Dia" onchange="this.form.submit()">
+            <a class="btn btn-outline-secondary btn-sm" th:classappend="${ehHoje} ? 'disabled'" th:href="@{/meus-extratos(dia=${diaSeguinte})}" title="Próximo dia" aria-label="Próximo dia"><i class="bi bi-chevron-right"></i></a>
+            <a th:unless="${ehHoje}" class="btn btn-success btn-sm fw-bold" href="/meus-extratos">Hoje</a>
+        </form>
+    </div>
+
+    <!-- resumo do dia -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-4">
+            <div class="resumo-card bg-body shadow-sm">
+                <span class="resumo-icone bg-success bg-opacity-10 text-success"><i class="bi bi-receipt"></i></span>
+                <div><div class="resumo-valor" th:text="${#lists.size(recibos)}">0</div><div class="small text-body-secondary" th:text="${#lists.size(recibos) == 1 ? 'recibo' : 'recibos'}">recibos</div></div>
             </div>
-            <a href="/admin/coletas" class="btn btn-dark rounded-pill fw-bold px-4 shadow-sm">Voltar</a>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="resumo-card bg-body shadow-sm">
+                <span class="resumo-icone bg-primary bg-opacity-10 text-primary"><i class="bi bi-cash-coin"></i></span>
+                <div><div class="resumo-valor" th:text="'R$ ' + ${#numbers.formatDecimal(somaDia, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</div><div class="small text-body-secondary">pagos no dia</div></div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="busca bg-body shadow-sm h-100">
+                <i class="bi bi-search text-body-secondary"></i>
+                <input type="search" id="searchInput" placeholder="Buscar por nome ou código" aria-label="Buscar recibo">
+            </div>
         </div>
     </div>
 
-    <!-- ÁREA DA LISTA / TABELA -->
-    <div class="table-responsive" style="overflow-visible;">
-        <table class="table table-custom w-100" id="extratosTable">
-            <thead th:if="${!usuarios.empty}">
-            <tr>
-                <th class="ps-4">Colaborador / Catador</th>
-                <th>Identificação</th>
-                <th class="text-end pe-4">Ação</th>
-            </tr>
-            </thead>
-            <tbody>
+    <div class="small fw-bold text-body-secondary text-uppercase mb-2" th:text="${ehHoje} ? 'Hoje, ' + ${#temporals.format(dia, 'dd/MM/yyyy')} : ${#temporals.format(dia, 'dd/MM/yyyy')}">Hoje</div>
 
-            <!-- ESTADO VAZIO (EMPTY STATE) -->
-            <tr th:if="${usuarios.empty}">
-                <td colspan="3" class="p-0">
-                    <div class="empty-state shadow-sm">
-                        <div class="empty-icon"><i class="bi bi-inbox"></i></div>
-                        <h5 class="fw-bold text-dark">Nenhum atendimento finalizado hoje.</h5>
-                        <p class="text-muted mb-0">As novas vendas aparecerão aqui automaticamente após a conclusão no balcão.</p>
-                    </div>
-                </td>
-            </tr>
+    <!-- lista -->
+    <div class="d-grid gap-2" id="extratosTable">
+        <div th:each="r : ${recibos}" class="recibo-linha extrato-row bg-body shadow-sm"
+             th:attr="data-name=${r.cliente.nome},data-id=${r.cliente.id + ' ' + (r.recibo.codigo != null ? r.recibo.codigo : '')}">
+            <div class="recibo-avatar" aria-hidden="true"
+                 th:text="${r.cliente.nome != null and !#strings.isEmpty(r.cliente.nome) ? #strings.toUpperCase(#strings.substring(r.cliente.nome,0,1)) : '?'}">M</div>
+            <div class="flex-grow-1 min-w-0">
+                <div class="fw-bold text-truncate" th:text="${r.cliente.nome}">Maria da Silva</div>
+                <div class="small text-body-secondary d-flex flex-wrap gap-x">
+                    <span th:if="${r.recibo.quando != null}"><i class="bi bi-clock"></i> <span th:text="${#temporals.format(r.recibo.quando, 'HH:mm')}">14:32</span></span>
+                    <span><i class="bi bi-box-seam"></i> <span th:text="${r.recibo.quantidadeItens == 1 ? '1 material' : r.recibo.quantidadeItens + ' materiais'}">3 materiais</span></span>
+                    <span th:if="${r.recibo.atendente != null}"><i class="bi bi-person-badge"></i> <span th:text="${r.recibo.atendente}">Luiz</span></span>
+                    <span th:if="${r.recibo.codigo != null}" class="font-monospace"># <span th:text="${r.recibo.codigo}">K7M2-QX9A</span></span>
+                </div>
+            </div>
+            <div class="text-end">
+                <div class="recibo-total" th:text="'R$ ' + ${#numbers.formatDecimal(r.recibo.total, 1, 'POINT', 2, 'COMMA')}">R$ 42,60</div>
+            </div>
+            <div class="d-flex gap-2 acoes">
+                <a th:href="@{/extrato/{id}(id=${r.cliente.id},recibo=${r.recibo.chave})}" class="btn btn-outline-secondary btn-sm fw-bold" title="Ver o recibo">
+                    <i class="bi bi-eye"></i> <span class="d-none d-sm-inline">Ver</span>
+                </a>
+                <a th:href="@{/extrato/{id}(id=${r.cliente.id},recibo=${r.recibo.chave},autoPrint=true)}" target="_blank" class="btn btn-success btn-sm fw-bold">
+                    <i class="bi bi-printer-fill"></i> Imprimir
+                </a>
+            </div>
+        </div>
 
-            <!-- LINHAS DA TABELA -->
-            <tr th:each="user : ${usuarios}" class="extrato-row" th:data-name="${user.nome}" th:data-id="${user.id}">
-                <td class="ps-4">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="avatar-circle">
-                            <i class="bi bi-person"></i>
-                        </div>
-                        <div>
-                            <h6 class="fw-bold m-0" th:text="${user.nome}">Nome do Catador</h6>
-                            <small class="text-muted"><i class="bi bi-whatsapp"></i> <span th:text="${user.telefone}"></span></small>
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    <span class="badge bg-light text-dark border border-secondary-subtle px-2 py-1 text-monospace">
-                        ID: <span th:text="${user.id}"></span>
-                    </span>
-                </td>
-                <td class="text-end pe-4">
-                    <a th:href="@{|/extrato/${user.id}?autoPrint=true|}" target="_blank" class="btn btn-outline-success rounded-pill fw-bold px-3 btn-sm">
-                        <i class="bi bi-printer-fill me-1"></i> Imprimir
-                    </a>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+        <div th:if="${#lists.isEmpty(recibos)}" class="vazio bg-body text-center py-5">
+            <div class="vazio-icone mx-auto mb-3"><i class="bi bi-inbox"></i></div>
+            <h2 class="h6 fw-bold mb-1" th:text="${ehHoje} ? 'Nenhum atendimento finalizado hoje' : 'Nenhum atendimento finalizado neste dia'">Nenhum atendimento</h2>
+            <p class="small text-body-secondary mb-0">Os recibos aparecem aqui assim que um atendimento é finalizado no balcão.</p>
+        </div>
+        <div id="semResultado" class="text-center small text-body-secondary py-3 d-none">Nenhum recibo com esse nome ou código.</div>
     </div>
-
-    <div th:if="${!usuarios.empty}" class="text-center mt-3">
-        <span class="text-muted small"><i class="bi bi-shield-check"></i> Ambiente Seguro. Somente ofertas com status <strong>VENDIDO</strong> são contabilizadas.</span>
-    </div>
-
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- SCRIPT EXTERNO -->
-<script th:src="@{/js/admin-extratos.js}"></script>
+<script th:src="@{/js/admin-extratos.js(v=2)}"></script>
 </body>
 </html>

@@ -22,4 +22,7 @@ public interface OfertaRepository extends JpaRepository<Oferta, Long> {
 
     @Query("SELECT SUM(o.peso) FROM Oferta o WHERE o.armazem.id = :armazemId AND o.material = :nomeMaterial AND o.status IN ('SAIDA_INDUSTRIA', 'AJUSTE_NEGATIVO')")
     Double somarSaidasPorMaterial(Long armazemId, String nomeMaterial);
+
+    /** Fase 31: itens de um recibo (atendimento) pelo código. */
+    List<Oferta> findAllByLoteOrderByIdAsc(String lote);
 }

@@ -497,6 +497,99 @@ public class DatabaseService {
         return new ArrayList<>(porId.values());
     }
 
+    /** Fase 31: materiais do armazém logado no formato da importação por planilha. */
+    public List<com.reciclatech.backend.util.ImportacaoPrecos.Atual> materiaisParaImportacao() {
+        List<com.reciclatech.backend.util.ImportacaoPrecos.Atual> lista = new ArrayList<>();
+        for (Material m : materialRepository.findAllByArmazemIdOrderByNomeAsc(getArmazemIdLogado())) {
+            lista.add(new com.reciclatech.backend.util.ImportacaoPrecos.Atual(m.getId(), m.getNome(), m.getUnidade(), m.getPrecoPorKg()));
+        }
+        return lista;
+    }
+
+    /**
+     * Fase 31: aplica a importação confirmada, tudo ou nada (uma transação). Cria os materiais novos e altera os preços
+     * pelas MESMAS regras da tela (validação, nome repetido, auditoria no histórico, cotação pública atualizada).
+     * Devolve {novos, alterados}.
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public int[] aplicarImportacaoPrecos(List<String[]> novos, List<Object[]> alteracoes) throws IOException {
+        int criados = 0, alterados = 0;
+        for (String[] n : novos) {                       // {nome, unidade, preço}
+            Material m = new Material();
+            m.setNome(n[0]);
+            m.setUnidade(n[1]);
+            m.setPrecoPorKg(new BigDecimal(n[2]));
+            salvarMaterial(m);
+            criados++;
+        }
+        Set<Long> meus = new HashSet<>();
+        for (Material m : materialRepository.findAllByArmazemIdOrderByNomeAsc(getArmazemIdLogado())) meus.add(m.getId());
+        for (Object[] a : alteracoes) {                  // {id, preço}
+            Long id = (Long) a[0];
+            if (!meus.contains(id)) throw new IllegalArgumentException("Um dos materiais da planilha não existe mais neste armazém. Importe de novo.");
+            atualizarPrecoMaterial(id, (BigDecimal) a[1], true); // a variação grande já foi confirmada na tela
+            alterados++;
+        }
+        return new int[]{criados, alterados};
+    }
+
+    /** Fase 31: dados do armazém logado (para o cabeçalho do recibo). */
+    public Optional<Armazem> armazemDaSessao() {
+        try { return armazemRepository.findById(getArmazemIdLogado()); } catch (RuntimeException e) { return Optional.empty(); }
+    }
+
+    /** Fase 31: um item da lista de recibos do dia (um por atendimento). */
+    public static final class ReciboDoDia {
+        public final Usuario cliente;
+        public final com.reciclatech.backend.util.Recibos.Grupo recibo;
+        ReciboDoDia(Usuario cliente, com.reciclatech.backend.util.Recibos.Grupo recibo) { this.cliente = cliente; this.recibo = recibo; }
+        public Usuario getCliente() { return cliente; }
+        public com.reciclatech.backend.util.Recibos.Grupo getRecibo() { return recibo; }
+    }
+
+    /** Fase 31: recibos de compra (VENDIDO) de um dia, um por atendimento, do mais recente para o mais antigo. */
+    public List<ReciboDoDia> recibosDoDia(LocalDate dia) {
+        Map<Long, List<Oferta>> porCliente = new LinkedHashMap<>();
+        Map<Long, Usuario> clientes = new HashMap<>();
+        for (Oferta o : ofertaRepository.findAllByArmazemIdOrderByDataCriacaoDesc(getArmazemIdLogado())) {
+            if (o.getStatus() != Oferta.StatusOferta.VENDIDO || o.getUsuario() == null) continue;
+            if (!dia.equals(com.reciclatech.backend.util.Recibos.dataDa(o))) continue;
+            porCliente.computeIfAbsent(o.getUsuario().getId(), k -> new ArrayList<>()).add(o);
+            clientes.put(o.getUsuario().getId(), o.getUsuario());
+        }
+        List<ReciboDoDia> lista = new ArrayList<>();
+        for (Map.Entry<Long, List<Oferta>> e : porCliente.entrySet()) {
+            for (com.reciclatech.backend.util.Recibos.Grupo g : com.reciclatech.backend.util.Recibos.agrupar(e.getValue())) {
+                lista.add(new ReciboDoDia(clientes.get(e.getKey()), g));
+            }
+        }
+        lista.sort(Comparator.comparing((ReciboDoDia r) -> r.recibo.quando == null ? java.time.LocalDateTime.MIN : r.recibo.quando).reversed()
+                .thenComparing((ReciboDoDia r) -> r.cliente.getId() == null ? 0L : r.cliente.getId(), Comparator.reverseOrder()));
+        return lista;
+    }
+
+    /** Fase 31: verificação pública de um recibo pelo código (sem login). Só leitura; nada de CPF ou telefone. */
+    public Optional<Map<String, Object>> verificarRecibo(String codigo) {
+        String lote = com.reciclatech.backend.util.CodigoRecibo.normalizar(codigo);
+        if (lote == null) return Optional.empty();
+        List<Oferta> itens = ofertaRepository.findAllByLoteOrderByIdAsc(lote);
+        if (itens.isEmpty()) return Optional.empty();
+        com.reciclatech.backend.util.Recibos.Grupo g = com.reciclatech.backend.util.Recibos.agrupar(itens).get(0);
+        Oferta primeira = itens.get(0);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("codigo", com.reciclatech.backend.util.CodigoRecibo.formatar(lote));
+        m.put("armazem", primeira.getArmazem() != null ? primeira.getArmazem().getNome() : "");
+        m.put("cidade", primeira.getArmazem() != null && primeira.getArmazem().getCidade() != null
+                ? primeira.getArmazem().getCidade() + (primeira.getArmazem().getUf() != null ? " - " + primeira.getArmazem().getUf() : "") : "");
+        m.put("tipo", primeira.getStatus() == Oferta.StatusOferta.SAIDA_INDUSTRIA ? "Romaneio de saída" : "Recibo de compra de material");
+        m.put("cliente", com.reciclatech.backend.util.Recibos.nomeResumido(primeira.getUsuario() != null ? primeira.getUsuario().getNome() : null));
+        m.put("data", g.data);
+        m.put("quando", g.quando);
+        m.put("itens", g.itens.size());
+        m.put("total", g.total);
+        return Optional.of(m);
+    }
+
     public List<Usuario> buscarUsuariosComVendasHoje() throws IOException {
         String hoje = LocalDate.now(ZoneId.of("America/Recife")).toString();
         List<Oferta> vendasHoje = ofertaRepository.findAllByArmazemIdOrderByDataCriacaoDesc(getArmazemIdLogado()).stream()
@@ -517,10 +610,21 @@ public class DatabaseService {
     // 5. VENDAS, OFERTAS E CONTROLE DE ESTOQUE
     // =========================================================================
 
+    /**
+     * Grava as linhas de um atendimento. Fase 31: todas recebem o mesmo código de recibo (lote), a hora e quem atendeu.
+     * Devolve o código do recibo.
+     */
     @Transactional
-    public void registrarVendasEmLote(List<List<Object>> linhasParaSalvar) throws IOException {
+    public String registrarVendasEmLote(List<List<Object>> linhasParaSalvar) throws IOException {
+        String lote = com.reciclatech.backend.util.CodigoRecibo.gerar();
+        java.time.LocalDateTime agora = java.time.LocalDateTime.now(ZoneId.of("America/Recife"));
+        String quem;
+        try { quem = com.reciclatech.backend.util.Valores.texto(atendenteAtual(), 120); } catch (RuntimeException e) { quem = null; }
         for (List<Object> row : linhasParaSalvar) {
             Oferta o = new Oferta();
+            o.setLote(lote);
+            o.setCriadoEm(agora);
+            o.setAtendente(quem);
             o.setArmazem(getArmazemLogado());
             o.setMaterial(row.get(1).toString());
 
@@ -546,6 +650,7 @@ public class DatabaseService {
             o.setStatus(Oferta.StatusOferta.valueOf(row.get(8).toString()));
             ofertaRepository.save(o);
         }
+        return lote;
     }
 
     /** Resultado de "iniciar atendimento". */
@@ -610,19 +715,25 @@ public class DatabaseService {
      */
     @Transactional(rollbackFor = Exception.class)
     public boolean finalizarAtendimento(String idVendedor, String cpfFinal, List<List<Object>> linhasParaSalvar) throws IOException {
+        return finalizarAtendimentoComRecibo(idVendedor, cpfFinal, linhasParaSalvar) != null;
+    }
+
+    /** Fase 31: igual ao finalizarAtendimento, mas devolve o código do recibo (nulo = já tinha sido finalizado). */
+    @Transactional(rollbackFor = Exception.class)
+    public String finalizarAtendimentoComRecibo(String idVendedor, String cpfFinal, List<List<Object>> linhasParaSalvar) throws IOException {
         List<Long> ids = idsUsuariosPorChave(idVendedor);
-        if (ids.isEmpty()) return false;
+        if (ids.isEmpty()) return null;
         List<Oferta> abertos = ofertaRepository.travarPorUsuariosEStatus(ids, STATUS_ABERTOS);
-        if (abertos.isEmpty()) return false;
+        if (abertos.isEmpty()) return null;
 
         validarLinhasDeCompra(idVendedor, cpfFinal, linhasParaSalvar);
-        registrarVendasEmLote(linhasParaSalvar);
+        String lote = registrarVendasEmLote(linhasParaSalvar);
         atualizarCpfUsuario(idVendedor, cpfFinal);
         for (Oferta o : abertos) {
             o.setStatus(Oferta.StatusOferta.FINALIZADO);
             ofertaRepository.save(o);
         }
-        return true;
+        return lote;
     }
 
     /**

@@ -189,6 +189,63 @@ class DatabaseServiceRegrasTest {
         assertEquals(0, new BigDecimal("95.00").compareTo(venda.getPrecoEstimado()), "o total tem de ser preço x peso, não o valor enviado");
     }
 
+    // ------------------------------------------------------------------ Fase 31: um recibo por atendimento
+
+    @Test
+    void cadaAtendimentoGanhaSeuProprioReciboComHoraEAtendente() throws Exception {
+        DatabaseService s = preparar();
+        sessao.put("atendenteNome", "Luiz");
+        material("Latinha", "8.00");
+        Usuario c = cliente("Ana");
+
+        pedido(c, Oferta.StatusOferta.EM_ATENDIMENTO);
+        String r1 = s.finalizarAtendimentoComRecibo(c.getId().toString(), null, lote(c, "Latinha", 10, "8.00", "80"));
+        pedido(c, Oferta.StatusOferta.EM_ATENDIMENTO);   // o mesmo cliente volta no mesmo dia
+        String r2 = s.finalizarAtendimentoComRecibo(c.getId().toString(), null, lote(c, "Latinha", 5, "8.00", "40"));
+
+        assertNotNull(r1);
+        assertNotNull(r2);
+        assertFalse(r1.equals(r2), "cada atendimento tem o seu código");
+        List<DatabaseService.ReciboDoDia> dia = s.recibosDoDia(LocalDate.now(ZoneId.of("America/Recife")));
+        assertEquals(2, dia.size(), "dois recibos separados, não um somando tudo");
+        for (DatabaseService.ReciboDoDia r : dia) {
+            assertEquals("Luiz", r.recibo.atendente);
+            assertNotNull(r.recibo.quando);
+        }
+        BigDecimal soma = dia.get(0).recibo.total.add(dia.get(1).recibo.total);
+        assertEquals(0, new BigDecimal("120.00").compareTo(soma));
+        // atendimento já finalizado: nada é gravado de novo
+        assertNull(s.finalizarAtendimentoComRecibo(c.getId().toString(), null, lote(c, "Latinha", 5, "8.00", "40")));
+    }
+
+    // ------------------------------------------------------------------ Fase 31: importação de preços (tudo ou nada, com histórico)
+
+    @Test
+    void importacaoCriaAlteraERegistraNoHistorico() throws Exception {
+        DatabaseService s = preparar();
+        Material latinha = material("Latinha", "8.00");
+
+        int[] r = s.aplicarImportacaoPrecos(
+                List.<String[]>of(new String[]{"Cobre", "KG", "38.00"}),
+                List.<Object[]>of(new Object[]{latinha.getId(), new BigDecimal("9.00")}));
+
+        assertEquals(1, r[0]);
+        assertEquals(1, r[1]);
+        assertEquals(0, new BigDecimal("9.00").compareTo(latinha.getPrecoPorKg()));
+        assertTrue(materiais.stream().anyMatch(m -> "Cobre".equals(m.getNome()) && "KG".equals(m.getUnidade())));
+        assertTrue(historico.stream().anyMatch(h -> HistoricoAlteracao.CRIADO.equals(h.getAcao())));
+        assertTrue(historico.stream().anyMatch(h -> HistoricoAlteracao.PRECO_ALTERADO.equals(h.getAcao())));
+    }
+
+    @Test
+    void importacaoRecusaMaterialDeOutroArmazemENomeRepetido() throws Exception {
+        DatabaseService s = preparar();
+        material("Latinha", "8.00");
+        recusa("material que não é deste armazém",
+                () -> s.aplicarImportacaoPrecos(List.of(), List.<Object[]>of(new Object[]{999999L, new BigDecimal("1.00")})));
+        recusa("nome já existe", () -> s.aplicarImportacaoPrecos(List.<String[]>of(new String[]{"latinha", "KG", "1.00"}), List.of()));
+    }
+
     // ------------------------------------------------------------------ ajuste de estoque
 
     @Test

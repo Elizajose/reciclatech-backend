@@ -1,120 +1,112 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
 <head>
-    <title>Revisão Final - Coletaê</title>
+    <title>Revisão - Coletaê</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="shortcut icon" th:href="@{/img/logo.png}" type="image/x-icon">
     <link rel="icon" th:href="@{/img/logo.png}" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-
-    <!-- CSS EXTERNO -->
-    <link rel="stylesheet" th:href="@{/css/admin-revisao.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" th:href="@{/css/admin-revisao.css(v=2)}">
 </head>
-<body class="pb-5 pt-4">
+<body class="bg-body-tertiary">
 
-<div class="container container-revisao">
-
-    <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center gap-3 rounded-4 mb-4">
-        <i class="bi bi-exclamation-circle-fill fs-2 text-warning"></i>
-        <div>
-            <h6 class="fw-bold mb-1">Última Revisão</h6>
-            <span class="small mb-0">Verifique os pesos registrados. Se necessário, você pode alterar o preço unitário pago por kg antes de finalizar.</span>
+<!-- Fase 31: revisão com subtotal por material, total ao vivo e aviso quando o preço foi negociado -->
+<header class="topo-revisao">
+    <div class="container d-flex align-items-center justify-content-between gap-2" style="max-width: 900px;">
+        <div class="d-flex align-items-center gap-2">
+            <span class="passo">1 Pesagem</span><i class="bi bi-chevron-right opacity-50"></i>
+            <span class="passo passo-ativo">2 Revisão</span><i class="bi bi-chevron-right opacity-50"></i>
+            <span class="passo">3 Recibo</span>
         </div>
     </div>
+</header>
 
-    <div class="card shadow-lg">
-        <div class="card-header bg-dark text-white py-3 px-4 rounded-top-4 border-0">
-            <h4 class="m-0 fw-bold"><i class="bi bi-check-all me-2"></i> Fechamento e Pagamento</h4>
-        </div>
+<div class="container py-4" style="max-width: 900px;">
+    <form action="/admin/confirmar-finalizacao" method="post" onsubmit="return prepararEnvio(this);">
+        <input type="hidden" name="idVendedor" th:value="${vendedor.id}">
+        <input type="hidden" id="idArmazem" th:value="${session.idPlanilhaAtiva}">
 
-        <form action="/admin/confirmar-finalizacao" method="post" onsubmit="return prepararEnvio(this);">
-            <input type="hidden" name="idVendedor" th:value="${vendedor.id}">
-            <input type="hidden" id="idArmazem" th:value="${session.idPlanilhaAtiva}">
-
-            <div class="card-body p-4 p-md-5 bg-body">
-
-                <!-- Dados do Cliente e CPF -->
-                <div class="row align-items-center bg-body-tertiary rounded-4 p-4 mb-5 border">
-                    <div class="col-md-6 mb-3 mb-md-0">
-                        <p class="text-muted small fw-bold mb-1 text-uppercase">Fornecedor / Catador</p>
-                        <h4 class="fw-bold text-primary m-0">
-                            <i class="bi bi-person-badge me-2"></i><span th:text="${vendedor.nome}">Nome</span>
-                        </h4>
+        <div class="card-body p-0">
+            <!-- Cliente -->
+            <div class="card border-0 shadow-sm rounded-4 mb-3"><div class="card-body p-4">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-6 d-flex align-items-center gap-3 min-w-0">
+                        <div class="cliente-avatar" aria-hidden="true"
+                             th:text="${vendedor.nome != null and !#strings.isEmpty(vendedor.nome) ? #strings.toUpperCase(#strings.substring(vendedor.nome,0,1)) : '?'}">M</div>
+                        <div class="min-w-0">
+                            <div class="small text-body-secondary">Fornecedor</div>
+                            <div class="fs-5 fw-bold text-truncate" th:text="${vendedor.nome}">Maria da Silva</div>
+                            <span class="badge bg-warning text-dark" th:if="${precosVip != null and !precosVip.isEmpty()}"><i class="bi bi-star-fill"></i> Preços VIP aplicados</span>
+                        </div>
                     </div>
                     <div class="col-md-6">
-                        <label class="fw-bold small text-muted mb-2 text-uppercase"><i class="bi bi-card-text me-1"></i> CPF para Nota (Opcional)</label>
-                        <input type="text" name="cpfFinal"
-                               class="form-control form-control-lg border-secondary-subtle"
-                               th:value="${vendedor.cpf}"
-                               placeholder="000.000.000-00"
-                               maxlength="14"
-                               oninput="formatarCPF(this)"
-                               inputmode="numeric">
+                        <label class="form-label small fw-bold mb-1" for="cpfFinal">CPF do fornecedor <span class="fw-normal text-body-secondary">(opcional, sai no recibo)</span></label>
+                        <input type="text" name="cpfFinal" id="cpfFinal" class="form-control" th:value="${vendedor.cpf}"
+                               placeholder="000.000.000-00" maxlength="14" oninput="formatarCPF(this)" inputmode="numeric">
                     </div>
                 </div>
+            </div></div>
 
-                <h5 class="fw-bold text-body-emphasis mb-3">Resumo dos Materiais</h5>
-
-                <div class="table-responsive border rounded-4 mb-5">
-                    <table class="table table-revisao table-hover mb-0 bg-body">
-                        <thead class="table-light">
-                        <tr>
-                            <th class="ps-4">Material</th>
-                            <th class="text-center">Peso Registrado</th>
-                            <th style="min-width: 180px;" class="pe-4">Preço Negociado (Unidade)</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr th:each="item : ${itens}">
-                            <input type="hidden" name="idsMateriais" th:value="${item.material.id}">
-
-                            <td class="ps-4">
-                                <span class="fw-bold text-body-emphasis fs-6" th:text="${item.material.nome}">Material</span>
-                            </td>
-
-                            <td class="text-center">
-                                <input type="hidden" name="pesosFinais" th:value="${item.peso}">
-                                <span class="badge bg-secondary bg-opacity-10 text-body border border-secondary-subtle px-3 py-2 rounded-pill fs-6"
-                                      th:text="${item.peso} + ' ' + ${item.material.unidade}">10 KG</span>
-                            </td>
-
-                            <td class="pe-4">
-                                <div class="input-group shadow-sm">
-                                    <span class="input-group-text bg-body-tertiary text-muted border-end-0">R$</span>
-                                    <input type="number" step="0.01" min="0.01" max="100000" required name="precosFinais"
-                                           class="form-control fw-bold text-success border-start-0"
-                                           th:value="${item.material.precoPorKg}"
-                                           inputmode="decimal">
-                                </div>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
+            <!-- Itens -->
+            <div class="card border-0 shadow-sm rounded-4 mb-3"><div class="card-body p-0">
+                <div class="d-flex justify-content-between align-items-center px-4 pt-4 pb-2">
+                    <h2 class="h6 fw-bold mb-0">Materiais</h2>
+                    <span class="small text-body-secondary">Se combinou outro preço, altere o valor por unidade.</span>
                 </div>
-
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <a href="javascript:history.back()" class="btn btn-outline-secondary btn-lg w-100 fw-bold py-3">
-                            <i class="bi bi-arrow-left me-1"></i> Voltar
-                        </a>
+                <div class="cabecalho-itens d-none d-md-grid px-4">
+                    <span>Material</span><span class="text-end">Quantidade</span><span>Preço por unidade</span><span class="text-end">Subtotal</span>
+                </div>
+                <div th:each="item : ${itens}" class="item-revisao px-4"
+                     th:attr="data-peso=${item.peso},data-tabela=${item.material.precoPorKg}">
+                    <input type="hidden" name="idsMateriais" th:value="${item.material.id}">
+                    <input type="hidden" name="pesosFinais" th:value="${item.peso}">
+                    <div class="min-w-0">
+                        <div class="fw-bold text-truncate" th:text="${item.material.nome}">Latinhas</div>
+                        <div class="small text-body-secondary">
+                            Tabela<span th:if="${precosVip != null and precosVip.containsKey(item.material.nome)}"> VIP</span>:
+                            R$ <span th:text="${#numbers.formatDecimal(item.material.precoPorKg, 1, 'POINT', 2, 'COMMA')}">4,50</span>
+                            <span class="badge bg-info-subtle text-info-emphasis negociado d-none">negociado</span>
+                        </div>
                     </div>
-                    <div class="col-md-8">
-                        <button type="submit" class="btn btn-success btn-lg w-100 shadow fw-bold py-3 text-uppercase letter-spacing-1">
-                            Finalizar e Gerar Recibo <i class="bi bi-check2-circle ms-2"></i>
+                    <div class="text-md-end">
+                        <span class="qtd" th:text="${#numbers.formatDecimal(item.peso, 1, 'POINT', 2, 'COMMA')} + ' ' + ${item.material.unidade == 'UN' ? 'un' : 'kg'}">4,00 kg</span>
+                    </div>
+                    <div>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">R$</span>
+                            <input type="number" step="0.01" min="0.01" max="100000" required name="precosFinais"
+                                   class="form-control fw-bold campo-preco" th:value="${item.material.precoPorKg}" inputmode="decimal"
+                                   th:attr="aria-label='Preço por unidade de ' + ${item.material.nome}">
+                            <button type="button" class="btn btn-outline-secondary voltar-tabela d-none" title="Voltar ao preço da tabela" aria-label="Voltar ao preço da tabela"><i class="bi bi-arrow-counterclockwise"></i></button>
+                        </div>
+                    </div>
+                    <div class="text-end fw-bold subtotal">R$ 0,00</div>
+                </div>
+            </div></div>
+
+            <!-- Total e ações -->
+            <div class="card border-0 shadow-sm rounded-4 total-card"><div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div>
+                        <div class="small text-body-secondary">Total a pagar ao fornecedor</div>
+                        <div class="total-valor" id="totalRevisao">R$ 0,00</div>
+                        <div class="small text-body-secondary" id="totalPesos"></div>
+                    </div>
+                    <div class="d-flex gap-2 flex-grow-1 flex-md-grow-0">
+                        <a href="javascript:history.back()" class="btn btn-outline-secondary btn-lg fw-bold"><i class="bi bi-arrow-left"></i> Voltar</a>
+                        <button type="submit" class="btn btn-success btn-lg fw-bold flex-grow-1">
+                            Finalizar e gerar recibo <i class="bi bi-check2-circle ms-1"></i>
                         </button>
                     </div>
                 </div>
-
-            </div>
-        </form>
-    </div>
+            </div></div>
+        </div>
+    </form>
 </div>
 
-<!-- SCRIPT EXTERNO -->
 <script th:src="@{/js/rascunho.js}"></script>
-<script th:src="@{/js/admin-revisao.js}"></script>
+<script th:src="@{/js/admin-revisao.js(v=2)}"></script>
 </body>
 </html>

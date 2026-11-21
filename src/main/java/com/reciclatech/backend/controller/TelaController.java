@@ -456,6 +456,7 @@ public class TelaController {
             model.addAttribute("vendedor", vendedor);
             model.addAttribute("itens", itensRevisao);
             model.addAttribute("totalEstimado", totalEstimado);
+            model.addAttribute("precosVip", precosVip); // Fase 31: marca "VIP" na revisão
             return "admin-revisao";
         } catch (Exception e) {
             return "redirect:/admin/coletas?erro=planilha";
@@ -505,9 +506,10 @@ public class TelaController {
                 loteDeVendas.add(row);
             }
             // o serviço confere de novo (material do armazém, teto de preço sobre a tabela/VIP) e recalcula os totais
-            boolean gravou = googleSheetsService.finalizarAtendimento(idVendedor, cpfGravar, loteDeVendas);
-            if (!gravou) return "redirect:/admin/coletas?aviso=ja_finalizado";
-            return "redirect:/extrato/" + idVendedor + "?fim=1";   // "fim=1": o navegador apaga o rascunho da pesagem
+            String recibo = googleSheetsService.finalizarAtendimentoComRecibo(idVendedor, cpfGravar, loteDeVendas);
+            if (recibo == null) return "redirect:/admin/coletas?aviso=ja_finalizado";
+            // Fase 31: o recibo mostra só este atendimento; "fim=1": o navegador apaga o rascunho da pesagem
+            return "redirect:/extrato/" + idVendedor + "?recibo=" + recibo + "&fim=1";
         } catch (IllegalArgumentException e) {
             ra.addFlashAttribute("erroTela", e.getMessage() + " Nada foi gravado.");
             return "redirect:/admin/coletas";
@@ -531,51 +533,124 @@ public class TelaController {
 // 3. EXTRATOS E RECIBOS
 // =========================================================================
 
+    /** Endereço público do site (variável URL_BASE), usado no QR Code de verificação do recibo. */
+    @Value("${coletae.url-base:}")
+    private String urlBasePublica;
+
+    /**
+     * Recibo de um atendimento. Fase 31: mostra SÓ o atendimento pedido (?recibo=CÓDIGO) ou, sem código, o mais recente;
+     * antes somava todas as compras do cliente. Data, hora e atendente são os do atendimento, não os de quem imprime.
+     */
     @GetMapping("/extrato/{id}")
-    public String gerarExtratoIndividual(@PathVariable String id, Model model, HttpSession session) {
+    public String gerarExtratoIndividual(@PathVariable String id, @RequestParam(required = false) String recibo,
+                                         Model model, HttpSession session) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         try {
             Usuario usuario = googleSheetsService.listarUsuarios().stream().filter(u -> BuscaCliente.corresponde(u, id)).findFirst().orElse(null);
             if (usuario == null) return "redirect:/";
 
-            List<Oferta> vendasReais = googleSheetsService.buscarVendasPorUsuario(id);
-            BigDecimal totalGeral = vendasReais.stream().map(Oferta::getPrecoEstimado).reduce(BigDecimal.ZERO, BigDecimal::add);
+            List<com.reciclatech.backend.util.Recibos.Grupo> grupos =
+                    com.reciclatech.backend.util.Recibos.agrupar(googleSheetsService.buscarVendasPorUsuario(id));
+            com.reciclatech.backend.util.Recibos.Grupo escolhido =
+                    com.reciclatech.backend.util.Recibos.escolher(grupos, recibo).orElse(null);
+            List<Oferta> vendasReais = escolhido == null ? new ArrayList<>() : escolhido.itens;
+            BigDecimal totalGeral = escolhido == null ? BigDecimal.ZERO : escolhido.total;
             List<Material> mats = googleSheetsService.listarMateriais();
+            Map<String, String> unidades = mapaUnidades(mats);
 
-            // =========================================================================
-            // ADICIONADO: BUSCA O RESPONSÁVEL DA SESSÃO PARA O RECIBO/EXTRATO
-            // =========================================================================
-            String responsavel = (String) session.getAttribute("nomeFuncionarioLogado");
-            if (responsavel == null || responsavel.trim().isEmpty()) {
-                responsavel = "Gestor / Administrador";
+            String responsavel = escolhido != null ? escolhido.atendente : null;
+            if (responsavel == null || responsavel.isBlank()) {
+                responsavel = (String) session.getAttribute("nomeFuncionarioLogado"); // vendas antigas não guardavam quem atendeu
+                if (responsavel == null || responsavel.trim().isEmpty()) responsavel = "Gestor / Administrador";
             }
-            model.addAttribute("responsavelAtendimento", responsavel);
+            double totalKg = 0, totalUn = 0;
+            for (Oferta v : vendasReais) {
+                double q = v.getPeso() == null ? 0 : v.getPeso();
+                if ("UN".equalsIgnoreCase(unidades.getOrDefault(v.getMaterial(), "KG"))) totalUn += q; else totalKg += q;
+            }
 
-            model.addAttribute("mapaUnidades", mapaUnidades(mats));
+            model.addAttribute("responsavelAtendimento", responsavel);
+            model.addAttribute("mapaUnidades", unidades);
             model.addAttribute("mapaPrecos", mapaPrecos(mats));
             model.addAttribute("vendedor", usuario);
             model.addAttribute("vendas", vendasReais);
             model.addAttribute("total", totalGeral);
-            model.addAttribute("dataHoje", LocalDate.now(ZoneId.of("America/Recife")));
-
+            model.addAttribute("totalKg", totalKg);
+            model.addAttribute("totalUn", totalUn);
+            model.addAttribute("valorExtenso", com.reciclatech.backend.util.ValorPorExtenso.reais(totalGeral));
+            model.addAttribute("recibo", escolhido);
+            model.addAttribute("reciboPedidoNaoExiste", recibo != null && !recibo.isBlank() && escolhido == null);
+            model.addAttribute("outrosRecibos", grupos.stream().filter(g -> g != escolhido).limit(12).collect(Collectors.toList()));
+            model.addAttribute("dataHoje", escolhido != null && escolhido.data != null ? escolhido.data : LocalDate.now(ZoneId.of("America/Recife")));
+            model.addAttribute("horaRecibo", escolhido != null && escolhido.quando != null
+                    ? escolhido.quando.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) : null);
+            Armazem armazemRecibo = googleSheetsService.armazemDaSessao().orElse(null);
+            model.addAttribute("armazem", armazemRecibo);
+            String nomeArm = armazemRecibo != null && armazemRecibo.getNome() != null ? armazemRecibo.getNome()
+                    : (session.getAttribute("nomeArmazem") != null ? session.getAttribute("nomeArmazem").toString() : "Armazém");
+            model.addAttribute("nomeArmazem", nomeArm);
+            model.addAttribute("nomeCliente", usuario.getNome() == null ? "" : usuario.getNome().replace("(SAÍDA)", "").trim());
+            if (imagemContaService != null) {
+                Object idArm = session.getAttribute("idPlanilhaAtiva");
+                try {
+                    if (idArm != null) model.addAttribute("versaoLogoRecibo",
+                            imagemContaService.versao(com.reciclatech.backend.service.ImagemContaService.ARMAZEM, Long.parseLong(idArm.toString())));
+                } catch (RuntimeException ignorado) { /* sem logo */ }
+            }
+            if (escolhido != null && escolhido.lote != null) {
+                String base = urlBasePublica == null ? "" : urlBasePublica.trim().replaceAll("/+$", "");
+                model.addAttribute("urlVerificacao", base + "/recibo/" + escolhido.getCodigo());
+            }
         } catch (Exception e) {
+            log.error("Erro ao montar o recibo", e);
             return "redirect:/?erro=extrato";
         }
         return "extrato";
     }
 
+    /** Fase 31: verificação pública do recibo (QR Code). Sem login; mostra só o essencial, sem CPF nem telefone. */
+    @GetMapping("/recibo/{codigo}")
+    public String verificarRecibo(@PathVariable String codigo, Model model, jakarta.servlet.http.HttpServletRequest request) {
+        if (!limitadorPublico.permitir("recibo:" + request.getRemoteAddr(), 30, 60_000L)) {
+            model.addAttribute("limite", true);
+            return "recibo-verificar";
+        }
+        try {
+            googleSheetsService.verificarRecibo(codigo).ifPresent(r -> model.addAttribute("r", r));
+        } catch (Exception e) {
+            log.warn("Falha ao verificar recibo: {}", e.getMessage());
+        }
+        return "recibo-verificar";
+    }
+
+    /** Fase 31: recibos de um dia (hoje por padrão), um por atendimento, com hora, itens e total. */
     @GetMapping("/meus-extratos")
-    public String listaExtratosDoDia(Model model, HttpSession session, HttpServletResponse response) {
+    public String listaExtratosDoDia(@RequestParam(required = false) String dia, Model model, HttpSession session, HttpServletResponse response) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (session.getAttribute("bloqueadoPagamento") != null) return "redirect:/admin/assinatura";
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 
+        LocalDate hoje = LocalDate.now(ZoneId.of("America/Recife"));
+        LocalDate escolhido = hoje;
+        if (dia != null && !dia.isBlank()) {
+            try { escolhido = LocalDate.parse(dia.trim()); } catch (RuntimeException ignorado) { escolhido = hoje; }
+            if (escolhido.isAfter(hoje)) escolhido = hoje;
+        }
+        model.addAttribute("dia", escolhido);
+        model.addAttribute("hoje", hoje);
+        model.addAttribute("ehHoje", escolhido.equals(hoje));
+        model.addAttribute("diaAnterior", escolhido.minusDays(1));
+        model.addAttribute("diaSeguinte", escolhido.plusDays(1));
         try {
-            List<Usuario> usuarios = googleSheetsService.buscarUsuariosComVendasHoje();
-            model.addAttribute("usuarios", usuarios);
+            List<DatabaseService.ReciboDoDia> recibos = googleSheetsService.recibosDoDia(escolhido);
+            model.addAttribute("recibos", recibos);
+            BigDecimal soma = BigDecimal.ZERO;
+            for (DatabaseService.ReciboDoDia r : recibos) soma = soma.add(r.recibo.total);
+            model.addAttribute("somaDia", soma);
         } catch (Exception e) {
             log.error("Erro na Central de Extratos", e);
-            model.addAttribute("usuarios", new ArrayList<>());
+            model.addAttribute("recibos", new ArrayList<>());
+            model.addAttribute("somaDia", BigDecimal.ZERO);
         }
         return "lista-extratos";
     }
@@ -663,6 +738,133 @@ public class TelaController {
     // =========================================================================
     // 5. TABELAS DE PREÇO E VIPs (CONFIGURAÇÕES DE COMPRA)
     // =========================================================================
+
+    // =========================================================================
+    // Fase 31: planilha de preços (baixar .xlsx e importar .xlsx/.csv com conferência)
+    // =========================================================================
+
+    private static final String S_IMPORTACAO = "importacaoPrecos";
+    private static final long IMPORTACAO_VALIDADE_MS = 15 * 60 * 1000L;
+
+    /** O que fica guardado na sessão entre a conferência e a confirmação (só textos e números: serializável). */
+    static final class ImportacaoPendente implements java.io.Serializable {
+        private static final long serialVersionUID = 1L;
+        final String token;
+        final String armazemId;
+        final long criadaEm;
+        final int variacoesGrandes;
+        final java.util.ArrayList<String[]> novos = new java.util.ArrayList<>();       // {nome, unidade, preço}
+        final java.util.ArrayList<Object[]> alteracoes = new java.util.ArrayList<>();  // {id (Long), preço (BigDecimal)}
+        ImportacaoPendente(String token, String armazemId, int variacoesGrandes) {
+            this.token = token; this.armazemId = armazemId; this.criadaEm = System.currentTimeMillis(); this.variacoesGrandes = variacoesGrandes;
+        }
+    }
+
+    private boolean gestorDePrecos(HttpSession s) {
+        return s.getAttribute("adminLogado") != null && s.getAttribute("bloqueadoPagamento") == null
+                && "GESTOR".equalsIgnoreCase((String) s.getAttribute("perfilUser"));
+    }
+
+    /** Baixa a tabela atual em .xlsx; o mesmo arquivo serve de modelo para importar. */
+    @GetMapping("/admin/precos/planilha")
+    public org.springframework.http.ResponseEntity<byte[]> baixarPlanilhaPrecos(HttpSession session) {
+        if (!gestorDePrecos(session)) return org.springframework.http.ResponseEntity.status(302).header("Location", "/login").build();
+        try {
+            List<com.reciclatech.backend.util.PlanilhaModelo.Linha> linhas = new ArrayList<>();
+            for (Material m : googleSheetsService.listarMateriais()) {
+                linhas.add(new com.reciclatech.backend.util.PlanilhaModelo.Linha(m.getNome(), m.getUnidade(), m.getPrecoPorKg()));
+            }
+            String nomeArm = String.valueOf(session.getAttribute("nomeArmazem") == null ? "" : session.getAttribute("nomeArmazem"));
+            byte[] corpo = com.reciclatech.backend.util.PlanilhaModelo.gerar(nomeArm, linhas);
+            String arquivo = "precos-" + java.text.Normalizer.normalize(nomeArm, java.text.Normalizer.Form.NFD)
+                    .replaceAll("[^A-Za-z0-9]+", "-").replaceAll("(^-|-$)", "").toLowerCase(Locale.ROOT)
+                    + "-" + LocalDate.now(ZoneId.of("America/Recife")) + ".xlsx";
+            return org.springframework.http.ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=\"" + arquivo.replace("--", "-") + "\"")
+                    .header("Cache-Control", "no-store")
+                    .contentType(org.springframework.http.MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(corpo);
+        } catch (Exception e) {
+            log.error("Falha ao gerar a planilha de preços", e);
+            return org.springframework.http.ResponseEntity.status(302).header("Location", "/admin/precos").build();
+        }
+    }
+
+    /** Recebe a planilha e mostra a conferência. Nada é gravado aqui. */
+    @PostMapping("/admin/precos/importar")
+    public String conferirImportacao(@RequestParam(value = "arquivo", required = false) org.springframework.web.multipart.MultipartFile arquivo,
+                                     HttpSession session, Model model, RedirectAttributes ra) {
+        if (!gestorDePrecos(session)) return "redirect:/admin/coletas";
+        session.removeAttribute(S_IMPORTACAO);
+        if (arquivo == null || arquivo.isEmpty()) {
+            ra.addFlashAttribute("erroTela", "Escolha a planilha (.xlsx ou .csv) para importar.");
+            return "redirect:/admin/precos";
+        }
+        if (arquivo.getSize() > com.reciclatech.backend.util.PlanilhaLeitura.TAMANHO_MAX) {
+            ra.addFlashAttribute("erroTela", "O arquivo passa de 1 MB. Envie só a lista de preços.");
+            return "redirect:/admin/precos";
+        }
+        try {
+            List<List<String>> tabela = com.reciclatech.backend.util.PlanilhaLeitura.ler(arquivo.getBytes());
+            com.reciclatech.backend.util.ImportacaoPrecos.Previa previa = com.reciclatech.backend.util.ImportacaoPrecos.montar(
+                    tabela, googleSheetsService.materiaisParaImportacao(), Valores.PRECO_MAX);
+            ImportacaoPendente pendente = new ImportacaoPendente(java.util.UUID.randomUUID().toString(),
+                    String.valueOf(session.getAttribute("idPlanilhaAtiva")), previa.variacoesGrandes);
+            for (com.reciclatech.backend.util.ImportacaoPrecos.Item it : previa.itens) {
+                if (it.tipo == com.reciclatech.backend.util.ImportacaoPrecos.Tipo.NOVO) {
+                    pendente.novos.add(new String[]{it.material, it.unidade, it.precoNovo.toPlainString()});
+                } else if (it.tipo == com.reciclatech.backend.util.ImportacaoPrecos.Tipo.ALTERAR) {
+                    pendente.alteracoes.add(new Object[]{it.idExistente, it.precoNovo});
+                }
+            }
+            if (previa.temMudanca()) session.setAttribute(S_IMPORTACAO, pendente);
+            model.addAttribute("previa", previa);
+            model.addAttribute("token", pendente.token);
+            model.addAttribute("nomeArquivo", arquivo.getOriginalFilename() == null ? "planilha" : arquivo.getOriginalFilename());
+            return "admin-precos-importar";
+        } catch (IllegalArgumentException e) {
+            ra.addFlashAttribute("erroTela", e.getMessage());
+            return "redirect:/admin/precos";
+        } catch (Exception e) {
+            log.error("Falha ao ler a planilha de preços", e);
+            ra.addFlashAttribute("erroTela", "Não foi possível ler a planilha. Baixe o modelo nesta tela e tente de novo.");
+            return "redirect:/admin/precos";
+        }
+    }
+
+    /** Grava o que foi conferido (tudo ou nada). */
+    @PostMapping("/admin/precos/importar/confirmar")
+    public String confirmarImportacao(@RequestParam String token, @RequestParam(required = false) String confirmarVariacoes,
+                                      HttpSession session, RedirectAttributes ra) {
+        if (!gestorDePrecos(session)) return "redirect:/admin/coletas";
+        Object guardado = session.getAttribute(S_IMPORTACAO);
+        if (!(guardado instanceof ImportacaoPendente p) || !p.token.equals(token)
+                || !p.armazemId.equals(String.valueOf(session.getAttribute("idPlanilhaAtiva")))
+                || System.currentTimeMillis() - p.criadaEm > IMPORTACAO_VALIDADE_MS) {
+            session.removeAttribute(S_IMPORTACAO);
+            ra.addFlashAttribute("erroTela", "A conferência expirou ou já foi usada. Envie a planilha de novo.");
+            return "redirect:/admin/precos";
+        }
+        if (p.variacoesGrandes > 0 && confirmarVariacoes == null) {
+            ra.addFlashAttribute("erroTela", "Marque a confirmação das variações grandes de preço antes de importar. Envie a planilha de novo.");
+            session.removeAttribute(S_IMPORTACAO);
+            return "redirect:/admin/precos";
+        }
+        try {
+            int[] r = googleSheetsService.aplicarImportacaoPrecos(p.novos, p.alteracoes);
+            session.removeAttribute(S_IMPORTACAO);
+            ra.addFlashAttribute("sucessoTela", "Planilha importada: " + r[0] + (r[0] == 1 ? " material novo" : " materiais novos")
+                    + " e " + r[1] + (r[1] == 1 ? " preço alterado." : " preços alterados.") + " Tudo ficou registrado no Histórico.");
+        } catch (IllegalArgumentException e) {
+            session.removeAttribute(S_IMPORTACAO);
+            ra.addFlashAttribute("erroTela", e.getMessage() + " Nada foi gravado.");
+        } catch (Exception e) {
+            log.error("Falha ao aplicar a importação de preços", e);
+            session.removeAttribute(S_IMPORTACAO);
+            ra.addFlashAttribute("erroTela", "Não foi possível importar. Nada foi gravado; tente de novo.");
+        }
+        return "redirect:/admin/precos";
+    }
 
     @GetMapping("/admin/precos")
     public String painelPrecos(Model m, HttpSession s, HttpServletResponse response) {
