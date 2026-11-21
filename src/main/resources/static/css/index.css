@@ -108,3 +108,31 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.025em; }
 .plan-features { list-style: none; padding: 0; margin: 30px 0; text-align: left; flex-grow: 1;}
 .plan-features li { margin-bottom: 15px; color: #4b5563; display: flex; align-items: flex-start; gap: 10px;}
 .plan-features li i { color: var(--primary); font-size: 1.2rem; }
+/* ===== Fase 27: cotação por região, busca e "quem paga mais" ===== */
+.cot-filtros { max-width: 720px; }
+.cot-busca { max-width: 560px; }
+.cot-abas .btn { padding: 8px 18px; }
+.cot-abas .btn.active { color: #fff; }
+.min-w-0 { min-width: 0; }
+.cot-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 18px; transition: border-color .2s, box-shadow .2s; }
+.cot-card:hover { border-color: var(--primary); box-shadow: 0 8px 20px -8px rgba(5, 150, 105, 0.25); }
+.cot-icone { width: 40px; height: 40px; border-radius: 50%; background: rgba(5, 150, 105, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.cot-nome { font-size: 1.05rem; font-weight: 800; color: var(--dark); line-height: 1.25; overflow-wrap: anywhere; }
+.cot-dias { display: block; margin-top: 2px; }
+.cot-mats { border-top: 1px solid #f1f5f9; }
+.cot-mat { padding: 8px 0; border-bottom: 1px solid #f1f5f9; gap: 12px; }
+.cot-mat-nome { font-size: 0.82rem; font-weight: 700; color: #374151; letter-spacing: .3px; overflow-wrap: anywhere; }
+.cot-mat-preco { font-weight: 900; color: var(--primary); white-space: nowrap; }
+.cot-ranking { max-width: 760px; }
+.cot-rank { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 12px 16px; margin-bottom: 10px; }
+.cot-rank-melhor { border: 2px solid #f59e0b; background: #fffbeb; }
+.cot-pos { font-weight: 900; font-size: 1.1rem; color: #9ca3af; width: 2.2rem; text-align: center; flex-shrink: 0; }
+.cot-rank-melhor .cot-pos { color: #b45309; }
+.cot-rank-nome { font-weight: 800; color: var(--dark); overflow-wrap: anywhere; }
+.cot-rank-preco { font-weight: 900; font-size: 1.15rem; color: var(--primary); white-space: nowrap; }
+@media (max-width: 575.98px) {
+    .cot-rank { flex-wrap: wrap; }
+    .cot-rank > .flex-grow-1 { flex: 1 1 0; }
+    .cot-rank > .flex-shrink-0:last-child { width: 100%; }
+    .cot-rank > .flex-shrink-0:last-child .btn { width: 100%; }
+}

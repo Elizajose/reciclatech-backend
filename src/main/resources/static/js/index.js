@@ -103,7 +103,7 @@ function enviarZap(event) {
 const NOMES_UF = {AC:"Acre",AL:"Alagoas",AP:"Amapá",AM:"Amazonas",BA:"Bahia",CE:"Ceará",DF:"Distrito Federal",ES:"Espírito Santo",GO:"Goiás",MA:"Maranhão",MT:"Mato Grosso",MS:"Mato Grosso do Sul",MG:"Minas Gerais",PA:"Pará",PB:"Paraíba",PR:"Paraná",PE:"Pernambuco",PI:"Piauí",RJ:"Rio de Janeiro",RN:"Rio Grande do Norte",RS:"Rio Grande do Sul",RO:"Rondônia",RR:"Roraima",SC:"Santa Catarina",SP:"São Paulo",SE:"Sergipe",TO:"Tocantins"};
 
 function chaveTexto(t) {
-    return (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+    return (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().replace(/\s+/g, " ").toLowerCase();
 }
 
 function iniciarFiltroRegiao() {
@@ -209,6 +209,41 @@ function iniciarFiltroRegiao() {
         selUf.value = ufs[0];
         aoMudarUf();
     }
+
+    // Fase 27: escolhe Estado e cidade no formulário (se existirem nele). Devolve true quando conseguiu.
+    function aplicarRegiao(uf, cidadeChave) {
+        if (!uf || !Array.from(selUf.options).some(o => o.value === uf)) return false;
+        selUf.value = uf;
+        aoMudarUf();
+        if (uf === "__SEM__") return true;
+        if (cidadeChave && Array.from(selCidade.options).some(o => o.value === cidadeChave)) {
+            selCidade.value = cidadeChave;
+            aoMudarCidade();
+        }
+        return true;
+    }
+
+    // Fase 27: o botão "Agendar coleta" da cotação preenche Estado, cidade e armazém e leva até o formulário.
+    function selecionarArmazem(id) {
+        const alvo = todos.find(a => a.el.value === String(id));
+        if (!alvo) return false;
+        if (alvo.uf && alvo.cidade) aplicarRegiao(alvo.uf, chaveTexto(alvo.cidade));
+        else aplicarRegiao("__SEM__", "");
+        selArmazem.value = alvo.el.value;
+        const caixa = document.getElementById("agendar");
+        if (caixa) caixa.scrollIntoView({behavior: "smooth", block: "start"});
+        const nome = document.getElementById("nomeZap");
+        if (nome) setTimeout(() => { try { nome.focus({preventScroll: true}); } catch (e) { nome.focus(); } }, 400);
+        return true;
+    }
+
+    window.coletaeAgendar = { aplicarRegiao: aplicarRegiao, selecionarArmazem: selecionarArmazem };
+
+    // Fase 27: usa a última região escolhida na cotação (se o formulário ainda estiver em branco)
+    try {
+        const salvo = JSON.parse(localStorage.getItem("coletae.cotacao") || "null");
+        if (salvo && salvo.uf && !selUf.value) aplicarRegiao(salvo.uf, salvo.cidade);
+    } catch (e) { /* navegador sem localStorage: segue normal */ }
 }
 
 document.addEventListener("DOMContentLoaded", iniciarFiltroRegiao);

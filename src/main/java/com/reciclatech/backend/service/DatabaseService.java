@@ -34,6 +34,7 @@ public class DatabaseService {
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private HistoricoAlteracaoRepository historicoRepository;
     @Autowired private ParceiroRepository parceiroRepository;
+    @Autowired(required = false) private CotacaoPublicaService cotacaoPublicaService; // Fase 27
     @Autowired private HttpSession session;
 
     /** Teto do preço negociado em relação à tabela/VIP (variável PRECO_MAX_MULTIPLO; 2 = até o dobro). */
@@ -283,28 +284,6 @@ public class DatabaseService {
         }
     }
 
-    public List<Map<String, Object>> obterCotacoesPublicas() throws IOException {
-        LocalDate hoje = LocalDate.now(ZoneId.of("America/Recife"));
-
-        List<Armazem> armazens = armazemRepository.findAll().stream()
-                .filter(a -> com.reciclatech.backend.util.Assinatura.aceitaPedidosPublicos(a.getStatus(), a.getDataCadastro(), hoje))
-                .collect(Collectors.toList());
-
-        List<Map<String, Object>> cotacoes = new ArrayList<>();
-        for (Armazem a : armazens) {
-            Map<String, Object> dados = new HashMap<>();
-            dados.put("idPlanilha", a.getId().toString());
-            dados.put("nome", a.getNome());
-            dados.put("htmlId", "arm" + a.getId()); // único por armazém (nomes parecidos davam o mesmo id na página)
-            dados.put("telefone", a.getTelefone());
-            dados.put("uf", a.getUf());
-            dados.put("cidade", a.getCidade());
-            dados.put("materiais", materialRepository.findAllByArmazemIdOrderByNomeAsc(a.getId()));
-            cotacoes.add(dados);
-        }
-        return cotacoes;
-    }
-
 
     // =========================================================================
     // 3. GESTÃO DE MATERIAIS E PREÇOS
@@ -343,6 +322,7 @@ public class DatabaseService {
         material.setArmazem(getArmazemLogado());
         materialRepository.save(material);
         auditar(HistoricoAlteracao.MATERIAL, HistoricoAlteracao.CRIADO, material.getNome(), material.getUnidade(), null, material.getPrecoPorKg());
+        renovarCotacaoPublica();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -368,6 +348,7 @@ public class DatabaseService {
         m.setPrecoPorKg(novoPreco);
         materialRepository.save(m);
         auditar(HistoricoAlteracao.MATERIAL, HistoricoAlteracao.PRECO_ALTERADO, m.getNome(), m.getUnidade(), anterior, novoPreco);
+        renovarCotacaoPublica();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -388,6 +369,22 @@ public class DatabaseService {
         }
         auditar(HistoricoAlteracao.MATERIAL, HistoricoAlteracao.EXCLUIDO, m.getNome(), m.getUnidade(), m.getPrecoPorKg(), null);
         materialRepository.delete(m);
+        renovarCotacaoPublica();
+    }
+
+    /**
+     * Fase 27: a cotação da página inicial guarda os preços por até 60 s. Depois de criar, alterar ou excluir um preço,
+     * descarta essa cópia agora e de novo quando a transação terminar (para não guardar o valor antigo no meio do caminho).
+     */
+    private void renovarCotacaoPublica() {
+        if (cotacaoPublicaService == null) return;
+        cotacaoPublicaService.invalidar();
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override public void afterCompletion(int status) { cotacaoPublicaService.invalidar(); }
+                    });
+        }
     }
 
     /** Saldo no pátio de um material (entradas - saídas), pelo mesmo critério das telas de estoque. */

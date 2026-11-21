@@ -88,7 +88,7 @@
             </div>
 
             <div class="col-lg-5">
-                <div class="form-glass">
+                <div class="form-glass" id="agendar">
                     <div class="text-center mb-4">
                         <h3 class="fw-bold text-dark m-0">Agendar Coleta</h3>
                         <p class="text-muted small">Catador, agende sua entrega direto no galpão!</p>
@@ -156,57 +156,91 @@
     </div>
 </section>
 
-<!-- COTAÇÕES DINÂMICAS POR ARMAZÉM -->
+<!-- COTAÇÕES (Fase 27): região primeiro, busca pelo nome e visão por material. Os dados vêm de /cotacoes/... (cotacao.js) -->
 <section id="cotacoes" class="py-5 bg-white">
     <div class="container py-5">
-        <div class="text-center mb-5">
+        <div class="text-center mb-4">
             <h6 class="text-success fw-bold text-uppercase tracking-wider">Transparência</h6>
-            <h2 class="fw-bold text-dark">Preços Atualizados Hoje</h2>
-            <p class="text-muted">Selecione o armazém parceiro para conferir a cotação atual.</p>
+            <h2 class="fw-bold text-dark">Preços dos Armazéns</h2>
+            <p class="text-muted mb-0">Escolha o seu estado e a sua cidade para ver quanto cada armazém está pagando.</p>
         </div>
 
-        <ul class="nav nav-pills justify-content-center mb-5 notranslate" id="pills-tab" role="tablist">
-            <li class="nav-item" role="presentation" th:each="armazem : ${listaArmazens}">
-                <button class="nav-link shadow-sm"
-                        th:id="'tab-' + ${armazem.htmlId}"
-                        data-bs-toggle="pill"
-                        th:data-bs-target="'#content-' + ${armazem.htmlId}"
-                        type="button" role="tab">
-                    <i class="bi bi-shop me-2"></i> <span th:text="${armazem.nome}">Nome do Armazém</span>
-                </button>
-            </li>
-        </ul>
-
-        <div class="tab-content" id="pills-tabContent">
-            <div th:each="armazem : ${listaArmazens}"
-                 class="tab-pane fade"
-                 th:id="'content-' + ${armazem.htmlId}"
-                 role="tabpanel">
-
-                <div class="row g-3 justify-content-center">
-                    <div th:each="m : ${armazem.materiais}" class="col-12 col-sm-6 col-lg-4">
-                        <div class="price-item">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                                    <i class="bi bi-recycle fs-6"></i>
-                                </div>
-                                <div class="text-start">
-                                    <p class="price-name text-uppercase" th:text="${m.nome}">Papelão</p>
-                                    <span class="price-unit">por <span class="notranslate" th:text="${m.unidade}">KG</span></span>
-                                </div>
-                            </div>
-                            <div class="price-value text-end notranslate">
-                                R$ <span th:text="${m.precoPorKg}">0.00</span>
-                            </div>
-                        </div>
+        <div class="cot-filtros mx-auto mb-4">
+            <div class="row g-2">
+                <div class="col-12 col-md-6">
+                    <div class="form-floating">
+                        <select class="form-select notranslate" id="cotUf" aria-label="Estado">
+                            <option value="" selected>Carregando...</option>
+                        </select>
+                        <label for="cotUf"><i class="bi bi-map text-muted me-1"></i> Estado</label>
                     </div>
+                </div>
+                <div class="col-12 col-md-6" id="cotCaixaCidade">
+                    <div class="form-floating">
+                        <select class="form-select notranslate" id="cotCidade" aria-label="Cidade" disabled>
+                            <option value="" selected>Escolha o estado primeiro</option>
+                        </select>
+                        <label for="cotCidade"><i class="bi bi-buildings text-muted me-1"></i> Cidade</label>
+                    </div>
+                </div>
+            </div>
 
-                    <div th:if="${#lists.isEmpty(armazem.materiais)}" class="col-12 text-center text-muted py-4">
-                        <p><i class="bi bi-info-circle me-2"></i>Nenhum preço cadastrado para este armazém no momento.</p>
+            <div id="cotVisoes" class="d-none mt-3">
+                <div class="d-flex justify-content-center">
+                    <div class="btn-group cot-abas" role="group" aria-label="Como ver os preços">
+                        <button type="button" class="btn btn-outline-success fw-bold active" data-visao="armazem" aria-pressed="true">
+                            <i class="bi bi-shop me-1"></i> Por armazém
+                        </button>
+                        <button type="button" class="btn btn-outline-success fw-bold" data-visao="material" aria-pressed="false">
+                            <i class="bi bi-trophy me-1"></i> Quem paga mais
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
+
+        <div id="cotAviso" class="text-center text-muted py-4">
+            <i class="bi bi-geo-alt fs-2 d-block mb-2 text-success"></i>
+            <span id="cotAvisoTexto">Escolha o estado e a cidade acima para ver os preços.</span>
+        </div>
+
+        <!-- Visão por armazém (ordem alfabética) -->
+        <div id="cotPainelArmazem" class="d-none">
+            <div class="cot-busca mx-auto mb-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="search" id="cotBusca" class="form-control" maxlength="60" autocomplete="off"
+                           placeholder="Buscar armazém pelo nome" aria-label="Buscar armazém pelo nome">
+                </div>
+                <p id="cotResumo" class="small text-muted text-center mt-2 mb-0"></p>
+            </div>
+            <div id="cotLista" class="row g-3"></div>
+            <div class="text-center mt-4">
+                <button type="button" id="cotVerMais" class="btn btn-outline-secondary rounded-pill px-4 d-none">
+                    Ver mais armazéns
+                </button>
+            </div>
+        </div>
+
+        <!-- Visão por material (quem paga mais) -->
+        <div id="cotPainelMaterial" class="d-none">
+            <div class="cot-busca mx-auto mb-3">
+                <p class="small text-muted text-center mb-2">Mais comuns por aqui:</p>
+                <div id="cotChips" class="d-flex flex-wrap justify-content-center gap-2 mb-3"></div>
+                <div class="form-floating">
+                    <select class="form-select notranslate" id="cotMaterial" aria-label="Material"></select>
+                    <label for="cotMaterial"><i class="bi bi-recycle text-muted me-1"></i> Material</label>
+                </div>
+            </div>
+            <div id="cotRanking" class="cot-ranking mx-auto"></div>
+            <p class="small text-muted text-center mt-3 mb-0">
+                Preços informados por cada armazém. Confirme pelo WhatsApp antes de levar o material.
+            </p>
+        </div>
+
+        <noscript>
+            <p class="text-center text-muted">Ative o JavaScript do navegador para ver os preços.</p>
+        </noscript>
     </div>
 </section>
 
@@ -585,7 +619,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<script th:src="@{/js/index.js(v=9.1)}"></script>
+<script th:src="@{/js/index.js(v=9.2)}"></script>
+<script th:src="@{/js/cotacao.js(v=1)}"></script>
 
 <!-- CARREGA A API DO GOOGLE TRANSLATE -->
 <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>

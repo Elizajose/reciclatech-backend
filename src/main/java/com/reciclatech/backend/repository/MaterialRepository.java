@@ -7,4 +7,7 @@ import java.util.List;
 @Repository
 public interface MaterialRepository extends JpaRepository<Material, Long> {
     List<Material> findAllByArmazemIdOrderByNomeAsc(Long armazemId);
+
+    /** Fase 27: preços de vários armazéns numa consulta só (cotação pública da página inicial). */
+    List<Material> findAllByArmazemIdIn(java.util.Collection<Long> armazemIds);
 }

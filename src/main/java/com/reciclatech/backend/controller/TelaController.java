@@ -47,6 +47,7 @@ public class TelaController {
     @Autowired private ParceiroService parceiroService;
     @Autowired private LoginThrottle throttle;
     @Autowired private LimitadorPublico limitadorPublico;
+    @Autowired private com.reciclatech.backend.service.CotacaoPublicaService cotacaoPublicaService;
     @Autowired(required = false) private com.reciclatech.backend.service.EmailService emailService;
 
     @Autowired(required = false)
@@ -75,8 +76,10 @@ public class TelaController {
     @GetMapping("/")
     public String home(Model model) {
         try {
-            model.addAttribute("listaArmazens", googleSheetsService.obterCotacoesPublicas());
+            // Fase 27: só a lista leve para o "Agendar Coleta"; os preços vêm sob demanda de /cotacoes/... (CotacaoController)
+            model.addAttribute("listaArmazens", cotacaoPublicaService.listaParaPedido());
         } catch (Exception e) {
+            log.warn("Página inicial sem a lista de armazéns: {}", e.getMessage());
             model.addAttribute("listaArmazens", new ArrayList<>());
         }
         return "index";
