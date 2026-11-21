@@ -27,6 +27,28 @@ public class EmailService {
         this.mailSender = mailSender;
     }
 
+    /** Aviso de segurança: a senha da conta acabou de ser trocada. Nunca lança exceção. */
+    public void enviarSenhaAlterada(String para, String nome) {
+        JavaMailSender sender = mailSender.getIfAvailable();
+        if (sender == null || remetente == null || remetente.isBlank() || para == null || para.isBlank()) {
+            return;
+        }
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom(remetente);
+            msg.setTo(para);
+            msg.setSubject("Coletaê: sua senha foi alterada");
+            msg.setText("Olá, " + nome + "!\n\n"
+                    + "A senha da sua conta no Coletaê acabou de ser alterada.\n\n"
+                    + "Foi você? Então está tudo certo, não precisa fazer nada.\n"
+                    + "Não foi você? Use agora a opção \"Esqueci minha senha\" na tela de entrada para criar uma nova senha "
+                    + "e fale com a gente: " + remetente + ".");
+            sender.send(msg);
+        } catch (Exception e) {
+            log.error("Falha ao enviar aviso de senha alterada: {}", e.getMessage());
+        }
+    }
+
     public void enviarRedefinicaoSenha(String para, String nome, String link) {
         if (logarLinks) {
             log.info("[DEV] Link de redefinição de senha para {}: {}", para, link);

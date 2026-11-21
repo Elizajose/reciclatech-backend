@@ -45,6 +45,10 @@ public class FiltroSeguranca extends OncePerRequestFilter {
         res.setHeader("X-Frame-Options", "SAMEORIGIN");
         res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
         res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+        // Só em conexão HTTPS: manda o navegador usar sempre HTTPS neste site (180 dias).
+        if (req.isSecure()) {
+            res.setHeader("Strict-Transport-Security", "max-age=15552000");
+        }
 
         // Páginas de área logada nunca ficam no cache do navegador: após "Sair", o botão Voltar não mostra mais a tela antiga.
         String uri = req.getRequestURI();

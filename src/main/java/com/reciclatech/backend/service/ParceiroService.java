@@ -37,6 +37,10 @@ public class ParceiroService {
         this.encoder = encoder;
     }
 
+    public Optional<Parceiro> buscar(Long parceiroId) {
+        return parceiroId == null ? Optional.empty() : parceiroRepository.findById(parceiroId);
+    }
+
     public boolean emailEmUso(String email) {
         return email != null && parceiroRepository.existsByEmailIgnoreCase(email.trim());
     }

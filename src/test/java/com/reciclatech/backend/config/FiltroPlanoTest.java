@@ -36,6 +36,7 @@ class FiltroPlanoTest {
                     case "getMethod" -> "GET";
                     case "getContextPath" -> "";
                     case "getSession" -> sessao;
+                    case "isSecure" -> false;
                     default -> null;
                 });
         HttpServletResponse res = (HttpServletResponse) Proxy.newProxyInstance(HttpServletResponse.class.getClassLoader(), new Class<?>[]{HttpServletResponse.class},

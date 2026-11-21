@@ -47,6 +47,7 @@ public class TelaController {
     @Autowired private ParceiroService parceiroService;
     @Autowired private LoginThrottle throttle;
     @Autowired private LimitadorPublico limitadorPublico;
+    @Autowired(required = false) private com.reciclatech.backend.service.EmailService emailService;
 
     @Autowired(required = false)
     private org.springframework.mail.javamail.JavaMailSender mailSender;
@@ -1200,6 +1201,12 @@ public class TelaController {
                 throttle.sucesso(chave);
                 session.setAttribute("credFp", parceiroService.impressaoDaSenha(parceiroId)); // esta sessão continua valendo; as outras caem
                 ra.addFlashAttribute("sucessoPerfil", "Senha atualizada com sucesso!");
+                if (emailService != null) {
+                    parceiroService.buscar(parceiroId).ifPresent(p -> {
+                        String destino = p.getEmail(), nome = p.getNome();
+                        java.util.concurrent.CompletableFuture.runAsync(() -> emailService.enviarSenhaAlterada(destino, nome));
+                    });
+                }
             } else {
                 throttle.falhou(chave);
                 ra.addFlashAttribute("erroPerfil", "Operação negada: a senha atual informada está incorreta.");
@@ -1278,6 +1285,17 @@ public class TelaController {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         if (printTela != null && !printTela.isEmpty() && !anexoPermitido(printTela)) {
             redirectAttributes.addFlashAttribute("erroSuporte", "Anexo não permitido. Envie apenas imagem (PNG, JPG, WEBP, GIF) ou PDF de até 5 MB.");
+            return "redirect:/admin/coletas";
+        }
+        // no máximo 5 chamados por hora por armazém (evita abuso e gasto da cota do e-mail)
+        String chaveChamado = "chamado:" + session.getAttribute("idPlanilhaAtiva");
+        if (!limitadorPublico.permitir(chaveChamado, 5, 60 * 60 * 1000L)) {
+            redirectAttributes.addFlashAttribute("erroSuporte", "Você já enviou vários chamados na última hora. Aguarde um pouco ou chame no WhatsApp.");
+            return "redirect:/admin/coletas";
+        }
+        if (emailRetorno != null && !emailRetorno.isBlank()
+                && !com.reciclatech.backend.util.EmailValido.formatoValido(emailRetorno)) {
+            redirectAttributes.addFlashAttribute("erroSuporte", "O e-mail de retorno parece inválido. Confira e tente de novo.");
             return "redirect:/admin/coletas";
         }
         // evita quebra de linha no assunto do e-mail (injeção de cabeçalho)

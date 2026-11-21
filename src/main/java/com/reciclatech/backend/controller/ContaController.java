@@ -6,6 +6,7 @@ import com.reciclatech.backend.service.ComparacaoArmazens;
 import com.reciclatech.backend.service.DatabaseService;
 import com.reciclatech.backend.service.ImagemContaService;
 import com.reciclatech.backend.util.Assinatura;
+import com.reciclatech.backend.service.LimitadorPublico;
 import com.reciclatech.backend.service.LoginThrottle;
 import com.reciclatech.backend.util.PeriodoComparacao;
 import com.reciclatech.backend.util.PrecoPlano;
@@ -37,13 +38,16 @@ public class ContaController {
     private final RecuperacaoSenhaService recuperacaoSenhaService;
     private final DatabaseService databaseService;
     private final ImagemContaService imagemContaService;
+    private final LimitadorPublico limitadorPublico;
 
     @org.springframework.beans.factory.annotation.Value("${coletae.preco-armazem-extra:129.90}")
     private double precoArmazemExtra;
 
     public ContaController(ParceiroService parceiroService,
                            LoginThrottle throttle, RecuperacaoSenhaService recuperacaoSenhaService,
-                           DatabaseService databaseService, ImagemContaService imagemContaService) {
+                           DatabaseService databaseService, ImagemContaService imagemContaService,
+                           LimitadorPublico limitadorPublico) {
+        this.limitadorPublico = limitadorPublico;
         this.databaseService = databaseService;
         this.imagemContaService = imagemContaService;
         this.parceiroService = parceiroService;
@@ -365,9 +369,11 @@ public class ContaController {
     }
 
     @PostMapping("/esqueci-senha")
-    public String esqueciEnviar(@RequestParam String email, Model model) {
+    public String esqueciEnviar(@RequestParam String email, HttpServletRequest request, Model model) {
         String chave = "reset:" + email;
-        if (!throttle.bloqueado(chave)) {
+        // freio por IP: impede disparar e-mails para muitos endereços diferentes (gastaria a cota do e-mail da empresa)
+        boolean ipOk = limitadorPublico.permitir("reset-ip:" + request.getRemoteAddr(), 10, 15 * 60 * 1000L);
+        if (ipOk && !throttle.bloqueado(chave)) {
             throttle.falhou(chave); // conta cada pedido: no máximo 5 e-mails a cada 15 min por endereço
             recuperacaoSenhaService.solicitar(email);
         }

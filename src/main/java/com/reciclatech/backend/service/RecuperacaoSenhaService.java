@@ -84,6 +84,9 @@ public class RecuperacaoSenhaService {
         parceiroService.definirSenha(t.getParceiro().getId(), novaSenha); // valida a senha nova
         t.setUsadoEm(LocalDateTime.now());
         tokenRepository.save(t);
+        String destino = t.getParceiro().getEmail();
+        String nome = t.getParceiro().getNome();
+        CompletableFuture.runAsync(() -> emailService.enviarSenhaAlterada(destino, nome));
         return true;
     }
 
