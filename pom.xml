@@ -51,6 +51,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
+        <!-- Fase 34: sessões guardadas no PostgreSQL (ninguém precisa entrar de novo depois de um deploy). Versão vem do Spring Boot. -->
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-jdbc</artifactId>
+        </dependency>
 
         <!-- Criptografia de senha (BCrypt). Só a biblioteca: não ativa o Spring Security -->
         <dependency>

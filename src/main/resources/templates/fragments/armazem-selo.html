@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Fase 34: selo com a logo e o nome do armazém no alto das telas internas que ainda não tinham -->
+<div th:fragment="selo" class="d-flex align-items-center gap-2 mb-3 d-print-none" style="min-width: 0;">
+    <img th:if="${versaoLogoPainel != null}" th:src="@{/admin/logo(v=${versaoLogoPainel})}" alt="Logo do armazém"
+         style="width: 34px; height: 34px; border-radius: 9px; object-fit: cover; border: 1px solid var(--bs-border-color); background: #fff;">
+    <span th:if="${versaoLogoPainel == null}" class="d-inline-flex align-items-center justify-content-center"
+          style="width: 34px; height: 34px; border-radius: 9px; background: #e8f5ee; color: #198754;"><i class="bi bi-recycle"></i></span>
+    <span class="fw-bold text-body-secondary text-truncate" th:text="${session.nomeArmazem != null ? session.nomeArmazem : 'Seu armazém'}">Armazém</span>
+</div>
+</body>
+</html>

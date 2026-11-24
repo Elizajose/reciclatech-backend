@@ -33,6 +33,29 @@ public class ChamadoController {
     @Value("${coletae.url-base:}")
     private String urlBase;
 
+    // Fase 34: o suporte recebe e-mail quando o armazém responde um chamado
+    @Value("${coletae.email-suporte:}")
+    private String emailSuporte;
+
+    private static ChamadoService.Anexo anexoDe(org.springframework.web.multipart.MultipartFile f) throws java.io.IOException {
+        if (f == null || f.isEmpty()) return null;
+        if (f.getSize() > ChamadoService.ANEXO_MAX_BYTES) throw new IllegalArgumentException("O anexo passa de 5 MB.");
+        return new ChamadoService.Anexo(f.getOriginalFilename(), f.getBytes());
+    }
+
+    private String base() { return urlBase == null ? "" : urlBase.trim().replaceAll("/+$", ""); }
+
+    /** Fase 34: entrega o anexo (só imagem ou PDF conferidos pelo conteúdo), sem deixar o navegador "adivinhar" o tipo. */
+    private static org.springframework.http.ResponseEntity<byte[]> entregar(com.reciclatech.backend.model.ChamadoAnexo a) {
+        String disp = (a.isImagem() || "application/pdf".equals(a.getTipo()) ? "inline" : "attachment") + "; filename=\"" + a.getNome() + "\"";
+        return org.springframework.http.ResponseEntity.ok()
+                .header("Content-Type", a.getTipo())
+                .header("Content-Disposition", disp)
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Cache-Control", "private, no-store")
+                .body(a.getDados());
+    }
+
     private static Long armazemDa(HttpSession s) {
         Object id = s.getAttribute("idPlanilhaAtiva");
         if (id == null) return null;
@@ -67,12 +90,15 @@ public class ChamadoController {
         model.addAttribute("chamados", lista);
         model.addAttribute("chamado", aberto);
         model.addAttribute("mensagens", aberto == null ? List.of() : chamadoService.mensagensDo(aberto.getId()));
+        model.addAttribute("anexos", aberto == null ? java.util.Map.of() : chamadoService.anexosPorMensagem(aberto.getId()));
         model.addAttribute("naoLidos", chamadoService.naoLidosDoArmazem(armazemId));
         return "admin-chamados";
     }
 
     @PostMapping("/admin/chamados/{id}/responder")
-    public String responderArmazem(@PathVariable Long id, @RequestParam String texto, HttpSession session, RedirectAttributes ra) {
+    public String responderArmazem(@PathVariable Long id, @RequestParam String texto,
+                                   @RequestParam(value = "arquivo", required = false) org.springframework.web.multipart.MultipartFile arquivo,
+                                   HttpSession session, RedirectAttributes ra) {
         if (session.getAttribute("adminLogado") == null) return "redirect:/login";
         Long armazemId = armazemDa(session);
         if (armazemId == null) return "redirect:/login";
@@ -81,8 +107,10 @@ public class ChamadoController {
             return "redirect:/admin/chamados?id=" + id;
         }
         try {
-            chamadoService.responderComoArmazem(armazemId, id, autorDa(session), texto);
+            Chamado c = chamadoService.responderComoArmazem(armazemId, id, autorDa(session), texto, anexoDe(arquivo));
             ra.addFlashAttribute("sucessoTela", "Mensagem enviada ao suporte.");
+            emailService.avisarSuporteChamado(emailSuporte, c.getCodigo(), c.getNomeArmazem(), c.getAssunto(), texto.strip(),
+                    base().isEmpty() ? null : base() + "/master/chamados?id=" + c.getId() + "&filtro=todos");
         } catch (IllegalArgumentException e) {
             ra.addFlashAttribute("erroTela", e.getMessage());
         } catch (Exception e) {
@@ -90,6 +118,21 @@ public class ChamadoController {
             ra.addFlashAttribute("erroTela", "Não foi possível enviar. Tente de novo.");
         }
         return "redirect:/admin/chamados?id=" + id;
+    }
+
+    @GetMapping("/admin/chamados/anexo/{anexoId}")
+    public org.springframework.http.ResponseEntity<byte[]> anexoArmazem(@PathVariable Long anexoId, HttpSession session) {
+        Long armazemId = session.getAttribute("adminLogado") == null ? null : armazemDa(session);
+        if (armazemId == null) return org.springframework.http.ResponseEntity.status(403).build();
+        return chamadoService.anexo(anexoId, armazemId).map(ChamadoController::entregar)
+                .orElse(org.springframework.http.ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/master/chamados/anexo/{anexoId}")
+    public org.springframework.http.ResponseEntity<byte[]> anexoMaster(@PathVariable Long anexoId, HttpSession session) {
+        if (session.getAttribute("masterLogado") == null) return org.springframework.http.ResponseEntity.status(403).build();
+        return chamadoService.anexo(anexoId, null).map(ChamadoController::entregar)
+                .orElse(org.springframework.http.ResponseEntity.notFound().build());
     }
 
     /** Número do sininho, para o painel atualizar sem recarregar (leve: uma contagem). */
@@ -119,19 +162,22 @@ public class ChamadoController {
         model.addAttribute("filtro", f);
         model.addAttribute("chamado", aberto);
         model.addAttribute("mensagens", aberto == null ? List.of() : chamadoService.mensagensDo(aberto.getId()));
+        model.addAttribute("anexos", aberto == null ? java.util.Map.of() : chamadoService.anexosPorMensagem(aberto.getId()));
         model.addAttribute("naoLidosSuporte", chamadoService.naoLidosDoSuporte());
         return "master-chamados";
     }
 
     @PostMapping("/master/chamados/{id}/responder")
     public String responderMaster(@PathVariable Long id, @RequestParam(required = false) String texto,
-                                  @RequestParam(required = false) String fechar, HttpSession session, RedirectAttributes ra) {
+                                  @RequestParam(required = false) String fechar,
+                                  @RequestParam(value = "arquivo", required = false) org.springframework.web.multipart.MultipartFile arquivo,
+                                  HttpSession session, RedirectAttributes ra) {
         if (session.getAttribute("masterLogado") == null) return "redirect:/login";
         try {
             boolean temTexto = texto != null && !texto.isBlank();
-            Chamado c = chamadoService.responderComoSuporte(id, texto, fechar != null);
+            Chamado c = chamadoService.responderComoSuporte(id, texto, fechar != null, anexoDe(arquivo));
             if (temTexto && c.getEmailRetorno() != null) {
-                String base = urlBase == null ? "" : urlBase.trim().replaceAll("/+$", "");
+                String base = base();
                 emailService.enviarRespostaChamado(c.getEmailRetorno(), c.getNomeArmazem(), c.getCodigo(), c.getAssunto(),
                         texto.strip(), base.isEmpty() ? null : base + "/admin/chamados?id=" + c.getId());
             }

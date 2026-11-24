@@ -23,3 +23,10 @@
 .master .balao-linha.suporte { justify-content: flex-end; }
 .master .balao-linha.suporte .balao { background: #e7f1ff; border-color: #b6d4fe; }
 .master .balao-linha.armazem .balao { background: var(--bs-tertiary-bg); }
+/* Fase 34: anexos */
+.balao-anexos { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.anexo-link { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; text-decoration: none; padding: 4px 8px; border-radius: 8px; background: rgba(255, 255, 255, .7); border: 1px solid var(--bs-border-color-translucent); width: fit-content; max-width: 100%; }
+.anexo-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-bs-theme="dark"] .anexo-link { background: rgba(0, 0, 0, .2); }
+.anexo-escolher { cursor: pointer; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.anexo-escolher.tem-arquivo { border-color: #198754; color: #198754; }

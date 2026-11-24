@@ -94,4 +94,24 @@ public class EmailService {
             log.error("Falha ao enviar aviso de resposta de chamado: {}", e.getMessage());
         }
     }
+
+    /** Fase 34: avisa o suporte que o armazém respondeu um chamado. Nunca lança exceção. */
+    public void avisarSuporteChamado(String para, String codigo, String nomeArmazem, String assunto, String texto, String link) {
+        JavaMailSender sender = mailSender.getIfAvailable();
+        if (sender == null || remetente == null || remetente.isBlank() || para == null || para.isBlank()) return;
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom(remetente);
+            msg.setTo(para);
+            msg.setSubject(("[CHAMADO " + codigo + "] Nova mensagem de " + (nomeArmazem == null ? "um armazém" : nomeArmazem)
+                    + " - " + assunto).replaceAll("[\\r\\n]+", " "));
+            msg.setText((nomeArmazem == null ? "O armazém" : nomeArmazem) + " respondeu o chamado " + codigo + " (" + assunto + "):\n\n"
+                    + texto + "\n\n"
+                    + (link == null ? "Responda pelo painel Master > Chamados." : "Responda pelo painel Master: " + link)
+                    + "\n(Resposta dada só por este e-mail não aparece para o armazém.)");
+            sender.send(msg);
+        } catch (Exception e) {
+            log.error("Falha ao avisar o suporte sobre resposta de chamado: {}", e.getMessage());
+        }
+    }
 }

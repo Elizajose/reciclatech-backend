@@ -1084,6 +1084,7 @@ public class TelaController {
         if ("MATERIAL".equals(tipo) || "DESPESA".equals(tipo) || "PRECO_VIP".equals(tipo) || "ESTOQUE".equals(tipo)) entidade = tipo;
         model.addAttribute("tipo", entidade == null ? "TODOS" : entidade);
         model.addAttribute("registros", googleSheetsService.listarHistorico(entidade, 500));
+        logoDoTopo(model, s);   // Fase 34: logo do armazém no topo
         return "admin-historico-alteracoes";
     }
 
@@ -1339,6 +1340,7 @@ public class TelaController {
             model.addAttribute("periodoDe", pf.de.toString());
             model.addAttribute("periodoAte", pf.ate.toString());
 
+            logoDoTopo(model, session);   // Fase 34: logo do armazém no topo
             return "analises";
 
         } catch (Exception e) {
@@ -1442,6 +1444,7 @@ public class TelaController {
 
         try { model.addAttribute("historico", googleSheetsService.getHistoricoCompleto()); }
         catch (Exception e) { model.addAttribute("historico", new ArrayList<>()); }
+        logoDoTopo(model, session);   // Fase 34: logo do armazém no topo
         return "admin-historico";
     }
 
@@ -1756,6 +1759,7 @@ public class TelaController {
         model.addAttribute("statusAssinatura", status != null ? status : "TRIAL");
         model.addAttribute("proximoVencimento", LocalDate.now(ZoneId.of("America/Recife")).plusDays(7).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
         model.addAttribute("faturas", new ArrayList<>());
+        logoDoTopo(model, session);   // Fase 34: logo do armazém no topo
         return "admin-assinatura";
     }
 
@@ -1816,8 +1820,20 @@ public class TelaController {
         if (chamadoService != null) {
             try {
                 Long armazemChamado = Long.parseLong(String.valueOf(session.getAttribute("idPlanilhaAtiva")));
-                registrado = chamadoService.abrir(armazemChamado, (String) session.getAttribute("nomeArmazem"),
-                        ChamadoController.autorDa(session), assunto, prioridade, descricao, emailRetorno);
+                com.reciclatech.backend.service.ChamadoService.Anexo anexo = null;
+                if (printTela != null && !printTela.isEmpty()) {
+                    anexo = new com.reciclatech.backend.service.ChamadoService.Anexo(printTela.getOriginalFilename(), printTela.getBytes());
+                }
+                try {
+                    registrado = chamadoService.abrir(armazemChamado, (String) session.getAttribute("nomeArmazem"),
+                            ChamadoController.autorDa(session), assunto, prioridade, descricao, emailRetorno, anexo);
+                } catch (IllegalArgumentException anexoRecusado) {
+                    // Fase 34: o print não passou na conferência do conteúdo; grava o chamado sem ele (o e-mail ainda leva o arquivo)
+                    if (anexo == null) throw anexoRecusado;
+                    log.warn("Anexo do chamado recusado: {}", anexoRecusado.getMessage());
+                    registrado = chamadoService.abrir(armazemChamado, (String) session.getAttribute("nomeArmazem"),
+                            ChamadoController.autorDa(session), assunto, prioridade, descricao, emailRetorno, null);
+                }
             } catch (Exception e) {
                 log.error("Chamado não ficou gravado no sistema (segue só por e-mail)", e);
             }

@@ -17,7 +17,12 @@
 <nav class="navbar navbar-dark bg-success shadow-sm mb-4">
     <div class="container-fluid px-4">
         <a class="navbar-brand fw-bold" href="/admin/analises"><i class="bi bi-arrow-left"></i> Voltar</a>
-        <span class="text-white fw-bold"><i class="bi bi-clock-history"></i> Histórico Geral</span>
+        <span class="text-white fw-bold d-flex align-items-center gap-2">
+            <img th:if="${versaoLogoPainel != null}" th:src="@{/admin/logo(v=${versaoLogoPainel})}" alt="Logo do armazém"
+                 style="width: 30px; height: 30px; border-radius: 8px; object-fit: cover; border: 2px solid rgba(255,255,255,.8); background: #fff;">
+            <span class="d-none d-sm-inline fw-normal opacity-75" th:text="${session.nomeArmazem}">Armazém</span>
+            <span><i class="bi bi-clock-history"></i> Histórico Geral</span>
+        </span>
     </div>
 </nav>
 

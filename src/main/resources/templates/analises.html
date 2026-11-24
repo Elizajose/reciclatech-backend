@@ -12,6 +12,7 @@
 </head>
 <body class="bg-body-tertiary">
 <div class="container mt-4">
+    <div th:replace="~{fragments/armazem-selo :: selo}"></div>
 <div class="container-lg mt-3" th:if="${erroTela != null or avisoTela != null or sucessoTela != null}">
     <div th:replace="~{fragments/avisos :: avisos}"></div>
 </div>

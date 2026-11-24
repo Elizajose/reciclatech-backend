@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" th:href="@{/css/admin-telas.css(v=1)}">
-    <link rel="stylesheet" th:href="@{/css/chamados.css(v=1)}">
+    <link rel="stylesheet" th:href="@{/css/chamados.css(v=2)}">
 </head>
 <body class="bg-body-tertiary master">
 <!-- Fase 32: caixa de chamados do suporte. Responder aqui grava a conversa, acende o sininho do armazém e avisa por e-mail. -->
@@ -85,13 +85,23 @@
                                 · <span th:text="${#temporals.format(m.criadoEm, 'dd/MM HH:mm')}">10/11</span>
                             </div>
                             <div class="balao-texto" th:text="${m.texto}">texto</div>
+                            <div class="balao-anexos" th:if="${anexos != null and anexos.get(m.id) != null}">
+                                <a th:each="ax : ${anexos.get(m.id)}" th:href="@{/master/chamados/anexo/{id}(id=${ax.id})}" target="_blank" rel="noopener" class="anexo-link">
+                                    <i class="bi" th:classappend="${ax.imagem} ? 'bi-image' : 'bi-file-earmark-pdf'"></i>
+                                    <span th:text="${ax.nome}">print.png</span> <small class="text-body-secondary" th:text="${ax.tamanhoTexto}">120 KB</small>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <form th:action="@{/master/chamados/{id}/responder(id=${chamado.id})}" method="post">
+                <form th:action="@{/master/chamados/{id}/responder(id=${chamado.id})}" method="post" enctype="multipart/form-data">
                     <label class="form-label small fw-bold" for="respostaMaster">Resposta ao armazém</label>
                     <textarea name="texto" id="respostaMaster" class="form-control mb-2" rows="4" maxlength="5000" placeholder="Escreva a resposta..."></textarea>
                     <div class="d-flex flex-wrap justify-content-end gap-2">
+                        <label class="btn btn-outline-secondary mb-0 me-auto anexo-escolher">
+                            <i class="bi bi-paperclip"></i> <span class="anexo-nome">Anexar arquivo</span>
+                            <input type="file" name="arquivo" class="d-none" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf">
+                        </label>
                         <button type="submit" name="fechar" value="sim" class="btn btn-outline-secondary fw-bold" title="Envia a resposta (se escrita) e marca como resolvido">
                             <i class="bi bi-check2-all"></i> Responder e resolver
                         </button>
@@ -103,6 +113,6 @@
         </div>
     </div>
 </div>
-<script th:src="@{/js/chamados.js(v=1)}"></script>
+<script th:src="@{/js/chamados.js(v=2)}"></script>
 </body>
 </html>
